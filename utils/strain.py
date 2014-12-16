@@ -61,6 +61,12 @@ def strain_tensor(Pos, Mass, Nmesh, BoxSize, smoothing):
 
 if __name__ == '__main__':
 
+    def mpicreate(file, blkname, size, dtype, comm):
+        if comm.rank == 0:
+            file.create(blkname, size=size, dtype=dtype)
+        comm.barrier()
+        return file.open(blkname)
+
 #    from matplotlib import pyplot
 
     # this will set the units to
@@ -96,10 +102,22 @@ if __name__ == '__main__':
 
     S = strain_tensor(P.Pos, P.Mass, Nmesh, BoxSize, 1000.0)
 
-    S = S.reshape(Ntot, -1)
-    with file.create('1/Strain', size=Ntot, dtype=('f4', 9)) as block:
+    S = S.reshape(NumPart, -1)
+
+    with mpicreate(file, '1/Strain-1000', size=Ntot, dtype=('f4', 9), comm=MPI.COMM_WORLD) as block:
         a, b, junk = myslice.indices(Ntot)
         block.write(a, S)
 
-    block = file.open('1/Strain')
-    assert numpy.allclose(S, block[myslice])
+    S = strain_tensor(P.Pos, P.Mass, Nmesh, BoxSize, 2000.0)
+
+    S = S.reshape(NumPart, -1)
+    with mpicreate(file, '1/Strain-2000', size=Ntot, dtype=('f4', 9), comm=MPI.COMM_WORLD) as block:
+        a, b, junk = myslice.indices(Ntot)
+        block.write(a, S)
+
+    S = strain_tensor(P.Pos, P.Mass, Nmesh, BoxSize, 4000.0)
+
+    S = S.reshape(NumPart, -1)
+    with mpicreate(file, '1/Strain-4000', size=Ntot, dtype=('f4', 9), comm=MPI.COMM_WORLD) as block:
+        a, b, junk = myslice.indices(Ntot)
+        block.write(a, S)

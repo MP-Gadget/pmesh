@@ -59,7 +59,49 @@ def strain_tensor(Pos, Mass, Nmesh, BoxSize, smoothing):
         S[..., j, i] = tmp
     return S
 
+def overdensity(Pos, Mass, Nmesh, BoxSize, smoothing):
+    """ Pos and smoothing is given in the same unit as BoxSize """
+    Ndim = Pos.shape[1]
+
+    assert Ndim == 3
+
+    # first convert to Nmesh units:
+
+    smoothing = smoothing * (1.0 * Nmesh / BoxSize)
+
+    Pos = Pos * (1.0 * Nmesh / BoxSize)
+
+    pm = ParticleMesh(Nmesh, verbose=False)
+
+    layout = pm.decompose(Pos)
+    tpos = layout.exchange(Pos)
+
+    if numpy.isscalar(P.Mass):
+        tmass = P.Mass
+    else:
+        tmass = layout.exchange(P.Mass)
+
+    pm.r2c(tpos, tmass)
+
+    D = numpy.empty(len(Pos), dtype='f8')
+
+    tmp = pm.c2r(
+        tpos, 
+        TransferFunction.Constant(BoxSize ** -3),
+        TransferFunction.Inspect('K0', (0, 0, 0)),
+#        TransferFunction.NormalizeDC,
+        TransferFunction.RemoveDC,
+        TransferFunction.Trilinear,
+        TransferFunction.Gaussian(smoothing), 
+        TransferFunction.Trilinear,
+        )
+    D[:] = layout.gather(tmp, mode='sum')
+    return D
+
 if __name__ == '__main__':
+    from sys import argv
+
+    scales = [int(a) for a in argv[1:]]
 
     def mpicreate(file, blkname, size, dtype, comm):
         if comm.rank == 0:
@@ -95,29 +137,18 @@ if __name__ == '__main__':
     P = lambda : None
 
     P.Mass = header.attrs['MassTable'][1]
-    P.Pos = file.open('1/Position')[myslice] * (1.0 * Nmesh / BoxSize )
+    P.Pos = file.open('1/Position')[myslice] 
     
     NumPart = len(P.Pos)
     print Nmesh, BoxSize, P.Mass
 
-    S = strain_tensor(P.Pos, P.Mass, Nmesh, BoxSize, 1000.0)
-
-    S = S.reshape(NumPart, -1)
-
-    with mpicreate(file, '1/Strain-1000', size=Ntot, dtype=('f4', 9), comm=MPI.COMM_WORLD) as block:
-        a, b, junk = myslice.indices(Ntot)
-        block.write(a, S)
-
-    S = strain_tensor(P.Pos, P.Mass, Nmesh, BoxSize, 2000.0)
-
-    S = S.reshape(NumPart, -1)
-    with mpicreate(file, '1/Strain-2000', size=Ntot, dtype=('f4', 9), comm=MPI.COMM_WORLD) as block:
-        a, b, junk = myslice.indices(Ntot)
-        block.write(a, S)
-
-    S = strain_tensor(P.Pos, P.Mass, Nmesh, BoxSize, 4000.0)
-
-    S = S.reshape(NumPart, -1)
-    with mpicreate(file, '1/Strain-4000', size=Ntot, dtype=('f4', 9), comm=MPI.COMM_WORLD) as block:
-        a, b, junk = myslice.indices(Ntot)
-        block.write(a, S)
+    for scale in scales:
+        S = strain_tensor(P.Pos, P.Mass, Nmesh, BoxSize, 1.0 * scale)
+        S = S.reshape(NumPart, -1)
+        with mpicreate(file, '1/Strain-%d' % scale, size=Ntot, dtype=('f4', 9), comm=MPI.COMM_WORLD) as block:
+            a, b, junk = myslice.indices(Ntot)
+            block.write(a, S)
+        D = overdensity(P.Pos, P.Mass, Nmesh, BoxSize, 1.0 * scale)
+        with mpicreate(file, '1/OverDensity-%d' % scale, size=Ntot, dtype=('f4'), comm=MPI.COMM_WORLD) as block:
+            a, b, junk = myslice.indices(Ntot)
+            block.write(a, D)

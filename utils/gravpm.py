@@ -1,9 +1,13 @@
+import sys; import os.path; sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+
 from gaepsi2.cosmology import WMAP7 as cosmology
 from bigfile import BigFile 
 from mpi4py import MPI
+
 from pypm.particlemesh import ParticleMesh
 import numpy
 from pypm.transfer import TransferFunction
+
 
 if __name__ == '__main__':
 

@@ -3,9 +3,10 @@ import os.path
 import traceback
 import numpy
 
-d = os.path.join(os.path.dirname(__file__), '..', 'src')
-sys.path.append(d)
-import cic
+d = os.path.join(os.path.dirname(__file__), '..')
+sys.path.insert(0, d)
+from pypm import cic
+
 def test_paint1():
     mesh = numpy.zeros((2, 2))
     pos = [[-.1, 0.0]]

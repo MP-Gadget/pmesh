@@ -12,14 +12,14 @@ def myext(*args):
     return Extension(*args, include_dirs=["./", numpy.get_include()])
 
 extensions = [
-        myext("pypm._domain", ["src/_domain.pyx"]),
+        myext("pypm._domain", ["pypm/_domain.pyx"]),
         ]
 
 setup(
     name="pypm", version="0.0",
     author="Yu Feng",
     description="Particle Mesh in Python",
-    package_dir = {'pypm': 'src'},
+    package_dir = {'pypm': 'pypm'},
     install_requires=['cython', 'numpy', 'mpi4py'],
     packages= ['pypm'],
     requires=['numpy', 'mpi4py'],

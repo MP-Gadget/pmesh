@@ -3,10 +3,10 @@ import sys
 import os.path
 import traceback
 
-d = os.path.join(os.path.dirname(__file__), '..', 'src')
-sys.path.append(d)
+d = os.path.join(os.path.dirname(__file__), '..')
+sys.path.insert(0, d)
 import numpy
-import domain
+from pypm import domain
 
 fakecomm = lambda : None
 

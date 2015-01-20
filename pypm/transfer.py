@@ -121,9 +121,27 @@ class TransferFunction:
         return PS
 
     @staticmethod
+    def Laplace(complex, w):
+        """ 
+            Take the Laplacian k-space: complex *= -w2
+
+            where this function performs only the -w **-2 part.
+
+            Note that k = w * Nmesh / BoxSize, thus the usual laplacian is
+           
+            - k ** 2 * complex = (Nmesh / BoxSize) ** 2 (-w**2) * complex
+
+        """
+        w2 = 0.0
+        for wi in w:
+            w2 = w2 + wi ** 2
+        w2 *= -1
+        complex[:] *= w2
+
+    @staticmethod
     def Poisson(complex, w):
         """ 
-            Solve Possion equation in k-space: complex /= -w2
+            Solve Poisson equation in k-space: complex /= -w2
 
             Notes about gravity:
 

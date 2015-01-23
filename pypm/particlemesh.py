@@ -40,6 +40,7 @@ class ParticleMesh(object):
 
         self.domain = domain.GridND(self.partition.i_edges)
         self.verbose = verbose
+        self.stack = []
 
     def decompose(self, pos):
         """ create a domain decompose layout for particles at given mesh
@@ -74,22 +75,19 @@ class ParticleMesh(object):
             # self.complex.flat[0] = 0
             pass
 
-    def c2r(self, pos, *transfer_functions):
-        """ complex is the fourier space field after applying the transfer 
-            kernel.
+    def push(self):
+        """ back up the old complex field """
+        self.stack.append(self.complex.copy())
 
-            transfer is a callable:
-            transfer(complex, w):  
-            apply transfer function on complex field with given k:
+    def pop(self):
+        """ restore the last backed up complex field """
+        self.complex[:] = self.stack.pop()
 
-            w is a tuple of (w0, w1, w2, ...)
-            w is in circular frequency units. The dimensionful k is w * Nmesh / BoxSize 
-            (nyquist is at about w = pi)
-            they broadcast to the correct shape of complex. This is to reduce
-            memory usage somewhat.
-            complex is modified in place.
+    def transfer(self, *transfer_functions):
+        """ apply a chain of transfer functions to the complex field
+            this will destroy the complex field. (self.complex)
+            There is no way back. save the complex field with push()
         """
-        bak = self.complex.copy()
         w = []
         for d in range(self.partition.Ndim):
             s = numpy.ones(self.partition.Ndim, dtype='intp')
@@ -107,12 +105,34 @@ class ParticleMesh(object):
             else:
                 raise TypeError(
                 "Wrong definition of the transfer function: %s" % transfer.__name__)
+
+    def c2r(self, pos, *transfer_functions):
+        """ complex is the fourier space field after applying the transfer 
+            kernel.
+
+            transfer is a callable:
+            transfer(complex, w):  
+            apply transfer function on complex field with given k:
+
+            w is a tuple of (w0, w1, w2, ...)
+            w is in circular frequency units. The dimensionful k is w * Nmesh / BoxSize 
+            (nyquist is at about w = pi)
+            they broadcast to the correct shape of complex. This is to reduce
+            memory usage somewhat.
+            complex is modified in place.
+        """
+        self.push()
+
+        self.transfer(*transfer_functions)
+
         self.backward.execute(self.complex.base, self.real.base)
         if self.verbose:
             realsum = self.comm.allreduce(self.real.sum(dtype='f8'), MPI.SUM)
             if self.comm.rank == 0:
                 print 'after c2r, sum of real', realsum
             self.comm.barrier()
+
         # restore the complex field, for next c2r transform
-        self.complex[:] = bak
+        self.pop()
+
         return cic.readout(self.real, pos, mode='ignore', period=self.Nmesh)

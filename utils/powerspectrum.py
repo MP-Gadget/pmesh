@@ -53,16 +53,13 @@ if __name__ == '__main__':
         tmass = P.Mass
     else:
         tmass = layout.exchange(P.Mass)
+
     pm.r2c(tpos, tmass)
+
     psout = numpy.empty(Nmesh)
     wout = numpy.empty(Nmesh)
 
-#    real = pm.real.copy()
-#    real[:] = 0
-#    cic.paint(P.Pos, real, weights=P.Mass, mode='ignore', period=Nmesh)
-#    numpy.savez('pm.real2', real)
-#    numpy.savez('pm.complex', pm.complex)
-    tmp = pm.c2r(tpos, 
+    pm.transfer( 
             TransferFunction.Trilinear,
             TransferFunction.NormalizeDC,
             TransferFunction.RemoveDC,

@@ -23,8 +23,8 @@ if __name__ == '__main__':
     DH = 3e5 / 100.
     G = 43007.1
     H0 = 0.1
-    Nmesh = 32
-    file = BigFile('debug-64/IC')
+    Nmesh = int(argv[2])
+    file = BigFile(argv[1])
     header = file.open('header')
     BoxSize = header.attrs['BoxSize'][0]
     a0 = header.attrs['Time'][0]
@@ -42,7 +42,8 @@ if __name__ == '__main__':
     P.Pos = file.open('1/Position')[myslice] 
     
     NumPart = len(P.Pos)
-    print '#', Nmesh, BoxSize, P.Mass
+    if MPI.COMM_WORLD.rank == 0:
+        print '#', Nmesh, BoxSize, P.Mass
 
     P.Pos *= (1.0 * Nmesh / BoxSize)
 
@@ -65,6 +66,6 @@ if __name__ == '__main__':
             TransferFunction.RemoveDC,
             TransferFunction.PowerSpectrum(wout, psout),
             )
-
-    numpy.savetxt(stdout, zip(wout * Nmesh /  BoxSize, psout * (6.28 / BoxSize)
+    if MPI.COMM_WORLD.rank == 0:
+        numpy.savetxt(stdout, zip(wout * Nmesh /  BoxSize, psout * (6.28 / BoxSize)
         ** -3))

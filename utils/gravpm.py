@@ -23,8 +23,8 @@ if __name__ == '__main__':
     DH = 3e5 / 100.
     G = 43007.1
     H0 = 0.1
-    Nmesh = 64
-    file = BigFile('debug-32/IC')
+    Nmesh = 128
+    file = BigFile('debug-64/IC')
     header = file.open('header')
     BoxSize = header.attrs['BoxSize'][0]
     a0 = header.attrs['Time'][0]
@@ -36,8 +36,10 @@ if __name__ == '__main__':
             )
     P = lambda : None
     P.Mass = header.attrs['MassTable'][1]
-    P.Pos = file.open('1/Position')[myslice] * (1.0 * Nmesh / BoxSize )
-    P.Vel = file.open('1/Velocity')[myslice] * a0 ** 1.5
+    P.Pos = file.open('1/Position')[myslice] 
+    P.Pos *= (1.0 * Nmesh / BoxSize )
+    P.Vel = file.open('1/Velocity')[myslice] 
+    P.Vel *= a0 ** 1.5
     P.ID = file.open('1/ID')[myslice] 
     
     NumPart = len(P.Pos)
@@ -73,15 +75,14 @@ if __name__ == '__main__':
                 numpy.trapz(1 / ( a2 * E2), g2),
                 )
 
-    dloga = 0.2
-    std = None
 
-    loga0 = numpy.log(a0)
-    loga = loga0
+    std = None
+    timesteps = numpy.linspace(numpy.log(a0), 0.0, 20, endpoint=True)
     vel2 = None
     accel2 = None
     icps = None
-    while True:
+
+    for loga1, loga2 in zip(timesteps[:-1], timesteps[1:]):
         # lets get the correct mass distribution with particles on the edge mirrored
         layout = pm.decompose(P.Pos)
         tpos = layout.exchange(P.Pos)
@@ -106,8 +107,8 @@ if __name__ == '__main__':
             TransferFunction.Trilinear,
     #        TransferFunction.Gaussian(1.25 * 2.0 ** 0.5), 
             # move to Mpc/h units
+            TransferFunction.PowerSpectrum(wout, psout),
             TransferFunction.Constant((BoxSize / 1000. / Nmesh) ** 3),
-            TransferFunction.PowerSpectrum(wout, psout)
             )
 
         wout /= (BoxSize / 1000. / Nmesh)
@@ -115,15 +116,9 @@ if __name__ == '__main__':
             icps = psout.copy()
 
         if MPI.COMM_WORLD.rank == 0:
-            print 'k', wout
-            print 'Pk', psout
-            print 'power spectrum / IC', psout / icps, \
-                (numpy.exp(loga) / numpy.exp(loga0)) ** 2
-            #pyplot.plot(wout, psout)
-            #pyplot.xscale('log')
-            #pyplot.yscale('log')
-            #pyplot.draw()
-            #pyplot.show()
+            with open('ps-%05.04g.txt' % numpy.exp(loga1), mode='w') as out:
+                numpy.savetxt(out, zip(wout * Nmesh / BoxSize, 
+                    psout * (6.28 / BoxSize) ** -3))
 
         density = layout.gather(density, mode='sum')
         Ntot = MPI.COMM_WORLD.allreduce(len(density), MPI.SUM)
@@ -133,7 +128,7 @@ if __name__ == '__main__':
                 Ntot - mean **2)
 
         dt_kickA, dt_drift, dt_kickB = canonical_factors(
-                loga, loga + 0.5 * dloga, loga + dloga)
+                loga1, 0.5 * (loga1 + loga2), loga2)
 
 
         for d in range(3):
@@ -166,20 +161,25 @@ if __name__ == '__main__':
 
         if MPI.COMM_WORLD.rank == 0:
             print 'step', \
-            'a',  numpy.exp(loga), \
+            'a1',  numpy.exp(loga1), \
+            'a2',  numpy.exp(loga2), \
             'mean density', mean, 'std', std, \
             'Ntot', Ntot, 'vel std', vel2, 'accel std', accel2, \
             'dt', dt_kickA, dt_drift, dt_kickB
             print P.Pos[0] / Nmesh * BoxSize, P.Vel[0], P.Accel[0], P.ID[0]
 
-        if loga >= 0.0: break
-        
-        P.Vel += P.Accel * dt_kickA
+        # avoid allocating extra memory at the cost of precision.
 
-        P.Pos += P.Vel * dt_drift * (1. / BoxSize * Nmesh)
+        P.Accel *= dt_kickA
+        P.Vel += P.Accel
+        # Pos is always in Nmesh coordinates.
 
+        P.Vel *= (dt_drift * (1. / BoxSize * Nmesh))
+        P.Pos += P.Vel
+        P.Vel /= (dt_drift * (1. / BoxSize * Nmesh))
+
+        # boundary wrap
         P.Pos %= Nmesh
 
-        P.Vel += P.Accel * dt_kickB
-
-        loga += dloga
+        P.Accel *= (dt_kickB / dt_kickA)
+        P.Vel += P.Accel

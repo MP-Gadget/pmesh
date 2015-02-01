@@ -1,6 +1,6 @@
 import sys; import os.path; sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
-from gaepsi2.cosmology import WMAP7 as cosmology
+from cosmology import WMAP9 as cosmology
 from bigfile import BigFile 
 from mpi4py import MPI
 
@@ -37,7 +37,6 @@ if __name__ == '__main__':
     P = lambda : None
     P.Mass = header.attrs['MassTable'][1]
     P.Pos = file.open('1/Position')[myslice] 
-    P.Pos *= (1.0 * Nmesh / BoxSize )
     P.Vel = file.open('1/Velocity')[myslice] 
     P.Vel *= a0 ** 1.5
     P.ID = file.open('1/ID')[myslice] 
@@ -47,13 +46,7 @@ if __name__ == '__main__':
     #NumPart = Nmesh ** 3 // 8 / MPI.COMM_WORLD.size
 
 
-    pm = ParticleMesh(Nmesh, verbose=False)
-    #pos = numpy.random.random(size=(NumPart, 3)) * Nmesh
-    #pos = numpy.array(
-    #    numpy.indices((Nmesh, Nmesh, Nmesh)), 
-    #    dtype='f4').reshape(3, -1).T.copy()
-    #MPI.COMM_WORLD.rank * NumPart + numpy.arange(len(pos), dtype='i4')
-    #vel = numpy.zeros_like(pos)
+    pm = ParticleMesh(BoxSize, Nmesh, verbose=False)
 
     P.Accel = numpy.empty_like(P.Pos)
 
@@ -61,7 +54,7 @@ if __name__ == '__main__':
         """returns canonical factors for
                 kickA, drift, kickB
         """
-        N = 129
+        N = 1025
         g1 = numpy.linspace(loga0, loga1, N, endpoint=True)
         g2 = numpy.linspace(loga1, loga2, N, endpoint=True)
         a1 = numpy.exp(g1)
@@ -77,12 +70,14 @@ if __name__ == '__main__':
 
 
     std = None
-    timesteps = numpy.linspace(numpy.log(a0), 0.0, 20, endpoint=True)
+    timesteps = list(numpy.linspace(numpy.log(a0), 0.0, 41, endpoint=True))
     vel2 = None
     accel2 = None
     icps = None
 
-    for loga1, loga2 in zip(timesteps[:-1], timesteps[1:]):
+    dt_kickA, dt_drift, dt_kickB = None, None, None
+
+    for loga1, loga2 in zip(timesteps[:], timesteps[1:] + [None]):
         # lets get the correct mass distribution with particles on the edge mirrored
         layout = pm.decompose(P.Pos)
         tpos = layout.exchange(P.Pos)
@@ -96,7 +91,6 @@ if __name__ == '__main__':
             TransferFunction.Gaussian(1.25 * 2.0 ** 0.5), 
             TransferFunction.Trilinear,
             )
-
         wout = numpy.empty(64)
         psout = numpy.empty(64)
         pm.c2r(
@@ -108,10 +102,8 @@ if __name__ == '__main__':
     #        TransferFunction.Gaussian(1.25 * 2.0 ** 0.5), 
             # move to Mpc/h units
             TransferFunction.PowerSpectrum(wout, psout),
-            TransferFunction.Constant((BoxSize / 1000. / Nmesh) ** 3),
             )
 
-        wout /= (BoxSize / 1000. / Nmesh)
         if icps is None:
             icps = psout.copy()
 
@@ -127,9 +119,8 @@ if __name__ == '__main__':
         std = (MPI.COMM_WORLD.allreduce(numpy.einsum('i,i->', density, density, dtype='f8'), MPI.SUM) /
                 Ntot - mean **2)
 
-        dt_kickA, dt_drift, dt_kickB = canonical_factors(
-                loga1, 0.5 * (loga1 + loga2), loga2)
-
+        if loga2 is None:
+            break
 
         for d in range(3):
             tmp = pm.c2r(
@@ -154,10 +145,21 @@ if __name__ == '__main__':
             #tmp *= -1
             P.Accel[:, d] = tmp
 
+        if dt_kickB is not None:
+            # KickB vel from n+1/2 to n+1
+            P.Accel *= dt_kickB
+            P.Vel += P.Accel
+            P.Accel /= dt_kickB
+
+        # now vel and pos are both at n+1
         vel2 = MPI.COMM_WORLD.allreduce(numpy.einsum('ij,ij->', P.Vel, P.Vel,
             dtype='f8'), MPI.SUM) ** 0.5
         accel2 = MPI.COMM_WORLD.allreduce(numpy.einsum('ij,ij->', P.Accel, P.Accel,
             dtype='f8'), MPI.SUM) ** 0.5
+
+        # next step
+        dt_kickA, dt_drift, dt_kickB = canonical_factors(
+                loga1, 0.5 * (loga1 + loga2), loga2)
 
         if MPI.COMM_WORLD.rank == 0:
             print 'step', \
@@ -166,20 +168,22 @@ if __name__ == '__main__':
             'mean density', mean, 'std', std, \
             'Ntot', Ntot, 'vel std', vel2, 'accel std', accel2, \
             'dt', dt_kickA, dt_drift, dt_kickB
-            print P.Pos[0] / Nmesh * BoxSize, P.Vel[0], P.Accel[0], P.ID[0]
+            print P.Pos[0], P.Vel[0], P.Accel[0], P.ID[0]
 
         # avoid allocating extra memory at the cost of precision.
 
+        # kickA
+        # vel n -> n+1/2
         P.Accel *= dt_kickA
         P.Vel += P.Accel
-        # Pos is always in Nmesh coordinates.
+        P.Accel /= dt_kickA
 
-        P.Vel *= (dt_drift * (1. / BoxSize * Nmesh))
+        # drift
+        # pos n -> n + 1
+        P.Vel *= dt_drift
         P.Pos += P.Vel
-        P.Vel /= (dt_drift * (1. / BoxSize * Nmesh))
+        P.Vel /= dt_drift
 
         # boundary wrap
-        P.Pos %= Nmesh
+        P.Pos %= pm.BoxSize
 
-        P.Accel *= (dt_kickB / dt_kickA)
-        P.Vel += P.Accel

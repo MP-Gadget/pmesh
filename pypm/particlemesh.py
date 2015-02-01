@@ -10,7 +10,7 @@ import numpy
 from mpi4py import MPI
 
 class ParticleMesh(object):
-    def __init__(self, Nmesh, comm=None, np=None, verbose=False):
+    def __init__(self, BoxSize, Nmesh, comm=None, np=None, verbose=False):
         """ create a PM object.  """
         # this weird sequence to intialize comm is because
         # we want to be compatible with None comm == MPI.COMM_WORLD
@@ -25,6 +25,7 @@ class ParticleMesh(object):
 
         self.procmesh = pfft.ProcMesh(np, comm=comm)
         self.Nmesh = Nmesh
+        self.BoxSize = BoxSize
         self.partition = pfft.Partition(pfft.Type.PFFT_R2C, 
             [Nmesh, Nmesh, Nmesh], 
             self.procmesh,
@@ -42,26 +43,53 @@ class ParticleMesh(object):
         self.verbose = verbose
         self.stack = []
 
+    def transform(self, x):
+        ret = (1.0 * self.Nmesh / self.BoxSize) * x - self.partition.local_i_start
+        #print self.partition.local_i_start, (ret.max(axis=0), ret.min(axis=0))
+        return ret
+    def transform0(self, x):
+        ret = (1.0 * self.Nmesh / self.BoxSize) * x
+        #print self.partition.local_i_start, (ret.max(axis=0), ret.min(axis=0))
+        return ret
+
     def decompose(self, pos):
         """ create a domain decompose layout for particles at given mesh
             coordinates.
+
+            position is in BoxSize coordinates (global)
 
             This layout can be used to migrate particles and images
             to the correct MPI ranks that hosts the PM local mesh
 
         """
-        return self.domain.decompose(pos, smoothing=1.0)
+        return self.domain.decompose(pos, smoothing=1.0,
+                transform=self.transform0)
 
-    def r2c(self, pos, mass=1.0):
-        """ position is in mesh coordinates, 
+    def paint(self, pos, mass=1.0):
+        """ 
+            position is in BoxSize coordinates (global position)
             transform the particle field given by pos and mass
             to the overdensity field in fourier space and save
             it in the internal storage.
-            particles are first 
         """
         self.real[:] = 0
-        pos -= self.partition.local_i_start[None, :]
-        cic.paint(pos, self.real, weights=mass, mode='ignore', period=self.Nmesh)
+        cic.paint(pos, self.real, weights=mass, mode='ignore',
+                period=self.Nmesh, transform=self.transform)
+
+    def r2c(self, pos=None, mass=1.0):
+        """ 
+            position is in BoxSize coordinates (global position)
+
+            transform the particle field given by pos and mass
+            to the overdensity field in fourier space and save
+            it in the internal storage.
+
+            if pos is None, do not paint the paritlces, directly
+            use self.real.
+        """
+        if pos is not None:
+            self.paint(pos, mass)
+
         if self.verbose:
             realsum = self.comm.allreduce(self.real.sum(dtype='f8'), MPI.SUM)
             if self.comm.rank == 0:
@@ -107,7 +135,10 @@ class ParticleMesh(object):
                 "Wrong definition of the transfer function: %s" % transfer.__name__)
 
     def c2r(self, pos, *transfer_functions):
-        """ complex is the fourier space field after applying the transfer 
+        """ 
+            pos is in BoxSize units (global position)
+
+            complex is the fourier space field after applying the transfer 
             kernel.
 
             transfer is a callable:
@@ -135,4 +166,6 @@ class ParticleMesh(object):
         # restore the complex field, for next c2r transform
         self.pop()
 
-        return cic.readout(self.real, pos, mode='ignore', period=self.Nmesh)
+        rt = cic.readout(self.real, pos, mode='ignore', period=self.Nmesh,
+                transform=self.transform)
+        return rt

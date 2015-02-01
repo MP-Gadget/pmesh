@@ -212,20 +212,21 @@ class GridND(object):
         self.mystart = numpy.array([g[r] for g, r in zip(grid, rank)])
         self.myend = numpy.array([g[r + 1] for g, r in zip(grid, rank)])
 
-    def decompose(self, pos, smoothing=0):
+    def decompose(self, pos, smoothing=0, transform=None):
         """ decompose the domain according to pos,
 
             smoothing is the size of a particle:
                 any particle that intersects the domain will
                 be transported to the domain.
-
+            transform is the transformation on pos
+            transform(pos[:, 3]) -> newpos[:, 3]
             returns a Layout object that can be used
             to exchange data
         """
 
         # we can't deal with too many points per rank, by  MPI
         assert len(pos) < 1024 * 1024 * 1024 * 2
-        posT = numpy.asarray(pos).T
+        pos = numpy.asarray(pos)
 
         Npoint = len(pos)
         Ndim = len(self.dims)
@@ -235,14 +236,21 @@ class GridND(object):
         if Npoint != 0:
             sil = numpy.empty((Ndim, Npoint), dtype='i2', order='C')
             sir = numpy.empty((Ndim, Npoint), dtype='i2', order='C')
+            chunksize = 1024 * 48 
+            for i in range(0, Npoint, chunksize):
+                s = slice(i, i + chunksize)
+                chunk = transform(pos[s])
+                for j in range(Ndim):
+                    dim = self.dims[j]
+                    if periodic:
+                        tmp = numpy.remainder(chunk[:, j], self.grid[j][-1])
+                    else:
+                        tmp = chunk[:, j]
+                    sil[j, s] = self._digitize(tmp - smoothing, self.grid[j]) - 1
+                    sir[j, s] = self._digitize(tmp + smoothing, self.grid[j])
+
             for j in range(Ndim):
                 dim = self.dims[j]
-                if periodic:
-                    tmp = numpy.remainder(posT[j], self.grid[j][-1])
-                else:
-                    tmp = posT[j]
-                sil[j, :] = self._digitize(tmp - smoothing, self.grid[j]) - 1
-                sir[j, :] = self._digitize(tmp + smoothing, self.grid[j])
                 if not periodic:
                     numpy.clip(sil[j], 0, dim, out=sil[j])
                     numpy.clip(sir[j], 0, dim, out=sir[j])

@@ -2,7 +2,7 @@
 #
 import numpy
 
-def paint(pos, mesh, weights=1.0, mode="raise", period=None):
+def paint(pos, mesh, weights=1.0, mode="raise", period=None, transform=None):
     """ CIC approximation (trilinear), painting points to Nmesh,
         each point has a weight given by weights.
         This does not give density.
@@ -20,12 +20,17 @@ def paint(pos, mesh, weights=1.0, mode="raise", period=None):
         period can be a scalar or of length len(mesh.shape). if period is given
         the particles are wrapped by the period.
 
+        transform is a function that transforms pos to mesh units:
+        transform(pos[:, 3]) -> meshpos[:, 3]
     """
     pos = numpy.array(pos)
     chunksize = 1024 * 16 * 4
     Ndim = pos.shape[-1]
     Np = pos.shape[0]
 
+    if transform is None:
+        transform = lambda x:x
+    pos = transform(pos)
     neighbours = ((numpy.arange(2 ** Ndim)[:, None] >> \
             numpy.arange(Ndim)[None, :]) & 1)
     for start in range(0, Np, chunksize):
@@ -35,11 +40,11 @@ def paint(pos, mesh, weights=1.0, mode="raise", period=None):
         else:
           wchunk = weights[chunk]
         if mode == 'raise':
-            gridpos = pos[chunk] 
+            gridpos = pos[chunk]
             rmi_mode = 'raise'
             intpos = numpy.intp(numpy.floor(gridpos))
         elif mode == 'ignore':
-            gridpos = pos[chunk] 
+            gridpos = pos[chunk]
             rmi_mode = 'raise'
             intpos = numpy.intp(numpy.floor(gridpos))
 
@@ -69,7 +74,7 @@ def paint(pos, mesh, weights=1.0, mode="raise", period=None):
 
     return mesh
 
-def readout(mesh, pos, mode="raise", period=None):
+def readout(mesh, pos, mode="raise", period=None, transform=None):
     """ CIC approximation, reading out mesh values at pos,
         see document of paint. 
     """
@@ -78,17 +83,19 @@ def readout(mesh, pos, mode="raise", period=None):
     chunksize = 1024 * 16 * 4
     Ndim = pos.shape[-1]
     Np = pos.shape[0]
+    if transform is None:
+        transform = lambda x: x
 
     neighbours = ((numpy.arange(2 ** Ndim)[:, None] >> \
             numpy.arange(Ndim)[None, :]) & 1)
     for start in range(0, Np, chunksize):
         chunk = slice(start, start+chunksize)
         if mode == 'raise':
-            gridpos = pos[chunk] 
+            gridpos = transform(pos[chunk])
             rmi_mode = 'raise'
             intpos = numpy.intp(numpy.floor(gridpos))
         elif mode == 'ignore':
-            gridpos = pos[chunk] 
+            gridpos = transform(pos[chunk])
             rmi_mode = 'raise'
             intpos = numpy.intp(numpy.floor(gridpos))
 

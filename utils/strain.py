@@ -18,9 +18,7 @@ def strain_tensor(Pos, Mass, Nmesh, BoxSize, smoothing):
 
     smoothing = smoothing * (1.0 * Nmesh / BoxSize)
 
-    Pos = Pos * (1.0 * Nmesh / BoxSize)
-
-    pm = ParticleMesh(Nmesh, verbose=False)
+    pm = ParticleMesh(BoxSize, Nmesh, verbose=False)
 
     layout = pm.decompose(Pos)
     tpos = layout.exchange(Pos)
@@ -39,7 +37,6 @@ def strain_tensor(Pos, Mass, Nmesh, BoxSize, smoothing):
         if i > j: continue
         tmp = pm.c2r(
             tpos, 
-            TransferFunction.Constant(BoxSize ** -3),
             TransferFunction.RemoveDC,
             TransferFunction.Trilinear,
             TransferFunction.Gaussian(smoothing), 
@@ -69,9 +66,7 @@ def overdensity(Pos, Mass, Nmesh, BoxSize, smoothing):
 
     smoothing = smoothing * (1.0 * Nmesh / BoxSize)
 
-    Pos = Pos * (1.0 * Nmesh / BoxSize)
-
-    pm = ParticleMesh(Nmesh, verbose=False)
+    pm = ParticleMesh(BoxSize, Nmesh, verbose=False)
 
     layout = pm.decompose(Pos)
     tpos = layout.exchange(Pos)
@@ -87,7 +82,6 @@ def overdensity(Pos, Mass, Nmesh, BoxSize, smoothing):
 
     tmp = pm.c2r(
         tpos, 
-        TransferFunction.Constant(BoxSize ** -3),
         TransferFunction.Inspect('K0', (0, 0, 0)),
 #        TransferFunction.NormalizeDC,
         TransferFunction.RemoveDC,

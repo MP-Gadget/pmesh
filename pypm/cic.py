@@ -30,7 +30,6 @@ def paint(pos, mesh, weights=1.0, mode="raise", period=None, transform=None):
 
     if transform is None:
         transform = lambda x:x
-    pos = transform(pos)
     neighbours = ((numpy.arange(2 ** Ndim)[:, None] >> \
             numpy.arange(Ndim)[None, :]) & 1)
     for start in range(0, Np, chunksize):
@@ -40,11 +39,11 @@ def paint(pos, mesh, weights=1.0, mode="raise", period=None, transform=None):
         else:
           wchunk = weights[chunk]
         if mode == 'raise':
-            gridpos = pos[chunk]
+            gridpos = transform(pos[chunk])
             rmi_mode = 'raise'
             intpos = numpy.intp(numpy.floor(gridpos))
         elif mode == 'ignore':
-            gridpos = pos[chunk]
+            gridpos = transform(pos[chunk])
             rmi_mode = 'raise'
             intpos = numpy.intp(numpy.floor(gridpos))
 

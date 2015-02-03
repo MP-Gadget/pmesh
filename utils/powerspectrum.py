@@ -38,24 +38,20 @@ if __name__ == '__main__':
 
     P = lambda : None
 
-    P.Mass = header.attrs['MassTable'][1]
     P.Pos = file.open('1/Position')[myslice] 
     
     NumPart = len(P.Pos)
     if MPI.COMM_WORLD.rank == 0:
-        print '#', Nmesh, BoxSize, P.Mass
+        print '#', Nmesh, BoxSize
 
-    P.Pos *= (1.0 * Nmesh / BoxSize)
+    pm = ParticleMesh(BoxSize, Nmesh, verbose=False)
+    if pm.comm.allreduce(P.Pos.max(), MPI.MAX) < BoxSize * 0.1:
+        print '# boxsize seems to be 1.0, corrected'
+        P.Pos *= BoxSize
 
-    pm = ParticleMesh(Nmesh, verbose=False)
     layout = pm.decompose(P.Pos)
     tpos = layout.exchange(P.Pos)
-    if numpy.isscalar(P.Mass):
-        tmass = P.Mass
-    else:
-        tmass = layout.exchange(P.Mass)
-
-    pm.r2c(tpos, tmass)
+    pm.r2c(tpos)
 
     psout = numpy.empty(Nmesh)
     wout = numpy.empty(Nmesh)

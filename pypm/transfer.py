@@ -64,6 +64,7 @@ class TransferFunction:
         #           wi) - 86 * numpy.sin(4 * wi)))
             tmp = 1 / 6.0 * (8 * numpy.sin (wi) - numpy.sin (2 * wi))
             complex[:] *= tmp * 1j
+            #complex[:] *= wi * 1j
         return SuperLanzcosDir
     @staticmethod
     def Gaussian(smoothing):
@@ -147,12 +148,12 @@ class TransferFunction:
 
             gravity is 
             
-            pot_k = -4pi G delta_k * k **-2 * BoxSize **-3
+            pot_k = -4pi G delta_k * k **-2
 
             where k = w * Nmesh / BoxSize
             hence
-            pot_k = -4pi G delta_k * w **-2  * (Nmesh / BoxSize) ** -2 * BoxSize ** -3
-                  = -4pi G delta_k * w **-2 * Nmesh ** -2 * BoxSize ** -1
+            pot_k = -4pi G delta_k * w **-2  * (Nmesh / BoxSize) ** -2 
+                  = -4pi G delta_k * w **-2 * Nmesh ** -2 * BoxSize ** -2
 
             where this function performs only the -w **-2 part.
         """

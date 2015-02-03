@@ -35,9 +35,11 @@ class ParticleMesh(object):
         self.complex = pfft.LocalBuffer(self.partition).view_output()
 
         self.forward = pfft.Plan(self.partition, pfft.Direction.PFFT_FORWARD,
-                self.real.base, self.complex.base, pfft.Type.PFFT_R2C, pfft.Flags.PFFT_TRANSPOSED_OUT | pfft.Flags.PFFT_DESTROY_INPUT)
+                self.real.base, self.complex.base, pfft.Type.PFFT_R2C,
+                pfft.Flags.PFFT_ESTIMATE | pfft.Flags.PFFT_TRANSPOSED_OUT | pfft.Flags.PFFT_DESTROY_INPUT)
         self.backward = pfft.Plan(self.partition, pfft.Direction.PFFT_BACKWARD,
-                self.complex.base, self.real.base, pfft.Type.PFFT_C2R, pfft.Flags.PFFT_TRANSPOSED_IN | pfft.Flags.PFFT_DESTROY_INPUT)
+                self.complex.base, self.real.base, pfft.Type.PFFT_C2R, 
+                pfft.Flags.PFFT_ESTIMATE | pfft.Flags.PFFT_TRANSPOSED_IN | pfft.Flags.PFFT_DESTROY_INPUT)
 
         self.domain = domain.GridND(self.partition.i_edges)
         self.verbose = verbose
@@ -71,10 +73,16 @@ class ParticleMesh(object):
             transform the particle field given by pos and mass
             to the overdensity field in fourier space and save
             it in the internal storage.
+
+            self.real is NOT the density field after this operation
+            it has the dimension of density, but is divided by 
+            Nmesh **3; PFFT will adjust for this Nmesh**3 after
+            r2c .
         """
         self.real[:] = 0
         cic.paint(pos, self.real, weights=mass, mode='ignore',
                 period=self.Nmesh, transform=self.transform)
+        self.real *= (1.0 / self.BoxSize) ** 3
 
     def r2c(self, pos=None, mass=1.0):
         """ 
@@ -138,6 +146,9 @@ class ParticleMesh(object):
         """ 
             pos is in BoxSize units (global position)
 
+            if pos is None, do not readout the values;
+            the transformed field is in self.real
+
             complex is the fourier space field after applying the transfer 
             kernel.
 
@@ -166,6 +177,7 @@ class ParticleMesh(object):
         # restore the complex field, for next c2r transform
         self.pop()
 
-        rt = cic.readout(self.real, pos, mode='ignore', period=self.Nmesh,
-                transform=self.transform)
-        return rt
+        if pos is not None:
+            rt = cic.readout(self.real, pos, mode='ignore', period=self.Nmesh,
+                    transform=self.transform)
+            return rt

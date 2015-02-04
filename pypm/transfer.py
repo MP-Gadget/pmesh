@@ -63,8 +63,10 @@ class TransferFunction:
         #       (126 * numpy.sin(wi) + 193 * numpy.sin(2 * wi) + 142 * numpy.sin (3 *
         #           wi) - 86 * numpy.sin(4 * wi)))
             tmp = 1 / 6.0 * (8 * numpy.sin (wi) - numpy.sin (2 * wi))
-            complex[:] *= tmp * 1j
-            #complex[:] *= wi * 1j
+            if order == 0:
+                complex *= wi * 1j
+            else:
+                complex[:] *= tmp * 1j
         return SuperLanzcosDir
     @staticmethod
     def Gaussian(smoothing):

@@ -8,6 +8,14 @@ import numpy
 from pypm.transfer import TransferFunction
 
 from pypm.tools import FromRoot
+import cosmology
+#CPARAM = cosmology.Cosmology(M=0.29, L=0.71, h=0.70, B=0.046, sigma8=0.820)
+CPARAM = cosmology.WMAP9
+PowerSpectrum = cosmology.WMAP9.PowerSpectrum
+#PowerSpectrum = cosmology.PowerSpectrum(
+#    *numpy.loadtxt('PK.txt', unpack=True), sigma8=0.73)
+#print PowerSpectrum.sigma8
+
 # this will set the units to
 #
 # time: 980 Myear/h
@@ -31,14 +39,13 @@ def canonical_factors(loga0, loga1, loga2):
     """returns canonical factors for
             kickA, drift, kickB
     """
-    from cosmology import WMAP9 as cosmology
     N = 1025
     g1 = numpy.linspace(loga0, loga1, N, endpoint=True)
     g2 = numpy.linspace(loga1, loga2, N, endpoint=True)
     a1 = numpy.exp(g1)
     a2 = numpy.exp(g2)
-    E1 = cosmology.Ea(a1) * H0
-    E2 = cosmology.Ea(a2) * H0
+    E1 = CPARAM.Ea(a1) * H0
+    E2 = CPARAM.Ea(a2) * H0
     return (
             numpy.trapz(1 / ( a1 * E1), g1),
             numpy.trapz(1 / ( a1 * a1 * E1), g1)
@@ -68,10 +75,36 @@ def ReadIC(filename):
     
     return P, BoxSize, a0
 
-def GridIC(BoxSize, Ngrid, a0):
-    """ Zel'Dovich IC at a0, for particle grid of Ngrid """
-    from cosmology import WMAP9 as cosmology
+def GridIC(BoxSize, Ngrid, a0, preshift=False):
+    """ 2LPT IC at a0, for particle grid of Ngrid
+    
+        This rather long code does 
 
+        (http://arxiv.org/pdf/astro-ph/9711187v1.pdf)
+
+        A few strange things to notice. 
+        The real space gaussian field has an amplitude of 1.0. 
+        In gaussian field it is 0.707 in amplitude. (grid **3 to adjust that)
+
+        (Also see http://www.design.caltech.edu/erik/Misc/Gaussian.html)
+        (And what FFTW really computes)
+
+        After applying the phase each component is further reduced to 0.5.
+        (thus FFT back from delta_k with unity power doesn't give us 
+        The PowerSpectrum we use is Pk/(2pi)**3. This is the convention used in
+        Gadget.
+
+        The sign of terms.  We agree with the paper -- pull out the - sign in D2
+        in Formula D2; 
+        The final result agrees with Martin's code(ic_2lpt_big). 
+        The final result differ with 2LPTic by -1.
+
+        Position of initial points. If set to the center of cells the small
+        scale power is smoothed. 
+        COLA does a global shift after the readout. This matters if one wants to
+        evolve the position by 2LPT. We follow COLA, but give an option to do
+        the preshift shift.
+    """
     pm = ParticleMesh(BoxSize, Ngrid, verbose=False)
 
     x0 = pm.partition.local_i_start
@@ -86,8 +119,9 @@ def GridIC(BoxSize, Ngrid, a0):
     view[:, :, :, 1] = numpy.arange(ni[1])[None, :, None] + x0[1]
     view[:, :, :, 2] = numpy.arange(ni[2])[None, None, :] + x0[2]
 
-    pos += 0.5 * BoxSize / Ngrid
     view *= 1.0 * BoxSize / Ngrid
+    if preshift:
+        pos += 0.5 * BoxSize / Ngrid
 
     # now set up the ranks
     Nlist = numpy.array(pm.comm.allgather(Nlocal), dtype='i8')
@@ -106,11 +140,27 @@ def GridIC(BoxSize, Ngrid, a0):
     seed = GlobalRNG.randint(999999999, size=pm.comm.size*11)[::11][pm.comm.rank]
     RNG = numpy.random.RandomState(seed)
 
-    pm.real[:] = RNG.normal(scale=Ngrid ** -1.5, size=pm.real.shape)
+    pm.real[:] = RNG.normal(scale=1.0, size=pm.real.shape)
+    realstd = pm.comm.allreduce((pm.real ** 2).sum(), MPI.SUM)
+    if pm.comm.rank == 0:
+        print 'realstd', (realstd / pm.Nmesh ** 3) ** 0.5
 
+    pm.real *= Ngrid ** -1.5
+
+#    pm.real[:] = numpy.fromfile('gaussian_r.bin',
+#            dtype='f8').reshape(128, 128, 130)[:, :, :128] * Ngrid ** -3
+
+#    print 'real std', pm.real.std()
     pm.r2c()
+    realstd = pm.comm.allreduce((pm.complex.real ** 2).sum(), MPI.SUM)
+    if pm.comm.rank == 0:
+        print 'complex std', (realstd / (1. + pm.Nmesh//2 +1) / pm.Nmesh ** 2) ** 0.5
 
-    D1 = cosmology.Dplus(a0) / cosmology.Dplus(1.0)
+#    pm.complex.tofile('gaussian-gravpm.bin')
+#    pm.complex[:] = numpy.fromfile('gaussian.bin',
+#            dtype='complex128').reshape(128, 128, 65)
+
+    D1 = CPARAM.Dplus(a0) / CPARAM.Dplus(1.0)
     D2 = D1 ** 2 
 
     def Transfer(complex, w):
@@ -121,10 +171,13 @@ def GridIC(BoxSize, Ngrid, a0):
         w2 *= 1.0 * Ngrid / BoxSize
         # Mpc/h
         w2 *= 1000.
-        wt = (1e9 * cosmology.PowerSpectrum.PofK(w2)) ** 0.5 
+        wt = PowerSpectrum.PofK(w2)
+        if True:
+            wt *= (2 * numpy.pi) ** 3 * (1.e-3 * BoxSize) ** -3 * D1 ** 2
+        else:
+            wt *= 1.0 # BoxSize ** 3 * (2 * numpy.pi / BoxSize) ** 3
 
-        # this has something to do with K0
-        wt *= (2 * numpy.pi / BoxSize) ** 1.5
+        wt **= 0.5 
         wt[w2 == 0] = 0
         # cut at nyquist
         wt[w2 >= numpy.pi / (BoxSize / 1000) * Ngrid] =0 
@@ -132,10 +185,19 @@ def GridIC(BoxSize, Ngrid, a0):
 
     pm.transfer(
             TransferFunction.RemoveDC,
-            TransferFunction.Poisson,
-            TransferFunction.Constant((1.0 * Ngrid / BoxSize) ** -2),
             Transfer,
             )
+#    pm.complex.tofile('delta_k-gravpm.bin')
+    
+#    pm.complex[:] = numpy.fromfile('delta_k.bin',
+#            dtype='complex128').reshape(128,128,65)
+
+    pm.transfer(
+            TransferFunction.Poisson,
+            TransferFunction.Constant((1.0 * Ngrid / BoxSize) ** -2),
+#            TransferFunction.Constant(D1 ** -1),
+    )
+
     # now we have the 'potential' field in K-space
 
     # ZA displacements
@@ -143,8 +205,9 @@ def GridIC(BoxSize, Ngrid, a0):
 
     for dir in range(3):
         tmp = pm.c2r(tpos, 
-                TransferFunction.SuperLanzcos(dir),
-                TransferFunction.Constant(1.0 * Ngrid / BoxSize),
+                TransferFunction.SuperLanzcos(dir, order=0),
+                TransferFunction.Constant(-1.0 * Ngrid / BoxSize),
+#                TransferFunction.Trilinear,
                 )
         tmp = layout.gather(tmp, mode='sum')
         P['ZA'][:, dir] = tmp
@@ -155,8 +218,8 @@ def GridIC(BoxSize, Ngrid, a0):
     diag = []
     for i, dir in enumerate([(0, 0), (1, 1), (2, 2)]):
         pm.c2r(None,
-                TransferFunction.SuperLanzcos(dir[0]),
-                TransferFunction.SuperLanzcos(dir[1]),
+                TransferFunction.SuperLanzcos(dir[0], order=0),
+                TransferFunction.SuperLanzcos(dir[1], order=0),
                 TransferFunction.Constant(1.0 * Ngrid / BoxSize),
                 TransferFunction.Constant(1.0 * Ngrid / BoxSize),
                 )
@@ -170,8 +233,8 @@ def GridIC(BoxSize, Ngrid, a0):
     # off terms
     for i, dir in enumerate([(0, 1), (0, 2), (1, 2)]):
         pm.c2r(None,
-                TransferFunction.SuperLanzcos(dir[0]),
-                TransferFunction.SuperLanzcos(dir[1]),
+                TransferFunction.SuperLanzcos(dir[0], order=0),
+                TransferFunction.SuperLanzcos(dir[1], order=0),
                 TransferFunction.Constant(1.0 * Ngrid / BoxSize),
                 TransferFunction.Constant(1.0 * Ngrid / BoxSize),
                 )
@@ -191,17 +254,18 @@ def GridIC(BoxSize, Ngrid, a0):
     for dir in range(3):
         tmp = pm.c2r(tpos, 
                 TransferFunction.Poisson,
-                TransferFunction.SuperLanzcos(dir),
+                TransferFunction.SuperLanzcos(dir, order=0),
                 TransferFunction.Constant((1.0 * Ngrid / BoxSize) ** -2),
-                TransferFunction.Constant(1.0 * Ngrid / BoxSize),
+                TransferFunction.Constant(-1.0 * Ngrid / BoxSize),
+#                TransferFunction.Trilinear,
                 )
         tmp = layout.gather(tmp, mode='sum')
         P['2LPT'][:, dir] = tmp
 
     # convert to the internal vel units of Gadget a**2 xdot
-    vel_prefac = a0 ** 2 * H0 * cosmology.Ea(a0)
-    F1 = cosmology.FOmega(a0)
-    F2 = cosmology.FOmega2(a0)
+    vel_prefac = a0 ** 2 * H0 * CPARAM.Ea(a0)
+    F1 = CPARAM.FOmega(a0)
+    F2 = CPARAM.FOmega2(a0)
 
     # std of displacements
     ZA2 = pm.comm.allreduce(numpy.einsum('ij,ij->', P['ZA'], P['ZA'],
@@ -215,7 +279,7 @@ def GridIC(BoxSize, Ngrid, a0):
     ZA2 /= Ngrid ** 3
     LPT2 /= Ngrid ** 3
 
-    P['DISP'] = D1 * P['ZA'] - 3.0 / 7.0 * D2 * P['2LPT']
+    P['DISP'] = P['ZA'] + 3.0 / 7.0 * P['2LPT']
 
     DISPM = pm.comm.allreduce(numpy.max(P['DISP']), MPI.MAX)
     if pm.comm.rank == 0:
@@ -225,24 +289,27 @@ def GridIC(BoxSize, Ngrid, a0):
                 'growth',D1 
         print 'F1', F1, 'F2', F2 
             
-        print 'ZA std', D1 * ZA2 ** 0.5 / BoxSize * Ngrid
-        print '2LPT std', 3.0 / 7.0 * D2 * LPT2 ** 0.5 / BoxSize * Ngrid
-        print 'ZA max', D1 * ZAM / BoxSize * Ngrid
-        print '2LPT max', 3.0 / 7.0 * D2 * LPTM / BoxSize * Ngrid
+        print 'ZA std', ZA2 ** 0.5 / BoxSize * Ngrid
+        print '2LPT std', 3.0 / 7.0 * LPT2 ** 0.5 / BoxSize * Ngrid
+        print 'ZA max', ZAM / BoxSize * Ngrid
+        print '2LPT max', 3.0 / 7.0 * LPTM / BoxSize * Ngrid
         print 'DISP max', DISPM / BoxSize * Ngrid
-        print 3.0 / 7.0 * D2 * LPT2 ** 0.5 / (D1 * ZA2 ** 0.5)
+        print 3.0 / 7.0 * LPT2 ** 0.5 / (ZA2 ** 0.5)
         print 'rho_crit=', 3 * H0 * H0 / ( 8 * numpy.pi * G)
 
-    if False:
+    if True:
         P['Position'] += P['DISP']
         P['Position'] %= BoxSize
-        P['Velocity'] = vel_prefac* (P['ZA'] * (F1 * D1) - P['2LPT'] * (2 * F2 * D2))
+        P['Velocity'] = vel_prefac* (P['ZA'] * F1 - P['2LPT'] * (2 * F2))
     else:
-        P['Position'] += D1 * P['ZA']
+        P['Position'] += P['ZA']
         P['Position'] %= BoxSize
-        P['Velocity'] = vel_prefac* (P['ZA'] * (F1 * D1))
+        P['Velocity'] = vel_prefac* (P['ZA'] * F1)
 
-    P['Mass'] = cosmology.OmegaM * 3 * H0 * H0 / ( 8 * numpy.pi * G) \
+    if not preshift:
+        P['Position'] += 0.5 * BoxSize / Ngrid
+
+    P['Mass'] = CPARAM.OmegaM * 3 * H0 * H0 / ( 8 * numpy.pi * G) \
             * BoxSize ** 3 / Ngrid ** 3
     return P, BoxSize, a0
 
@@ -305,7 +372,7 @@ if __name__ == '__main__':
 
     Nmesh = 512
     BoxSize = 256000.
-    a0 = 1 / 10.
+    a0 = 1 / 100.
     #P, BoxSize, a0 = ReadIC('debug-64/IC')
     P, BoxSize, a0 = GridIC(BoxSize, 256, a0)
     pm = ParticleMesh(BoxSize, Nmesh, verbose=True)

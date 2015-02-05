@@ -49,7 +49,7 @@ def GridIC(PowerSpectrum, BoxSize, Ngrid, D1, order=3, preshift=False,
     ni = pm.partition.local_ni
     Nlocal = numpy.prod(ni)
 
-    pos = numpy.empty(Nlocal, dtype=(dtype, 3))
+    pos = numpy.empty((Nlocal, 3), dtype=dtype)
     ID = numpy.empty(Nlocal, dtype=('i8'))
 
     view = pos.reshape(list(ni) + [3])

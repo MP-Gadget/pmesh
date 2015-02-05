@@ -35,7 +35,7 @@ class Timer(object):
         t1 = 1.0 * MPI.Wtime()
         self.spent += t1 - self.t0
 class Timers(dict):
-    def __init__(self, comm):
+    def __init__(self, comm=None):
         self.comm = comm
     def __getitem__(self, key):
         if not dict.__contains__(self, key):

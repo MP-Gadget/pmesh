@@ -6,7 +6,7 @@ from mpi4py import MPI
 from pypm.particlemesh import ParticleMesh
 import numpy
 from pypm.transfer import TransferFunction
-
+from pypm import cic
 from pypm.tools import FromRoot
 import cosmology
 
@@ -205,6 +205,7 @@ if __name__ == '__main__':
                 'a', numpy.exp(loga2), \
                 dt_kickA, dt_drift, dt_kickB
             print str(pm.T)
+            print cic.RT
         # kickA
         # vel n -> n+1/2
         P['Accel'] *= dt_kickA

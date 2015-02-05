@@ -7,7 +7,9 @@ import pfft
 import domain
 import cic
 import numpy
+import time
 from mpi4py import MPI
+from tools import Timers
 
 class ParticleMesh(object):
     def __init__(self, BoxSize, Nmesh, comm=None, np=None, verbose=False):
@@ -34,12 +36,14 @@ class ParticleMesh(object):
         self.real = pfft.LocalBuffer(self.partition).view_input()
         self.complex = pfft.LocalBuffer(self.partition).view_output()
 
-        self.forward = pfft.Plan(self.partition, pfft.Direction.PFFT_FORWARD,
-                self.real.base, self.complex.base, pfft.Type.PFFT_R2C,
-                pfft.Flags.PFFT_ESTIMATE | pfft.Flags.PFFT_TRANSPOSED_OUT | pfft.Flags.PFFT_DESTROY_INPUT)
-        self.backward = pfft.Plan(self.partition, pfft.Direction.PFFT_BACKWARD,
-                self.complex.base, self.real.base, pfft.Type.PFFT_C2R, 
-                pfft.Flags.PFFT_ESTIMATE | pfft.Flags.PFFT_TRANSPOSED_IN | pfft.Flags.PFFT_DESTROY_INPUT)
+        self.T = Timers(self.comm)
+        with self.T['Plan']:
+            self.forward = pfft.Plan(self.partition, pfft.Direction.PFFT_FORWARD,
+                    self.real.base, self.complex.base, pfft.Type.PFFT_R2C,
+                    pfft.Flags.PFFT_ESTIMATE | pfft.Flags.PFFT_TRANSPOSED_OUT | pfft.Flags.PFFT_DESTROY_INPUT)
+            self.backward = pfft.Plan(self.partition, pfft.Direction.PFFT_BACKWARD,
+                    self.complex.base, self.real.base, pfft.Type.PFFT_C2R, 
+                    pfft.Flags.PFFT_ESTIMATE | pfft.Flags.PFFT_TRANSPOSED_IN | pfft.Flags.PFFT_DESTROY_INPUT)
 
         self.domain = domain.GridND(self.partition.i_edges)
         self.verbose = verbose
@@ -64,8 +68,9 @@ class ParticleMesh(object):
             to the correct MPI ranks that hosts the PM local mesh
 
         """
-        return self.domain.decompose(pos, smoothing=1.0,
-                transform=self.transform0)
+        with self.T['Decompose']:
+            return self.domain.decompose(pos, smoothing=1.0,
+                    transform=self.transform0)
 
     def paint(self, pos, mass=1.0):
         """ 
@@ -79,10 +84,11 @@ class ParticleMesh(object):
             Nmesh **3; PFFT will adjust for this Nmesh**3 after
             r2c .
         """
-        self.real[:] = 0
-        cic.paint(pos, self.real, weights=mass, mode='ignore',
-                period=self.Nmesh, transform=self.transform)
-        self.real *= (1.0 / self.BoxSize) ** 3
+        with self.T['Paint']:
+            self.real[:] = 0
+            cic.paint(pos, self.real, weights=mass, mode='ignore',
+                    period=self.Nmesh, transform=self.transform)
+            self.real *= (1.0 / self.BoxSize) ** 3
 
     def r2c(self, pos=None, mass=1.0):
         """ 
@@ -104,7 +110,8 @@ class ParticleMesh(object):
                 print 'before r2c, sum of real', realsum
             self.comm.barrier()
 
-        self.forward.execute(self.real.base, self.complex.base)
+        with self.T['R2C']:
+            self.forward.execute(self.real.base, self.complex.base)
 
         if self.procmesh.rank == 0:
             # remove the mean !
@@ -133,14 +140,15 @@ class ParticleMesh(object):
             wi *= (2 * numpy.pi / self.Nmesh)
             w.append(wi.reshape(s))
 
-        for transfer in transfer_functions:
-            if transfer.func_code.co_argcount == 2:
-                transfer(self.complex, w)
-            elif transfer.func_code.co_argcount == 3:
-                transfer(self.comm, self.complex, w)
-            else:
-                raise TypeError(
-                "Wrong definition of the transfer function: %s" % transfer.__name__)
+        with self.T['Transfer']:
+            for transfer in transfer_functions:
+                if transfer.func_code.co_argcount == 2:
+                    transfer(self.complex, w)
+                elif transfer.func_code.co_argcount == 3:
+                    transfer(self.comm, self.complex, w)
+                else:
+                    raise TypeError(
+                    "Wrong definition of the transfer function: %s" % transfer.__name__)
 
     def c2r(self, pos, *transfer_functions):
         """ 
@@ -167,7 +175,8 @@ class ParticleMesh(object):
 
         self.transfer(*transfer_functions)
 
-        self.backward.execute(self.complex.base, self.real.base)
+        with self.T['C2R']:
+            self.backward.execute(self.complex.base, self.real.base)
         if self.verbose:
             realsum = self.comm.allreduce(self.real.sum(dtype='f8'), MPI.SUM)
             if self.comm.rank == 0:
@@ -177,7 +186,8 @@ class ParticleMesh(object):
         # restore the complex field, for next c2r transform
         self.pop()
 
-        if pos is not None:
-            rt = cic.readout(self.real, pos, mode='ignore', period=self.Nmesh,
-                    transform=self.transform)
-            return rt
+        with self.T['Readout']:
+            if pos is not None:
+                rt = cic.readout(self.real, pos, mode='ignore', period=self.Nmesh,
+                        transform=self.transform)
+                return rt

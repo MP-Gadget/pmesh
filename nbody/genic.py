@@ -6,7 +6,7 @@ import numpy
 from pypm.transfer import TransferFunction
 
 def GridIC(PowerSpectrum, BoxSize, Ngrid, D1, order=3, preshift=False,
-        ZAonly=False, dtype='f8'):
+        shift=0.5, ZAonly=False, dtype='f8'):
     """ 2LPT IC from PowerSpectrum scaled by D1**2, for particle grid of Ngrid
     
         CPARAM is a Cosmology object. We also need CPARAM.PowerSpectrum object.
@@ -59,7 +59,7 @@ def GridIC(PowerSpectrum, BoxSize, Ngrid, D1, order=3, preshift=False,
 
     view *= 1.0 * BoxSize / Ngrid
     if preshift:
-        pos += 0.5 * BoxSize / Ngrid
+        pos += shift * BoxSize / Ngrid
 
     # now set up the ranks
     Nlist = numpy.array(pm.comm.allgather(Nlocal), dtype='i8')
@@ -194,6 +194,6 @@ def GridIC(PowerSpectrum, BoxSize, Ngrid, D1, order=3, preshift=False,
 
 
     if not preshift:
-        P['Position'] += 0.5 * BoxSize / Ngrid
+        P['Position'] += shift * BoxSize / Ngrid
     return P
 

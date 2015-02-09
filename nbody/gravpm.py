@@ -232,6 +232,7 @@ if __name__ == '__main__':
 
 
         if istep == len(timesteps) - 1:
+            SaveSnapshot(pm.comm, 'final-256', P)
             break
         loga2 = timesteps[istep + 1]
 

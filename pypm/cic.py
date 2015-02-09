@@ -1,7 +1,6 @@
 # cloud in cell painting
 #
 import numpy
-
 def paint(pos, mesh, weights=1.0, mode="raise", period=None, transform=None):
     """ CIC approximation (trilinear), painting points to Nmesh,
         each point has a weight given by weights.
@@ -75,12 +74,15 @@ def paint(pos, mesh, weights=1.0, mode="raise", period=None, transform=None):
 
 from tools import Timers
 RT = Timers()
-def readout(mesh, pos, mode="raise", period=None, transform=None):
+def readout(mesh, pos, mode="raise", period=None, transform=None, out=None):
     """ CIC approximation, reading out mesh values at pos,
         see document of paint. 
     """
     pos = numpy.array(pos)
-    value = numpy.zeros(len(pos), dtype='f8')
+    if out is None:
+        out = numpy.zeros(len(pos), dtype='f8')
+    else:
+        out[:] = 0
     chunksize = 1024 * 16 * 4
     Ndim = pos.shape[-1]
     Np = pos.shape[0]
@@ -127,7 +129,15 @@ def readout(mesh, pos, mode="raise", period=None, transform=None):
                     if len(targetpos) > 0:
                         targetindex = numpy.ravel_multi_index(
                                 targetpos.T, mesh.shape, mode=rmi_mode)
-                        value[chunk][mask] += kernel * mesh.flat[targetindex]
-    return value
+                        out[chunk][mask] += kernel * mesh.flat[targetindex]
+    return out
 
 
+try:
+    import _cic
+    paint_old = paint
+    paint = _cic.paint
+    readout_old = readout
+    readout = _cic.readout
+except ImportError:
+    pass

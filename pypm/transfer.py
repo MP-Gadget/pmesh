@@ -1,6 +1,10 @@
 import numpy
 from mpi4py import MPI
-
+try:
+    from numba import jit
+except ImportError:
+    jit = None
+    pass
 class TransferFunction:
     """ these a a function of Window Transfer functions used by PM.
         they take the fourier-space field complex and the dimensionless circular frequency 
@@ -76,6 +80,7 @@ class TransferFunction:
             The PM split is cut = sqrt(0.5) * smoothing
         """
         sm2 = smoothing ** 2
+
         def GaussianS(complex, w):
             w2 = 0
             for wi in w:

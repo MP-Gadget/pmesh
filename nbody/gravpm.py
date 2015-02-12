@@ -140,28 +140,25 @@ if __name__ == '__main__':
     a0 = 1 / 10.
     #P, BoxSize, a0 = ReadIC('debug-64/IC')
     D1 = CPARAM.Dplus(a0) / CPARAM.Dplus(1.0)
+    D2 = D1 ** 2
 
-    P = GridIC(PowerSpectrum, BoxSize, Ngrid, D1, dtype='f4', shift=0.0)
+    P = GridIC(PowerSpectrum, BoxSize, Ngrid, dtype='f4', shift=0.0)
 
     P['Mass'] = CPARAM.OmegaM * 3 * H0 * H0 / ( 8 * numpy.pi * G) \
             * BoxSize ** 3 / Ngrid ** 3.
 
     P['ICPosition'] = P['Position'].copy()
-    P['Position'] += P['ZA']
-    P['Position'] += P['2LPT']
+    P['Position'] += D1 * P['ZA']
+    P['Position'] += D2 * P['2LPT']
     P['Position'] %= BoxSize
 
     F1 = CPARAM.FOmega(a0)
     F2 = CPARAM.FOmega2(a0)
-    P['Velocity'] = a0 ** 2 * H0 * CPARAM.Ea(a0) * (P['ZA'] * F1 - P['2LPT'] * (2 * F2))
-
-    # now evolve to Z=0
-    P['ZA'] /= D1
-    P['2LPT'] /= D1 ** 2
-
+    P['Velocity'] = a0 ** 2 * H0 * CPARAM.Ea(a0) * \
+            (P['ZA'] * (F1 * D1) + P['2LPT'] * (2 * F2 * D2))
 
     pm = ParticleMesh(BoxSize, Nmesh, verbose=True)
-    SaveSnapshot(pm.comm, 'gridic-256', P)
+    #SaveSnapshot(pm.comm, 'gridic-256', P)
     MPI.COMM_WORLD.barrier()
     if pm.comm.rank == 0:
         print 'a0', a0, \
@@ -200,10 +197,12 @@ if __name__ == '__main__':
 
         tmp = P['ICPosition'] + D1 * P['ZA']
         tmp %= pm.BoxSize
+        P['ZAPosition'] = tmp
         wout1, psout1 = MeasurePower(pm, tmp)
 
         tmp = P['ICPosition'] + D1 * P['ZA'] + D2 * P['2LPT']
         tmp %= pm.BoxSize
+        P['2LPTPosition'] = tmp
         diff = tmp - P['Position']
         diffbar = pm.comm.allreduce(numpy.einsum('ij->j', diff, dtype='f8'), MPI.SUM)
         diffbar /= Ntot
@@ -227,7 +226,7 @@ if __name__ == '__main__':
             print 'Step', \
             'a',  numpy.exp(loga1), \
             'vel std', velstd, \
-            'mean diff bet. 2LPT and QPM', diffbar
+            'mean diff bet. 2LPT and QPM', diffbar, \
             'rms diff bet. 2LPT and QPM', rms
 
 

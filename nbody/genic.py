@@ -5,9 +5,9 @@ from pypm.particlemesh import ParticleMesh
 import numpy
 from pypm.transfer import TransferFunction
 
-def GridIC(PowerSpectrum, BoxSize, Ngrid, D1, order=3, preshift=False,
+def GridIC(PowerSpectrum, BoxSize, Ngrid, order=3, preshift=False,
         shift=0.5, ZAonly=False, dtype='f8'):
-    """ 2LPT IC from PowerSpectrum scaled by D1**2, for particle grid of Ngrid
+    """ 2LPT IC from PowerSpectrum for particle grid of Ngrid
     
         CPARAM is a Cosmology object. We also need CPARAM.PowerSpectrum object.
 
@@ -28,10 +28,14 @@ def GridIC(PowerSpectrum, BoxSize, Ngrid, D1, order=3, preshift=False,
         The PowerSpectrum we use is Pk/(2pi)**3. This is the convention used in
         Gadget.
 
-        The sign of terms.  We agree with the paper -- pull out the - sign in D2
+        The sign of terms.  We agree with the paper but shall pull out the - sign in D2
         in Formula D2; 
         The final result agrees with Martin's code(ic_2lpt_big). 
         The final result differ with 2LPTic by -1.
+
+        Factor 3/7 is multiplied to 2LPT field, abs(D2) and abs(D1) shall be
+        applied the ZA and 2LPT before shifting the particles and adding the
+        velocity.
 
         Position of initial points. If set to the center of cells the small
         scale power is smoothed. 
@@ -41,6 +45,7 @@ def GridIC(PowerSpectrum, BoxSize, Ngrid, D1, order=3, preshift=False,
     """
     # convert to the internal vel units of Gadget a**2 xdot
 
+    D1 = 1.0
     D2 = D1 ** 2 
 
     pm = ParticleMesh(BoxSize, Ngrid, verbose=False)

@@ -63,12 +63,12 @@ def driver(pos, mesh, weights, mode, period, transform,
 def paint_some(pos, mesh, meshflat, weights, period):
     Ndim = pos.shape[1]
     Np = pos.shape[0]
-    Nmax = 2 ** Ndim
+    Nmax = int(2 ** Ndim)
     ignore = False
     period = int(period)
     outbound = 0
     for i in range(Np):
-        w = weights[i]
+        w = float(weights[i])
         for n in range(Nmax):
             ignore = False
             kernel = 1.0
@@ -83,7 +83,10 @@ def paint_some(pos, mesh, meshflat, weights, period):
                 else:
                     kernel *= (1.0 - diff)
                 if period > 0:
-                    targetpos %= period
+                    while targetpos >= period:
+                        targetpos -= period
+                    while targetpos < 0:
+                        targetpos += period
                 if targetpos < 0 or \
                         targetpos >= mesh.shape[d]:
                     ignore = True
@@ -123,7 +126,10 @@ def readout_some(pos, mesh, meshflat, myvalue, period):
                 else:
                     kernel *= (1.0 - diff)
                 if period > 0:
-                    targetpos %= period
+                    while targetpos >= period:
+                        targetpos -= period
+                    while targetpos < 0:
+                        targetpos += period
                 if targetpos < 0 or \
                         targetpos >= mesh.shape[d]:
                     ignore = True

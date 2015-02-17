@@ -84,16 +84,16 @@ def GridIC(PowerSpectrum, BoxSize, Ngrid, order=3, preshift=False,
     RNG = numpy.random.RandomState(seed)
 
     pm.real[:] = RNG.normal(scale=1.0, size=pm.real.shape)
-    realstd = pm.comm.allreduce((pm.real ** 2).sum(), MPI.SUM)
-    if pm.comm.rank == 0:
-        print 'realstd', (realstd / pm.Nmesh ** 3) ** 0.5
+#    realstd = pm.comm.allreduce((pm.real ** 2).sum(), MPI.SUM)
+#    if pm.comm.rank == 0:
+#        print 'realstd', (realstd / pm.Nmesh ** 3) ** 0.5
 
     pm.real *= Ngrid ** -1.5
 
     pm.r2c()
-    realstd = pm.comm.allreduce((pm.complex.real ** 2).sum(), MPI.SUM)
-    if pm.comm.rank == 0:
-        print 'complex std', (realstd / (1. + pm.Nmesh//2 +1) / pm.Nmesh ** 2) ** 0.5
+#    realstd = pm.comm.allreduce((pm.complex.real ** 2).sum(), MPI.SUM)
+#    if pm.comm.rank == 0:
+#        print 'complex std', (realstd / (1. + pm.Nmesh//2 +1) / pm.Nmesh ** 2) ** 0.5
 
     def Transfer(complex, w):
         w2 = 0
@@ -189,16 +189,15 @@ def GridIC(PowerSpectrum, BoxSize, Ngrid, order=3, preshift=False,
     ZA2 /= Ngrid ** 3
     LPT2 /= Ngrid ** 3
 
-    if pm.comm.rank == 0:
-        print 'BoxSize', BoxSize, 'Ngrid', Ngrid
-        print 'ZA std', ZA2 ** 0.5 / BoxSize * Ngrid
-        print '2LPT std', LPT2 ** 0.5 / BoxSize * Ngrid
-        print 'ZA max', ZAM / BoxSize * Ngrid
-        print '2LPT max', LPTM / BoxSize * Ngrid
-        print pm.T
-
-
+    stats = dict(
+            BoxSize=BoxSize,
+            Ngrid=Ngrid,
+            stdZA=ZA2 ** 0.5 / BoxSize * Ngrid,
+            std2LPT= LPT2 ** 0.5 / BoxSize * Ngrid,
+            maxZA= ZAM ** 0.5 / BoxSize * Ngrid,
+            max2LPT= LPTM ** 0.5 / BoxSize * Ngrid,
+            T=str(pm.T))
     if not preshift:
         P['Position'] += shift * BoxSize / Ngrid
-    return P
+    return P, stats
 

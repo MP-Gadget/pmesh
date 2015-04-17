@@ -23,7 +23,9 @@
     <script type="text/javascript" src="_static/jquery.js"></script>
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
-    <link rel="top" title="PyPM 0.1 documentation" href="index.html" /> 
+    <link rel="top" title="PyPM 0.1 documentation" href="index.html" />
+    <link rel="up" title="pypm package" href="pypm.html" />
+    <link rel="prev" title="pypm.tools module" href="pypm.tools.html" /> 
   </head>
   <body role="document">
     <div class="related" role="navigation" aria-label="related navigation">
@@ -35,7 +37,12 @@
         <li class="right" >
           <a href="py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li class="nav-item nav-item-0"><a href="index.html">PyPM 0.1 documentation</a> &raquo;</li> 
+        <li class="right" >
+          <a href="pypm.tools.html" title="pypm.tools module"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">PyPM 0.1 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="modules.html" >pypm</a> &raquo;</li>
+          <li class="nav-item nav-item-2"><a href="pypm.html" accesskey="U">pypm package</a> &raquo;</li> 
       </ul>
     </div>  
 
@@ -108,13 +115,15 @@ divides by the mean</p>
 <dd><p>Solve Poisson equation in k-space: complex /= -w2</p>
 <p>Notes about gravity:</p>
 <p>gravity is</p>
-<p>pot_k = -4pi G delta_k * k <a href="#id5"><span class="problematic" id="id6">**</span></a>-2</p>
-<p>where k = w * Nmesh / BoxSize
-hence
-pot_k = -4pi G delta_k * w <a href="#id7"><span class="problematic" id="id8">**</span></a>-2  * (Nmesh / BoxSize) ** -2</p>
-<blockquote>
-<div>= -4pi G delta_k * w <a href="#id9"><span class="problematic" id="id10">**</span></a>-2 * Nmesh ** -2 * BoxSize ** -2</div></blockquote>
-<p>where this function performs only the -w <a href="#id11"><span class="problematic" id="id12">**</span></a>-2 part.</p>
+<div class="math">
+<p><img src="_images/math/1f750bd15068a0e9d3382182b311444b70a9d3a8.png" alt="\phi_k = -4 \pi G \delta_k k^{-2}"/></p>
+</div><p>where <img class="math" src="_images/math/dccbe6294a8d2fad84334ed4341d70f96504c36c.png" alt="k = \omega  N_m / L"/>.</p>
+<p>hence</p>
+<div class="math">
+<p><img src="_images/math/71a2336d9c487e26d17cab47ce7e5af436803aba.png" alt="\phi_k = -4 \pi G \delta_k
+        \omega^{-2}  
+        (N_m / L)^{-2}"/></p>
+</div><p>where this function performs only the <img class="math" src="_images/math/36ed78faf3f2df61f3de6865e21cb3a6ff4dc484.png" alt="- \omega **-2"/> part.</p>
 </dd></dl>
 
 <dl class="staticmethod">
@@ -154,6 +163,9 @@ complex * i * w * Nmesh / BoxSize</p>
       </div>
       <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
         <div class="sphinxsidebarwrapper">
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="pypm.tools.html"
+                        title="previous chapter">pypm.tools module</a></p>
   <div role="note" aria-label="source link">
     <h3>This Page</h3>
     <ul class="this-page-menu">
@@ -187,7 +199,12 @@ complex * i * w * Nmesh / BoxSize</p>
         <li class="right" >
           <a href="py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li class="nav-item nav-item-0"><a href="index.html">PyPM 0.1 documentation</a> &raquo;</li> 
+        <li class="right" >
+          <a href="pypm.tools.html" title="pypm.tools module"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">PyPM 0.1 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="modules.html" >pypm</a> &raquo;</li>
+          <li class="nav-item nav-item-2"><a href="pypm.html" >pypm package</a> &raquo;</li> 
       </ul>
     </div>
     <div class="footer" role="contentinfo">

@@ -211,14 +211,21 @@
 
 <span class="sd">            gravity is </span>
 <span class="sd">            </span>
-<span class="sd">            pot_k = -4pi G delta_k * k **-2</span>
+<span class="sd">            .. math ::</span>
 
-<span class="sd">            where k = w * Nmesh / BoxSize</span>
+<span class="sd">                \phi_k = -4 \pi G \delta_k k^{-2}</span>
+
+<span class="sd">            where :math:`k = \omega  N_m / L`.</span>
+
 <span class="sd">            hence</span>
-<span class="sd">            pot_k = -4pi G delta_k * w **-2  * (Nmesh / BoxSize) ** -2 </span>
-<span class="sd">                  = -4pi G delta_k * w **-2 * Nmesh ** -2 * BoxSize ** -2</span>
 
-<span class="sd">            where this function performs only the -w **-2 part.</span>
+<span class="sd">            .. math ::</span>
+
+<span class="sd">                \phi_k = -4 \pi G \delta_k</span>
+<span class="sd">                        \omega^{-2}  </span>
+<span class="sd">                        (N_m / L)^{-2}</span>
+
+<span class="sd">            where this function performs only the :math:`- \omega **-2` part.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">w2</span> <span class="o">=</span> <span class="mf">0.0</span>
         <span class="k">for</span> <span class="n">wi</span> <span class="ow">in</span> <span class="n">w</span><span class="p">:</span>

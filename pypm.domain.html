@@ -1,0 +1,161 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pypm.domain module &mdash; PyPM 0.1 documentation</title>
+    
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="PyPM 0.1 documentation" href="index.html" />
+   
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9">
+
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">PyPM 0.1 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="module-pypm.domain">
+<span id="pypm-domain-module"></span><h1>pypm.domain module<a class="headerlink" href="#module-pypm.domain" title="Permalink to this headline">¶</a></h1>
+<p>Domain Decomposition in Gaepsi</p>
+<blockquote>
+<div>currently we have a GridND decomposition algorithm.</div></blockquote>
+<dl class="class">
+<dt id="pypm.domain.GridND">
+<em class="property">class </em><code class="descclassname">pypm.domain.</code><code class="descname">GridND</code><span class="sig-paren">(</span><em>grid</em>, <em>comm=&lt;mpi4py.MPI.Intracomm object&gt;</em>, <em>periodic=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pypm/domain.html#GridND"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pypm.domain.GridND" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">object</span></code></p>
+<p>ND domain decomposition on a uniform grid</p>
+<dl class="method">
+<dt id="pypm.domain.GridND.decompose">
+<code class="descname">decompose</code><span class="sig-paren">(</span><em>pos</em>, <em>smoothing=0</em>, <em>transform=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pypm/domain.html#GridND.decompose"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pypm.domain.GridND.decompose" title="Permalink to this definition">¶</a></dt>
+<dd><p>decompose the domain according to pos,</p>
+<dl class="docutils">
+<dt>smoothing is the size of a particle:</dt>
+<dd>any particle that intersects the domain will
+be transported to the domain.</dd>
+</dl>
+<p>transform is the transformation on pos
+transform(pos[:, 3]) -&gt; newpos[:, 3]
+returns a Layout object that can be used
+to exchange data</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="pypm.domain.Layout">
+<em class="property">class </em><code class="descclassname">pypm.domain.</code><code class="descname">Layout</code><span class="sig-paren">(</span><em>comm</em>, <em>oldlength</em>, <em>sendcounts</em>, <em>indices</em>, <em>recvcounts=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pypm/domain.html#Layout"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pypm.domain.Layout" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">object</span></code></p>
+<p>A global all to all communication layout</p>
+<dl class="method">
+<dt id="pypm.domain.Layout.exchange">
+<code class="descname">exchange</code><span class="sig-paren">(</span><em>data</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pypm/domain.html#Layout.exchange"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pypm.domain.Layout.exchange" title="Permalink to this definition">¶</a></dt>
+<dd><p>exchange the data globally according to the layout;</p>
+<p>data shall be of the same length of the input position
+that builds the layout</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pypm.domain.Layout.gather">
+<code class="descname">gather</code><span class="sig-paren">(</span><em>data</em>, <em>mode='sum'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pypm/domain.html#Layout.gather"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pypm.domain.Layout.gather" title="Permalink to this definition">¶</a></dt>
+<dd><p>pull the data from other ranks back to its original hosting rank
+values of mirror items are added. 
+mode can be &#8216;sum&#8217; or &#8216;any&#8217;, or &#8216;mean&#8217;.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="pypm.domain.Rotator">
+<em class="property">class </em><code class="descclassname">pypm.domain.</code><code class="descname">Rotator</code><span class="sig-paren">(</span><em>comm</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pypm/domain.html#Rotator"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pypm.domain.Rotator" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">object</span></code></p>
+</dd></dl>
+
+<dl class="function">
+<dt id="pypm.domain.bincountv">
+<code class="descclassname">pypm.domain.</code><code class="descname">bincountv</code><span class="sig-paren">(</span><em>x</em>, <em>weights</em>, <em>minlength=None</em>, <em>dtype=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pypm/domain.html#bincountv"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pypm.domain.bincountv" title="Permalink to this definition">¶</a></dt>
+<dd><p>bincount with vector weights</p>
+</dd></dl>
+
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/pypm.domain.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2015, Yu Feng.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.3.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.3</a>
+      
+      |
+      <a href="_sources/pypm.domain.txt"
+          rel="nofollow">Page source</a></li>
+    </div>
+
+    
+
+    
+  </body>
+</html>

@@ -1,0 +1,19 @@
+pypm package
+============
+
+.. automodule:: pypm
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+Submodules
+----------
+
+.. toctree::
+
+   pypm.cic
+   pypm.domain
+   pypm.particlemesh
+   pypm.tools
+   pypm.transfer
+

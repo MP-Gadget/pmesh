@@ -1,0 +1,7 @@
+pypm.tools module
+=================
+
+.. automodule:: pypm.tools
+    :members:
+    :undoc-members:
+    :show-inheritance:

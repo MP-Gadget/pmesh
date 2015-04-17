@@ -1,0 +1,7 @@
+pypm.cic module
+===============
+
+.. automodule:: pypm.cic
+    :members:
+    :undoc-members:
+    :show-inheritance:

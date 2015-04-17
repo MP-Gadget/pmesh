@@ -1,0 +1,355 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pypm.particlemesh module &mdash; PyPM 0.1 documentation</title>
+    
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="PyPM 0.1 documentation" href="index.html" />
+   
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9">
+
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">PyPM 0.1 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="module-pypm.particlemesh">
+<span id="pypm-particlemesh-module"></span><h1>pypm.particlemesh module<a class="headerlink" href="#module-pypm.particlemesh" title="Permalink to this headline">¶</a></h1>
+<p>PyPM: A Particle Mesh code in Python</p>
+<dl class="class">
+<dt id="pypm.particlemesh.ParticleMesh">
+<em class="property">class </em><code class="descclassname">pypm.particlemesh.</code><code class="descname">ParticleMesh</code><span class="sig-paren">(</span><em>BoxSize</em>, <em>Nmesh</em>, <em>comm=None</em>, <em>np=None</em>, <em>verbose=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pypm/particlemesh.html#ParticleMesh"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pypm.particlemesh.ParticleMesh" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">object</span></code></p>
+<p>ParticleMesh provides an interface to solver for forces
+with particle mesh method</p>
+<p>ParticleMesh object is a state machine. 
+The typical routine is</p>
+<ol class="arabic simple">
+<li>Paint particles via <a class="reference internal" href="#pypm.particlemesh.ParticleMesh.paint" title="pypm.particlemesh.ParticleMesh.paint"><code class="xref py py-meth docutils literal"><span class="pre">paint()</span></code></a></li>
+<li>Real to Complex transform via <a class="reference internal" href="#pypm.particlemesh.ParticleMesh.r2c" title="pypm.particlemesh.ParticleMesh.r2c"><code class="xref py py-meth docutils literal"><span class="pre">r2c()</span></code></a></li>
+<li>Complex to Real transform via <a class="reference internal" href="#pypm.particlemesh.ParticleMesh.c2r" title="pypm.particlemesh.ParticleMesh.c2r"><code class="xref py py-meth docutils literal"><span class="pre">c2r()</span></code></a>, applying transfer functions</li>
+<li>Read out force values     via <a class="reference internal" href="#pypm.particlemesh.ParticleMesh.readout" title="pypm.particlemesh.ParticleMesh.readout"><code class="xref py py-meth docutils literal"><span class="pre">readout()</span></code></a></li>
+<li>go back to 3, for other force components</li>
+</ol>
+<p>Memory usage is twice the size of the FFT mesh. However, 
+Be aware the transfer functions may take more memory.</p>
+<p class="rubric">Attributes</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="54%" />
+<col width="46%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td>comm</td>
+<td>(:py:class:MPI.Comm)</td>
+</tr>
+<tr class="row-even"><td>the MPI communicator</td>
+<td>&nbsp;</td>
+</tr>
+<tr class="row-odd"><td>Nmesh</td>
+<td>(int)</td>
+</tr>
+<tr class="row-even"><td>number of mesh points per side</td>
+<td>&nbsp;</td>
+</tr>
+<tr class="row-odd"><td>BoxSize</td>
+<td>(float)</td>
+</tr>
+<tr class="row-even"><td>size of box</td>
+<td>&nbsp;</td>
+</tr>
+<tr class="row-odd"><td>domain</td>
+<td>(domain.NDGrid)</td>
+</tr>
+<tr class="row-even"><td>domain decomposition (private)</td>
+<td>&nbsp;</td>
+</tr>
+<tr class="row-odd"><td>partition</td>
+<td>(:py:class:pfft.Partition)</td>
+</tr>
+<tr class="row-even"><td>domain partition (private)</td>
+<td>&nbsp;</td>
+</tr>
+<tr class="row-odd"><td>real</td>
+<td>(array_like)</td>
+</tr>
+<tr class="row-even"><td>the real FFT array (private)</td>
+<td>&nbsp;</td>
+</tr>
+<tr class="row-odd"><td>complex</td>
+<td>(array_like)</td>
+</tr>
+<tr class="row-even"><td>the complex FFT array (private)</td>
+<td>&nbsp;</td>
+</tr>
+<tr class="row-odd"><td>T</td>
+<td>(:py:class:Timers)</td>
+</tr>
+<tr class="row-even"><td>profiling timers</td>
+<td>&nbsp;</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="pypm.particlemesh.ParticleMesh.c2r">
+<code class="descname">c2r</code><span class="sig-paren">(</span><em>transfer_functions</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pypm/particlemesh.html#ParticleMesh.c2r"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pypm.particlemesh.ParticleMesh.c2r" title="Permalink to this definition">¶</a></dt>
+<dd><p>Complex to real transformation.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>transfer_functions: list of :py:class:transfer.TransferFunction</strong></p>
+<p class="last"><strong>A chain of transfer functions to apply to the complex field.</strong></p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="pypm.particlemesh.ParticleMesh.decompose">
+<code class="descname">decompose</code><span class="sig-paren">(</span><em>pos</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pypm/particlemesh.html#ParticleMesh.decompose"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pypm.particlemesh.ParticleMesh.decompose" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a domain decompose layout for particles at given
+coordinates.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>pos</strong> : array_like (, Ndim)</p>
+<p><strong>position of particles in simulation  unit</strong></p>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>layout</strong> : :py:class:domain.Layout</p>
+<p>layout that can be used to migrate particles and images</p>
+<p class="last">to the correct MPI ranks that hosts the PM local mesh</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="pypm.particlemesh.ParticleMesh.paint">
+<code class="descname">paint</code><span class="sig-paren">(</span><em>pos</em>, <em>mass=1.0</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pypm/particlemesh.html#ParticleMesh.paint"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pypm.particlemesh.ParticleMesh.paint" title="Permalink to this definition">¶</a></dt>
+<dd><p>Paint particles into the internal real canvas.</p>
+<p>Transform the particle field given by pos and mass
+to the overdensity field in fourier space and save
+it in the internal storage.
+A multi-linear CIC approximation scheme is used.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>pos</strong> : array_like (, Ndim)</p>
+<p><strong>position of particles in simulation  unit</strong></p>
+<p><strong>mass</strong> : scalar or array_like (,)</p>
+<p class="last"><strong>mass of particles in simulation  unit</strong></p>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Notes</p>
+<p>self.real is NOT the density field after this operation.
+It has the dimension of density, but is divided by 
+Nmesh <a href="#id1"><span class="problematic" id="id2">**</span></a>3; PFFT will adjust for this Nmesh**3 after r2c .</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pypm.particlemesh.ParticleMesh.pop">
+<code class="descname">pop</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/pypm/particlemesh.html#ParticleMesh.pop"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pypm.particlemesh.ParticleMesh.pop" title="Permalink to this definition">¶</a></dt>
+<dd><p>Restore the complex field</p>
+<p>The complex field was saved to an internal stack by <a class="reference internal" href="#pypm.particlemesh.ParticleMesh.push" title="pypm.particlemesh.ParticleMesh.push"><code class="xref py py-meth docutils literal"><span class="pre">push()</span></code></a>.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pypm.particlemesh.ParticleMesh.push">
+<code class="descname">push</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/pypm/particlemesh.html#ParticleMesh.push"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pypm.particlemesh.ParticleMesh.push" title="Permalink to this definition">¶</a></dt>
+<dd><p>Save the complex field</p>
+<p>The complex field is saved to an internal stack. Recover the
+complex field with <a class="reference internal" href="#pypm.particlemesh.ParticleMesh.pop" title="pypm.particlemesh.ParticleMesh.pop"><code class="xref py py-meth docutils literal"><span class="pre">pop()</span></code></a>.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pypm.particlemesh.ParticleMesh.r2c">
+<code class="descname">r2c</code><span class="sig-paren">(</span><em>pos=None</em>, <em>mass=1.0</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pypm/particlemesh.html#ParticleMesh.r2c"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pypm.particlemesh.ParticleMesh.r2c" title="Permalink to this definition">¶</a></dt>
+<dd><p>Perform real to complex FFT on the internal canvas.</p>
+<p>If pos and mass are given, <a class="reference internal" href="#pypm.particlemesh.ParticleMesh.paint" title="pypm.particlemesh.ParticleMesh.paint"><code class="xref py py-meth docutils literal"><span class="pre">paint()</span></code></a> is called to
+paint the particles before running the fourier transform</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>pos</strong> : array_like (, Ndim)</p>
+<p><strong>position of particles in simulation  unit</strong></p>
+<p><strong>mass</strong> : scalar or array_like (,)</p>
+<p class="last"><strong>mass of particles in simulation  unit</strong></p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="pypm.particlemesh.ParticleMesh.readout">
+<code class="descname">readout</code><span class="sig-paren">(</span><em>pos</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pypm/particlemesh.html#ParticleMesh.readout"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pypm.particlemesh.ParticleMesh.readout" title="Permalink to this definition">¶</a></dt>
+<dd><p>Read out from real field at positions</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>pos</strong> : array_like (, Ndim)</p>
+<p><strong>position of particles in simulation  unit</strong></p>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>rt</strong> : array_like (,)</p>
+<p class="last">read out values from the real field.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="pypm.particlemesh.ParticleMesh.transfer">
+<code class="descname">transfer</code><span class="sig-paren">(</span><em>transfer_functions</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pypm/particlemesh.html#ParticleMesh.transfer"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pypm.particlemesh.ParticleMesh.transfer" title="Permalink to this definition">¶</a></dt>
+<dd><p>Apply transfer functions</p>
+<p>Apply a chain of transfer functions to the complex field, in place.
+If the original field shall be preserved, use <a class="reference internal" href="#pypm.particlemesh.ParticleMesh.push" title="pypm.particlemesh.ParticleMesh.push"><code class="xref py py-meth docutils literal"><span class="pre">push()</span></code></a>.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>transfer_functions: list of :py:class:transfer.TransferFunction</strong></p>
+<p class="last"><strong>A chain of transfer functions to apply to the complex field.</strong></p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="pypm.particlemesh.ParticleMesh.transform">
+<code class="descname">transform</code><span class="sig-paren">(</span><em>x</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pypm/particlemesh.html#ParticleMesh.transform"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pypm.particlemesh.ParticleMesh.transform" title="Permalink to this definition">¶</a></dt>
+<dd><p>Transform from simulation unit to local grid unit.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>x</strong> : array_like (, Ndim)</p>
+<p><strong>coordinates in simulation unit</strong></p>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>ret</strong> : array_like (, Ndim)</p>
+<p class="last">coordinates in local grid unit</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="pypm.particlemesh.ParticleMesh.transform0">
+<code class="descname">transform0</code><span class="sig-paren">(</span><em>x</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pypm/particlemesh.html#ParticleMesh.transform0"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pypm.particlemesh.ParticleMesh.transform0" title="Permalink to this definition">¶</a></dt>
+<dd><p>Transform from simulation unit to global grid unit.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>x</strong> : array_like (, Ndim)</p>
+<p><strong>coordinates in simulation unit</strong></p>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>ret</strong> : array_like (, Ndim)</p>
+<p class="last">coordinates in global grid unit</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/pypm.particlemesh.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2015, Yu Feng.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.3.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.3</a>
+      
+      |
+      <a href="_sources/pypm.particlemesh.txt"
+          rel="nofollow">Page source</a></li>
+    </div>
+
+    
+
+    
+  </body>
+</html>

@@ -1,0 +1,402 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pypm.particlemesh &mdash; PyPM 0.1 documentation</title>
+    
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="top" title="PyPM 0.1 documentation" href="../../index.html" />
+    <link rel="up" title="Module code" href="../index.html" />
+   
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9">
+
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">PyPM 0.1 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for pypm.particlemesh</h1><div class="highlight"><pre>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">PyPM: A Particle Mesh code in Python</span>
+
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">pfft</span>
+<span class="kn">import</span> <span class="nn">domain</span>
+<span class="kn">import</span> <span class="nn">cic</span>
+<span class="kn">import</span> <span class="nn">numpy</span>
+<span class="kn">import</span> <span class="nn">time</span>
+<span class="kn">from</span> <span class="nn">mpi4py</span> <span class="kn">import</span> <span class="n">MPI</span>
+<span class="kn">from</span> <span class="nn">tools</span> <span class="kn">import</span> <span class="n">Timers</span>
+
+<div class="viewcode-block" id="ParticleMesh"><a class="viewcode-back" href="../../pypm.particlemesh.html#pypm.particlemesh.ParticleMesh">[docs]</a><span class="k">class</span> <span class="nc">ParticleMesh</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    ParticleMesh provides an interface to solver for forces</span>
+<span class="sd">    with particle mesh method</span>
+
+<span class="sd">    ParticleMesh object is a state machine. </span>
+<span class="sd">    The typical routine is</span>
+
+<span class="sd">    1. Paint particles via :py:meth:`paint`</span>
+<span class="sd">    2. Real to Complex transform via :py:meth:`r2c`</span>
+<span class="sd">    3. Complex to Real transform via :py:meth:`c2r`, applying transfer functions</span>
+<span class="sd">    4. Read out force values     via :py:meth:`readout`</span>
+<span class="sd">    5. go back to 3, for other force components</span>
+
+<span class="sd">    Memory usage is twice the size of the FFT mesh. However, </span>
+<span class="sd">    Be aware the transfer functions may take more memory.</span>
+
+<span class="sd">    Attributes</span>
+<span class="sd">    ----------</span>
+<span class="sd">    comm    : :py:class:MPI.Comm</span>
+<span class="sd">    the MPI communicator</span>
+
+<span class="sd">    Nmesh   : int</span>
+<span class="sd">    number of mesh points per side</span>
+
+<span class="sd">    BoxSize : float</span>
+<span class="sd">    size of box</span>
+<span class="sd">    </span>
+<span class="sd">    domain   : domain.NDGrid</span>
+<span class="sd">    domain decomposition (private)</span>
+
+<span class="sd">    partition : :py:class:pfft.Partition</span>
+<span class="sd">    domain partition (private)</span>
+
+<span class="sd">    real   : array_like</span>
+<span class="sd">    the real FFT array (private)</span>
+
+<span class="sd">    complex : array_like</span>
+<span class="sd">    the complex FFT array (private)</span>
+
+<span class="sd">    T    : :py:class:Timers</span>
+<span class="sd">    profiling timers</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">BoxSize</span><span class="p">,</span> <span class="n">Nmesh</span><span class="p">,</span> <span class="n">comm</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">np</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; create a PM object.  &quot;&quot;&quot;</span>
+        <span class="c"># this weird sequence to intialize comm is because</span>
+        <span class="c"># we want to be compatible with None comm == MPI.COMM_WORLD</span>
+        <span class="c"># while not relying on pfft&#39;s full mpi4py compatibility</span>
+        <span class="c"># (passing None through to pfft)</span>
+        <span class="k">if</span> <span class="n">comm</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">comm</span> <span class="o">=</span> <span class="n">MPI</span><span class="o">.</span><span class="n">COMM_WORLD</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">comm</span> <span class="o">=</span> <span class="n">comm</span>
+        <span class="k">if</span> <span class="n">np</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="n">np</span> <span class="o">=</span> <span class="n">pfft</span><span class="o">.</span><span class="n">split_size_2d</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">comm</span><span class="o">.</span><span class="n">size</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">procmesh</span> <span class="o">=</span> <span class="n">pfft</span><span class="o">.</span><span class="n">ProcMesh</span><span class="p">(</span><span class="n">np</span><span class="p">,</span> <span class="n">comm</span><span class="o">=</span><span class="n">comm</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Nmesh</span> <span class="o">=</span> <span class="n">Nmesh</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">BoxSize</span> <span class="o">=</span> <span class="n">BoxSize</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">partition</span> <span class="o">=</span> <span class="n">pfft</span><span class="o">.</span><span class="n">Partition</span><span class="p">(</span><span class="n">pfft</span><span class="o">.</span><span class="n">Type</span><span class="o">.</span><span class="n">PFFT_R2C</span><span class="p">,</span> 
+            <span class="p">[</span><span class="n">Nmesh</span><span class="p">,</span> <span class="n">Nmesh</span><span class="p">,</span> <span class="n">Nmesh</span><span class="p">],</span> 
+            <span class="bp">self</span><span class="o">.</span><span class="n">procmesh</span><span class="p">,</span>
+            <span class="n">pfft</span><span class="o">.</span><span class="n">Flags</span><span class="o">.</span><span class="n">PFFT_TRANSPOSED_OUT</span> <span class="o">|</span> <span class="n">pfft</span><span class="o">.</span><span class="n">Flags</span><span class="o">.</span><span class="n">PFFT_DESTROY_INPUT</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">real</span> <span class="o">=</span> <span class="n">pfft</span><span class="o">.</span><span class="n">LocalBuffer</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">partition</span><span class="p">)</span><span class="o">.</span><span class="n">view_input</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">complex</span> <span class="o">=</span> <span class="n">pfft</span><span class="o">.</span><span class="n">LocalBuffer</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">partition</span><span class="p">)</span><span class="o">.</span><span class="n">view_output</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">T</span> <span class="o">=</span> <span class="n">Timers</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">comm</span><span class="p">)</span>
+        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">T</span><span class="p">[</span><span class="s">&#39;Plan&#39;</span><span class="p">]:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">forward</span> <span class="o">=</span> <span class="n">pfft</span><span class="o">.</span><span class="n">Plan</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">partition</span><span class="p">,</span> <span class="n">pfft</span><span class="o">.</span><span class="n">Direction</span><span class="o">.</span><span class="n">PFFT_FORWARD</span><span class="p">,</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">real</span><span class="o">.</span><span class="n">base</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">complex</span><span class="o">.</span><span class="n">base</span><span class="p">,</span> <span class="n">pfft</span><span class="o">.</span><span class="n">Type</span><span class="o">.</span><span class="n">PFFT_R2C</span><span class="p">,</span>
+                    <span class="n">pfft</span><span class="o">.</span><span class="n">Flags</span><span class="o">.</span><span class="n">PFFT_ESTIMATE</span> <span class="o">|</span> <span class="n">pfft</span><span class="o">.</span><span class="n">Flags</span><span class="o">.</span><span class="n">PFFT_TRANSPOSED_OUT</span> <span class="o">|</span> <span class="n">pfft</span><span class="o">.</span><span class="n">Flags</span><span class="o">.</span><span class="n">PFFT_DESTROY_INPUT</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">backward</span> <span class="o">=</span> <span class="n">pfft</span><span class="o">.</span><span class="n">Plan</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">partition</span><span class="p">,</span> <span class="n">pfft</span><span class="o">.</span><span class="n">Direction</span><span class="o">.</span><span class="n">PFFT_BACKWARD</span><span class="p">,</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">complex</span><span class="o">.</span><span class="n">base</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">real</span><span class="o">.</span><span class="n">base</span><span class="p">,</span> <span class="n">pfft</span><span class="o">.</span><span class="n">Type</span><span class="o">.</span><span class="n">PFFT_C2R</span><span class="p">,</span> 
+                    <span class="n">pfft</span><span class="o">.</span><span class="n">Flags</span><span class="o">.</span><span class="n">PFFT_ESTIMATE</span> <span class="o">|</span> <span class="n">pfft</span><span class="o">.</span><span class="n">Flags</span><span class="o">.</span><span class="n">PFFT_TRANSPOSED_IN</span> <span class="o">|</span> <span class="n">pfft</span><span class="o">.</span><span class="n">Flags</span><span class="o">.</span><span class="n">PFFT_DESTROY_INPUT</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">domain</span> <span class="o">=</span> <span class="n">domain</span><span class="o">.</span><span class="n">GridND</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">partition</span><span class="o">.</span><span class="n">i_edges</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span> <span class="o">=</span> <span class="n">verbose</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">stack</span> <span class="o">=</span> <span class="p">[]</span>
+
+<div class="viewcode-block" id="ParticleMesh.transform"><a class="viewcode-back" href="../../pypm.particlemesh.html#pypm.particlemesh.ParticleMesh.transform">[docs]</a>    <span class="k">def</span> <span class="nf">transform</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; </span>
+<span class="sd">        Transform from simulation unit to local grid unit.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        x     : array_like (, Ndim)</span>
+<span class="sd">        coordinates in simulation unit</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        ret   : array_like (, Ndim)</span>
+<span class="sd">        coordinates in local grid unit</span>
+<span class="sd"> </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">ret</span> <span class="o">=</span> <span class="p">(</span><span class="mf">1.0</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">Nmesh</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">BoxSize</span><span class="p">)</span> <span class="o">*</span> <span class="n">x</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">partition</span><span class="o">.</span><span class="n">local_i_start</span>
+        <span class="c">#print self.partition.local_i_start, (ret.max(axis=0), ret.min(axis=0))</span>
+        <span class="k">return</span> <span class="n">ret</span>
+</div>
+<div class="viewcode-block" id="ParticleMesh.transform0"><a class="viewcode-back" href="../../pypm.particlemesh.html#pypm.particlemesh.ParticleMesh.transform0">[docs]</a>    <span class="k">def</span> <span class="nf">transform0</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; </span>
+<span class="sd">        Transform from simulation unit to global grid unit.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        x     : array_like (, Ndim)</span>
+<span class="sd">        coordinates in simulation unit</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        ret   : array_like (, Ndim)</span>
+<span class="sd">        coordinates in global grid unit</span>
+<span class="sd"> </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">ret</span> <span class="o">=</span> <span class="p">(</span><span class="mf">1.0</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">Nmesh</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">BoxSize</span><span class="p">)</span> <span class="o">*</span> <span class="n">x</span>
+        <span class="c">#print self.partition.local_i_start, (ret.max(axis=0), ret.min(axis=0))</span>
+        <span class="k">return</span> <span class="n">ret</span>
+</div>
+<div class="viewcode-block" id="ParticleMesh.decompose"><a class="viewcode-back" href="../../pypm.particlemesh.html#pypm.particlemesh.ParticleMesh.decompose">[docs]</a>    <span class="k">def</span> <span class="nf">decompose</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pos</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; </span>
+<span class="sd">        Create a domain decompose layout for particles at given</span>
+<span class="sd">        coordinates.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        pos    : array_like (, Ndim)</span>
+<span class="sd">        position of particles in simulation  unit</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        layout  : :py:class:domain.Layout</span>
+<span class="sd">        layout that can be used to migrate particles and images</span>
+<span class="sd">        to the correct MPI ranks that hosts the PM local mesh</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">T</span><span class="p">[</span><span class="s">&#39;Decompose&#39;</span><span class="p">]:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">domain</span><span class="o">.</span><span class="n">decompose</span><span class="p">(</span><span class="n">pos</span><span class="p">,</span> <span class="n">smoothing</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
+                    <span class="n">transform</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">transform0</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="ParticleMesh.paint"><a class="viewcode-back" href="../../pypm.particlemesh.html#pypm.particlemesh.ParticleMesh.paint">[docs]</a>    <span class="k">def</span> <span class="nf">paint</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pos</span><span class="p">,</span> <span class="n">mass</span><span class="o">=</span><span class="mf">1.0</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; </span>
+<span class="sd">        Paint particles into the internal real canvas.</span>
+
+<span class="sd">        Transform the particle field given by pos and mass</span>
+<span class="sd">        to the overdensity field in fourier space and save</span>
+<span class="sd">        it in the internal storage.</span>
+<span class="sd">        A multi-linear CIC approximation scheme is used.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        pos    : array_like (, Ndim)</span>
+<span class="sd">        position of particles in simulation  unit</span>
+
+<span class="sd">        mass   : scalar or array_like (,)</span>
+<span class="sd">        mass of particles in simulation  unit</span>
+
+
+<span class="sd">        Notes</span>
+<span class="sd">        -----</span>
+<span class="sd">        self.real is NOT the density field after this operation.</span>
+<span class="sd">        It has the dimension of density, but is divided by </span>
+<span class="sd">        Nmesh **3; PFFT will adjust for this Nmesh**3 after r2c .</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">T</span><span class="p">[</span><span class="s">&#39;Paint&#39;</span><span class="p">]:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">real</span><span class="p">[:]</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="n">cic</span><span class="o">.</span><span class="n">paint</span><span class="p">(</span><span class="n">pos</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">real</span><span class="p">,</span> <span class="n">weights</span><span class="o">=</span><span class="n">mass</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s">&#39;ignore&#39;</span><span class="p">,</span>
+                    <span class="n">period</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">Nmesh</span><span class="p">,</span> <span class="n">transform</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">transform</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">real</span> <span class="o">*=</span> <span class="p">(</span><span class="mf">1.0</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">BoxSize</span><span class="p">)</span> <span class="o">**</span> <span class="mi">3</span>
+</div>
+<div class="viewcode-block" id="ParticleMesh.r2c"><a class="viewcode-back" href="../../pypm.particlemesh.html#pypm.particlemesh.ParticleMesh.r2c">[docs]</a>    <span class="k">def</span> <span class="nf">r2c</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pos</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">mass</span><span class="o">=</span><span class="mf">1.0</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; </span>
+<span class="sd">        Perform real to complex FFT on the internal canvas.</span>
+
+<span class="sd">        If pos and mass are given, :py:meth:`paint` is called to</span>
+<span class="sd">        paint the particles before running the fourier transform</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        pos    : array_like (, Ndim)</span>
+<span class="sd">        position of particles in simulation  unit</span>
+
+<span class="sd">        mass   : scalar or array_like (,)</span>
+<span class="sd">        mass of particles in simulation  unit</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">pos</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">paint</span><span class="p">(</span><span class="n">pos</span><span class="p">,</span> <span class="n">mass</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span><span class="p">:</span>
+            <span class="n">realsum</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">comm</span><span class="o">.</span><span class="n">allreduce</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">real</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="s">&#39;f8&#39;</span><span class="p">),</span> <span class="n">MPI</span><span class="o">.</span><span class="n">SUM</span><span class="p">)</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">comm</span><span class="o">.</span><span class="n">rank</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="k">print</span> <span class="s">&#39;before r2c, sum of real&#39;</span><span class="p">,</span> <span class="n">realsum</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">comm</span><span class="o">.</span><span class="n">barrier</span><span class="p">()</span>
+
+        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">T</span><span class="p">[</span><span class="s">&#39;R2C&#39;</span><span class="p">]:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">forward</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">real</span><span class="o">.</span><span class="n">base</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">complex</span><span class="o">.</span><span class="n">base</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">procmesh</span><span class="o">.</span><span class="n">rank</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="c"># remove the mean !</span>
+            <span class="c"># self.complex.flat[0] = 0</span>
+            <span class="k">pass</span>
+</div>
+<div class="viewcode-block" id="ParticleMesh.push"><a class="viewcode-back" href="../../pypm.particlemesh.html#pypm.particlemesh.ParticleMesh.push">[docs]</a>    <span class="k">def</span> <span class="nf">push</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; </span>
+<span class="sd">        Save the complex field </span>
+<span class="sd">        </span>
+<span class="sd">        The complex field is saved to an internal stack. Recover the</span>
+<span class="sd">        complex field with :py:meth:`pop`.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">stack</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">complex</span><span class="o">.</span><span class="n">copy</span><span class="p">())</span>
+</div>
+<div class="viewcode-block" id="ParticleMesh.pop"><a class="viewcode-back" href="../../pypm.particlemesh.html#pypm.particlemesh.ParticleMesh.pop">[docs]</a>    <span class="k">def</span> <span class="nf">pop</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; </span>
+<span class="sd">        Restore the complex field </span>
+<span class="sd">        </span>
+<span class="sd">        The complex field was saved to an internal stack by :py:meth:`push`. </span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">complex</span><span class="p">[:]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">stack</span><span class="o">.</span><span class="n">pop</span><span class="p">()</span>
+</div>
+<div class="viewcode-block" id="ParticleMesh.transfer"><a class="viewcode-back" href="../../pypm.particlemesh.html#pypm.particlemesh.ParticleMesh.transfer">[docs]</a>    <span class="k">def</span> <span class="nf">transfer</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">transfer_functions</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; </span>
+<span class="sd">        Apply transfer functions</span>
+
+<span class="sd">        Apply a chain of transfer functions to the complex field, in place.</span>
+<span class="sd">        If the original field shall be preserved, use :py:meth:`push`.</span>
+<span class="sd">    </span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        transfer_functions: list of :py:class:transfer.TransferFunction </span>
+<span class="sd">        A chain of transfer functions to apply to the complex field. </span>
+<span class="sd">        </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">w</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">partition</span><span class="o">.</span><span class="n">Ndim</span><span class="p">):</span>
+            <span class="n">s</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">partition</span><span class="o">.</span><span class="n">Ndim</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="s">&#39;intp&#39;</span><span class="p">)</span>
+            <span class="n">s</span><span class="p">[</span><span class="n">d</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">partition</span><span class="o">.</span><span class="n">local_no</span><span class="p">[</span><span class="n">d</span><span class="p">]</span>
+            <span class="n">wi</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">s</span><span class="p">[</span><span class="n">d</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="s">&#39;f8&#39;</span><span class="p">)</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">partition</span><span class="o">.</span><span class="n">local_o_start</span><span class="p">[</span><span class="n">d</span><span class="p">]</span> 
+            <span class="n">wi</span><span class="p">[</span><span class="n">wi</span> <span class="o">&gt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">Nmesh</span> <span class="o">//</span> <span class="mi">2</span><span class="p">]</span> <span class="o">-=</span> <span class="bp">self</span><span class="o">.</span><span class="n">Nmesh</span>
+            <span class="n">wi</span> <span class="o">*=</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">numpy</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">Nmesh</span><span class="p">)</span>
+            <span class="n">w</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">wi</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">s</span><span class="p">))</span>
+
+        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">T</span><span class="p">[</span><span class="s">&#39;Transfer&#39;</span><span class="p">]:</span>
+            <span class="k">for</span> <span class="n">transfer</span> <span class="ow">in</span> <span class="n">transfer_functions</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">transfer</span><span class="o">.</span><span class="n">func_code</span><span class="o">.</span><span class="n">co_argcount</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+                    <span class="n">transfer</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">complex</span><span class="p">,</span> <span class="n">w</span><span class="p">)</span>
+                <span class="k">elif</span> <span class="n">transfer</span><span class="o">.</span><span class="n">func_code</span><span class="o">.</span><span class="n">co_argcount</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
+                    <span class="n">transfer</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">comm</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">complex</span><span class="p">,</span> <span class="n">w</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
+                    <span class="s">&quot;Wrong definition of the transfer function: </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">transfer</span><span class="o">.</span><span class="n">__name__</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="ParticleMesh.readout"><a class="viewcode-back" href="../../pypm.particlemesh.html#pypm.particlemesh.ParticleMesh.readout">[docs]</a>    <span class="k">def</span> <span class="nf">readout</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pos</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; </span>
+<span class="sd">        Read out from real field at positions</span>
+<span class="sd">            </span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        pos    : array_like (, Ndim)</span>
+<span class="sd">        position of particles in simulation  unit</span>
+<span class="sd">        </span>
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        rt     : array_like (,)</span>
+<span class="sd">        read out values from the real field.</span>
+<span class="sd"> </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">T</span><span class="p">[</span><span class="s">&#39;Readout&#39;</span><span class="p">]:</span>
+            <span class="k">if</span> <span class="n">pos</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="n">rt</span> <span class="o">=</span> <span class="n">cic</span><span class="o">.</span><span class="n">readout</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">real</span><span class="p">,</span> <span class="n">pos</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s">&#39;ignore&#39;</span><span class="p">,</span> <span class="n">period</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">Nmesh</span><span class="p">,</span>
+                        <span class="n">transform</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">transform</span><span class="p">)</span>
+                <span class="k">return</span> <span class="n">rt</span>
+        </div>
+<div class="viewcode-block" id="ParticleMesh.c2r"><a class="viewcode-back" href="../../pypm.particlemesh.html#pypm.particlemesh.ParticleMesh.c2r">[docs]</a>    <span class="k">def</span> <span class="nf">c2r</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">transfer_functions</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; </span>
+<span class="sd">        Complex to real transformation.</span>
+<span class="sd">        </span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        transfer_functions: list of :py:class:transfer.TransferFunction </span>
+<span class="sd">        A chain of transfer functions to apply to the complex field. </span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">push</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">transfer</span><span class="p">(</span><span class="o">*</span><span class="n">transfer_functions</span><span class="p">)</span>
+
+        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">T</span><span class="p">[</span><span class="s">&#39;C2R&#39;</span><span class="p">]:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">backward</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">complex</span><span class="o">.</span><span class="n">base</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">real</span><span class="o">.</span><span class="n">base</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span><span class="p">:</span>
+            <span class="n">realsum</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">comm</span><span class="o">.</span><span class="n">allreduce</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">real</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="s">&#39;f8&#39;</span><span class="p">),</span> <span class="n">MPI</span><span class="o">.</span><span class="n">SUM</span><span class="p">)</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">comm</span><span class="o">.</span><span class="n">rank</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="k">print</span> <span class="s">&#39;after c2r, sum of real&#39;</span><span class="p">,</span> <span class="n">realsum</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">comm</span><span class="o">.</span><span class="n">barrier</span><span class="p">()</span>
+
+        <span class="c"># restore the complex field, for next c2r transform</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pop</span><span class="p">()</span>
+</pre></div></div></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2015, Yu Feng.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.3.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.3</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

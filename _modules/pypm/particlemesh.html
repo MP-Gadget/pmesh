@@ -147,12 +147,12 @@
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
 <span class="sd">        x     : array_like (, Ndim)</span>
-<span class="sd">        coordinates in simulation unit</span>
+<span class="sd">            coordinates in simulation unit</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
 <span class="sd">        ret   : array_like (, Ndim)</span>
-<span class="sd">        coordinates in local grid unit</span>
+<span class="sd">            coordinates in local grid unit</span>
 <span class="sd"> </span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">ret</span> <span class="o">=</span> <span class="p">(</span><span class="mf">1.0</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">Nmesh</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">BoxSize</span><span class="p">)</span> <span class="o">*</span> <span class="n">x</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">partition</span><span class="o">.</span><span class="n">local_i_start</span>
@@ -166,12 +166,12 @@
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
 <span class="sd">        x     : array_like (, Ndim)</span>
-<span class="sd">        coordinates in simulation unit</span>
+<span class="sd">            coordinates in simulation unit</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
 <span class="sd">        ret   : array_like (, Ndim)</span>
-<span class="sd">        coordinates in global grid unit</span>
+<span class="sd">            coordinates in global grid unit</span>
 <span class="sd"> </span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">ret</span> <span class="o">=</span> <span class="p">(</span><span class="mf">1.0</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">Nmesh</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">BoxSize</span><span class="p">)</span> <span class="o">*</span> <span class="n">x</span>
@@ -186,12 +186,12 @@
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
 <span class="sd">        pos    : array_like (, Ndim)</span>
-<span class="sd">        position of particles in simulation  unit</span>
+<span class="sd">            position of particles in simulation  unit</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
 <span class="sd">        layout  : :py:class:domain.Layout</span>
-<span class="sd">        layout that can be used to migrate particles and images</span>
+<span class="sd">            layout that can be used to migrate particles and images</span>
 <span class="sd">        to the correct MPI ranks that hosts the PM local mesh</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">T</span><span class="p">[</span><span class="s">&#39;Decompose&#39;</span><span class="p">]:</span>
@@ -210,10 +210,10 @@
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
 <span class="sd">        pos    : array_like (, Ndim)</span>
-<span class="sd">        position of particles in simulation  unit</span>
+<span class="sd">            position of particles in simulation  unit</span>
 
 <span class="sd">        mass   : scalar or array_like (,)</span>
-<span class="sd">        mass of particles in simulation  unit</span>
+<span class="sd">            mass of particles in simulation  unit</span>
 
 
 <span class="sd">        Notes</span>
@@ -239,10 +239,10 @@
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
 <span class="sd">        pos    : array_like (, Ndim)</span>
-<span class="sd">        position of particles in simulation  unit</span>
+<span class="sd">            position of particles in simulation  unit</span>
 
 <span class="sd">        mass   : scalar or array_like (,)</span>
-<span class="sd">        mass of particles in simulation  unit</span>
+<span class="sd">            mass of particles in simulation  unit</span>
 
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="n">pos</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
@@ -291,7 +291,7 @@
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
 <span class="sd">        transfer_functions: list of :py:class:transfer.TransferFunction </span>
-<span class="sd">        A chain of transfer functions to apply to the complex field. </span>
+<span class="sd">            A chain of transfer functions to apply to the complex field. </span>
 <span class="sd">        </span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">w</span> <span class="o">=</span> <span class="p">[]</span>
@@ -320,12 +320,12 @@
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
 <span class="sd">        pos    : array_like (, Ndim)</span>
-<span class="sd">        position of particles in simulation  unit</span>
+<span class="sd">            position of particles in simulation  unit</span>
 <span class="sd">        </span>
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
 <span class="sd">        rt     : array_like (,)</span>
-<span class="sd">        read out values from the real field.</span>
+<span class="sd">            read out values from the real field.</span>
 <span class="sd"> </span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">T</span><span class="p">[</span><span class="s">&#39;Readout&#39;</span><span class="p">]:</span>
@@ -341,7 +341,7 @@
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
 <span class="sd">        transfer_functions: list of :py:class:transfer.TransferFunction </span>
-<span class="sd">        A chain of transfer functions to apply to the complex field. </span>
+<span class="sd">            A chain of transfer functions to apply to the complex field. </span>
 
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">push</span><span class="p">()</span>

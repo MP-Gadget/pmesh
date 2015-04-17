@@ -162,14 +162,21 @@ class TransferFunction:
 
             gravity is 
             
-            pot_k = -4pi G delta_k * k **-2
+            .. math ::
 
-            where k = w * Nmesh / BoxSize
+                \phi_k = -4 \pi G \delta_k k^{-2}
+
+            where :math:`k = \omega  N_m / L`.
+
             hence
-            pot_k = -4pi G delta_k * w **-2  * (Nmesh / BoxSize) ** -2 
-                  = -4pi G delta_k * w **-2 * Nmesh ** -2 * BoxSize ** -2
 
-            where this function performs only the -w **-2 part.
+            .. math ::
+
+                \phi_k = -4 \pi G \delta_k
+                        \omega^{-2}  
+                        (N_m / L)^{-2}
+
+            where this function performs only the :math:`- \omega **-2` part.
         """
         w2 = 0.0
         for wi in w:

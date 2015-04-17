@@ -29,29 +29,29 @@ class ParticleMesh(object):
 
     Attributes
     ----------
-    comm    : :py:class:MPI.Comm
-    the MPI communicator
+    comm    : :py:class:`MPI.Comm`
+        the MPI communicator
 
     Nmesh   : int
-    number of mesh points per side
+        number of mesh points per side
 
     BoxSize : float
-    size of box
+        size of box
     
-    domain   : domain.NDGrid
-    domain decomposition (private)
+    domain   : :py:class:`pypm.domain.GridND`
+        domain decomposition (private)
 
-    partition : :py:class:pfft.Partition
-    domain partition (private)
+    partition : :py:class:`pfft.Partition`
+        domain partition (private)
 
     real   : array_like
-    the real FFT array (private)
+        the real FFT array (private)
 
     complex : array_like
-    the complex FFT array (private)
+        the complex FFT array (private)
 
-    T    : :py:class:Timers
-    profiling timers
+    T    : :py:class:`pypm.tools.Timers`
+        profiling timers
 
     """
     def __init__(self, BoxSize, Nmesh, comm=None, np=None, verbose=False):
@@ -98,12 +98,12 @@ class ParticleMesh(object):
         Parameters
         ----------
         x     : array_like (, Ndim)
-        coordinates in simulation unit
+            coordinates in simulation unit
 
         Returns
         -------
         ret   : array_like (, Ndim)
-        coordinates in local grid unit
+            coordinates in local grid unit
  
         """
         ret = (1.0 * self.Nmesh / self.BoxSize) * x - self.partition.local_i_start
@@ -117,12 +117,12 @@ class ParticleMesh(object):
         Parameters
         ----------
         x     : array_like (, Ndim)
-        coordinates in simulation unit
+            coordinates in simulation unit
 
         Returns
         -------
         ret   : array_like (, Ndim)
-        coordinates in global grid unit
+            coordinates in global grid unit
  
         """
         ret = (1.0 * self.Nmesh / self.BoxSize) * x
@@ -137,12 +137,12 @@ class ParticleMesh(object):
         Parameters
         ----------
         pos    : array_like (, Ndim)
-        position of particles in simulation  unit
+            position of particles in simulation  unit
 
         Returns
         -------
         layout  : :py:class:domain.Layout
-        layout that can be used to migrate particles and images
+            layout that can be used to migrate particles and images
         to the correct MPI ranks that hosts the PM local mesh
         """
         with self.T['Decompose']:
@@ -161,10 +161,10 @@ class ParticleMesh(object):
         Parameters
         ----------
         pos    : array_like (, Ndim)
-        position of particles in simulation  unit
+            position of particles in simulation  unit
 
         mass   : scalar or array_like (,)
-        mass of particles in simulation  unit
+            mass of particles in simulation  unit
 
 
         Notes
@@ -190,10 +190,10 @@ class ParticleMesh(object):
         Parameters
         ----------
         pos    : array_like (, Ndim)
-        position of particles in simulation  unit
+            position of particles in simulation  unit
 
         mass   : scalar or array_like (,)
-        mass of particles in simulation  unit
+            mass of particles in simulation  unit
 
         """
         if pos is not None:
@@ -241,8 +241,8 @@ class ParticleMesh(object):
     
         Parameters
         ----------
-        transfer_functions: list of :py:class:transfer.TransferFunction 
-        A chain of transfer functions to apply to the complex field. 
+        transfer_functions : list of :py:class:transfer.TransferFunction 
+            A chain of transfer functions to apply to the complex field. 
         
         """
         w = []
@@ -271,12 +271,12 @@ class ParticleMesh(object):
         Parameters
         ----------
         pos    : array_like (, Ndim)
-        position of particles in simulation  unit
+            position of particles in simulation  unit
         
         Returns
         -------
         rt     : array_like (,)
-        read out values from the real field.
+            read out values from the real field.
  
         """
         with self.T['Readout']:
@@ -291,8 +291,8 @@ class ParticleMesh(object):
         
         Parameters
         ----------
-        transfer_functions: list of :py:class:transfer.TransferFunction 
-        A chain of transfer functions to apply to the complex field. 
+        transfer_functions  : list of :py:class:`transfer.TransferFunction`
+            A chain of transfer functions to apply to the complex field. 
 
         """
         self.push()

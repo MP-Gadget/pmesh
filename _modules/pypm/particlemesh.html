@@ -78,29 +78,29 @@
 
 <span class="sd">    Attributes</span>
 <span class="sd">    ----------</span>
-<span class="sd">    comm    : :py:class:MPI.Comm</span>
-<span class="sd">    the MPI communicator</span>
+<span class="sd">    comm    : :py:class:`MPI.Comm`</span>
+<span class="sd">        the MPI communicator</span>
 
 <span class="sd">    Nmesh   : int</span>
-<span class="sd">    number of mesh points per side</span>
+<span class="sd">        number of mesh points per side</span>
 
 <span class="sd">    BoxSize : float</span>
-<span class="sd">    size of box</span>
+<span class="sd">        size of box</span>
 <span class="sd">    </span>
-<span class="sd">    domain   : domain.NDGrid</span>
-<span class="sd">    domain decomposition (private)</span>
+<span class="sd">    domain   : :py:class:`domain.NDGrid`</span>
+<span class="sd">        domain decomposition (private)</span>
 
-<span class="sd">    partition : :py:class:pfft.Partition</span>
-<span class="sd">    domain partition (private)</span>
+<span class="sd">    partition : :py:class:`pfft.Partition`</span>
+<span class="sd">        domain partition (private)</span>
 
 <span class="sd">    real   : array_like</span>
-<span class="sd">    the real FFT array (private)</span>
+<span class="sd">        the real FFT array (private)</span>
 
 <span class="sd">    complex : array_like</span>
-<span class="sd">    the complex FFT array (private)</span>
+<span class="sd">        the complex FFT array (private)</span>
 
-<span class="sd">    T    : :py:class:Timers</span>
-<span class="sd">    profiling timers</span>
+<span class="sd">    T    : :py:class:`Timers`</span>
+<span class="sd">        profiling timers</span>
 
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">BoxSize</span><span class="p">,</span> <span class="n">Nmesh</span><span class="p">,</span> <span class="n">comm</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">np</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>

@@ -67,57 +67,33 @@ Be aware the transfer functions may take more memory.</p>
 <p class="rubric">Attributes</p>
 <table border="1" class="docutils">
 <colgroup>
-<col width="54%" />
-<col width="46%" />
+<col width="13%" />
+<col width="87%" />
 </colgroup>
 <tbody valign="top">
 <tr class="row-odd"><td>comm</td>
-<td>(:py:class:MPI.Comm)</td>
+<td>(<code class="xref py py-class docutils literal"><span class="pre">MPI.Comm</span></code>) the MPI communicator</td>
 </tr>
-<tr class="row-even"><td>the MPI communicator</td>
-<td>&nbsp;</td>
-</tr>
-<tr class="row-odd"><td>Nmesh</td>
-<td>(int)</td>
-</tr>
-<tr class="row-even"><td>number of mesh points per side</td>
-<td>&nbsp;</td>
+<tr class="row-even"><td>Nmesh</td>
+<td>(int) number of mesh points per side</td>
 </tr>
 <tr class="row-odd"><td>BoxSize</td>
-<td>(float)</td>
+<td>(float) size of box</td>
 </tr>
-<tr class="row-even"><td>size of box</td>
-<td>&nbsp;</td>
-</tr>
-<tr class="row-odd"><td>domain</td>
-<td>(domain.NDGrid)</td>
-</tr>
-<tr class="row-even"><td>domain decomposition (private)</td>
-<td>&nbsp;</td>
+<tr class="row-even"><td>domain</td>
+<td>(<code class="xref py py-class docutils literal"><span class="pre">domain.NDGrid</span></code>) domain decomposition (private)</td>
 </tr>
 <tr class="row-odd"><td>partition</td>
-<td>(:py:class:pfft.Partition)</td>
+<td>(<code class="xref py py-class docutils literal"><span class="pre">pfft.Partition</span></code>) domain partition (private)</td>
 </tr>
-<tr class="row-even"><td>domain partition (private)</td>
-<td>&nbsp;</td>
-</tr>
-<tr class="row-odd"><td>real</td>
-<td>(array_like)</td>
-</tr>
-<tr class="row-even"><td>the real FFT array (private)</td>
-<td>&nbsp;</td>
+<tr class="row-even"><td>real</td>
+<td>(array_like) the real FFT array (private)</td>
 </tr>
 <tr class="row-odd"><td>complex</td>
-<td>(array_like)</td>
+<td>(array_like) the complex FFT array (private)</td>
 </tr>
-<tr class="row-even"><td>the complex FFT array (private)</td>
-<td>&nbsp;</td>
-</tr>
-<tr class="row-odd"><td>T</td>
-<td>(:py:class:Timers)</td>
-</tr>
-<tr class="row-even"><td>profiling timers</td>
-<td>&nbsp;</td>
+<tr class="row-even"><td>T</td>
+<td>(<code class="xref py py-class docutils literal"><span class="pre">Timers</span></code>) profiling timers</td>
 </tr>
 </tbody>
 </table>

@@ -88,23 +88,23 @@ class QPM(object):
         pm.r2c(tpos, P['Mass'])
 
         # calculate potential in k-space
-        pm.transfer(
+        pm.transfer( [
                 TransferFunction.RemoveDC,
                 TransferFunction.Trilinear,
                 TransferFunction.Gaussian(1.25 * smoothing), 
                 TransferFunction.Poisson, 
                 TransferFunction.Constant(4 * numpy.pi * QPM.G),
                 TransferFunction.Constant(pm.Nmesh ** -2 * pm.BoxSize ** 2),
-        )
+                ])
 
         for d in range(3):
-            tmp = pm.c2r(
-                tpos, 
+            pm.c2r( [
                 TransferFunction.SuperLanzcos(d), 
                 # watch out negative for gravity *pulls*!
                 TransferFunction.Constant(- pm.Nmesh ** 1 * pm.BoxSize ** -1),
                 TransferFunction.Trilinear,
-                )
+                ])
+            tmp = pm.readout(tpos)
             tmp = layout.gather(tmp, mode='sum')
             P['Accel'][:, d] = tmp
 

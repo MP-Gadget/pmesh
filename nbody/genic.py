@@ -109,12 +109,12 @@ def GridIC(PowerSpectrum, BoxSize, Ngrid, order=3, preshift=False,
         wt[w2 >= numpy.pi / (BoxSize) * Ngrid] =0 
         complex[:] *= wt
 
-    pm.transfer(
+    pm.transfer( [
             TransferFunction.RemoveDC,
             Transfer,
             TransferFunction.Poisson,
             TransferFunction.Constant((1.0 * Ngrid / BoxSize) ** -2),
-    )
+            ])
 
     # now we have the 'potential' field in K-space
 
@@ -122,10 +122,11 @@ def GridIC(PowerSpectrum, BoxSize, Ngrid, order=3, preshift=False,
     P['ZA'] = numpy.empty_like(pos)
 
     for dir in range(3):
-        tmp = pm.c2r(tpos, 
+        pm.c2r( [
                 TransferFunction.SuperLanzcos(dir, order=order),
                 TransferFunction.Constant(-1.0 * Ngrid / BoxSize),
-                )
+                ])
+        tpm = pm.readout(tpos)
         tmp = layout.gather(tmp, mode='sum')
         P['ZA'][:, dir] = tmp
 
@@ -134,11 +135,11 @@ def GridIC(PowerSpectrum, BoxSize, Ngrid, order=3, preshift=False,
     # diag terms
     diag = []
     for i, dir in enumerate([(0, 0), (1, 1), (2, 2)]):
-        pm.c2r(None,
+        pm.c2r([
                 TransferFunction.SuperLanzcos(dir[0], order=order),
                 TransferFunction.SuperLanzcos(dir[1], order=order),
                 TransferFunction.Constant((1.0 * Ngrid / BoxSize) ** 2),
-                )
+               ])
         diag.append(pm.real.copy())
 
     field = diag[0] * diag[1]
@@ -148,11 +149,11 @@ def GridIC(PowerSpectrum, BoxSize, Ngrid, order=3, preshift=False,
 
     # off terms
     for i, dir in enumerate([(0, 1), (0, 2), (1, 2)]):
-        pm.c2r(None,
+        pm.c2r([
                 TransferFunction.SuperLanzcos(dir[0], order=order),
                 TransferFunction.SuperLanzcos(dir[1], order=order),
                 TransferFunction.Constant((1.0 * Ngrid / BoxSize) ** 2),
-                )
+               ])
         field -= pm.real ** 2
         
     field *= Ngrid ** -3.0
@@ -163,16 +164,17 @@ def GridIC(PowerSpectrum, BoxSize, Ngrid, order=3, preshift=False,
 
     P['2LPT'] = numpy.empty_like(pos)
 
-    tmp = pm.c2r(tpos)
+    tmp = pm.readout(tpos)
     P['digrad'] = layout.gather(tmp, mode='sum')
 
     for dir in range(3):
-        tmp = pm.c2r(tpos, 
+        pm.c2r([
                 TransferFunction.Poisson,
                 TransferFunction.SuperLanzcos(dir, order=0),
                 TransferFunction.Constant((1.0 * Ngrid / BoxSize) ** -2),
                 TransferFunction.Constant(-1.0 * Ngrid / BoxSize),
-                )
+                ])
+        tmp = pm.readout(tpos)
         tmp = layout.gather(tmp, mode='sum')
         P['2LPT'][:, dir] = tmp
 

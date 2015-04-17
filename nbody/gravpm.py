@@ -75,13 +75,14 @@ def MeasurePower(pm, pos):
 
     wout = numpy.empty(pm.Nmesh//2)
     psout = numpy.empty(pm.Nmesh//2)
-    pm.c2r(
-        tpos, 
+    pm.transfer(
+        [
         TransferFunction.NormalizeDC,
         TransferFunction.RemoveDC,
         TransferFunction.Trilinear,
 #        TransferFunction.Gaussian(1.25 * 2.0 ** 0.5), 
         TransferFunction.PowerSpectrum(wout, psout),
+        ]
         )
     return wout, psout
 

@@ -1,6 +1,5 @@
 """
-    PyPM:
-        A Particle Mesh code in Python
+PyPM: A Particle Mesh code in Python
 
 """
 import pfft
@@ -12,6 +11,49 @@ from mpi4py import MPI
 from tools import Timers
 
 class ParticleMesh(object):
+    """
+    ParticleMesh provides an interface to solver for forces
+    with particle mesh method
+
+    ParticleMesh object is a state machine. 
+    The typical routine is
+
+    1. Paint particles via :py:meth:`paint`
+    2. Real to Complex transform via :py:meth:`r2c`
+    3. Complex to Real transform via :py:meth:`c2r`, applying transfer functions
+    4. Read out force values     via :py:meth:`readout`
+    5. go back to 3, for other force components
+
+    Memory usage is twice the size of the FFT mesh. However, 
+    Be aware the transfer functions may take more memory.
+
+    Attributes
+    ----------
+    comm    : :py:class:MPI.Comm
+    the MPI communicator
+
+    Nmesh   : int
+    number of mesh points per side
+
+    BoxSize : float
+    size of box
+    
+    domain   : domain.NDGrid
+    domain decomposition (private)
+
+    partition : :py:class:pfft.Partition
+    domain partition (private)
+
+    real   : array_like
+    the real FFT array (private)
+
+    complex : array_like
+    the complex FFT array (private)
+
+    T    : :py:class:Timers
+    profiling timers
+
+    """
     def __init__(self, BoxSize, Nmesh, comm=None, np=None, verbose=False):
         """ create a PM object.  """
         # this weird sequence to intialize comm is because
@@ -50,23 +92,58 @@ class ParticleMesh(object):
         self.stack = []
 
     def transform(self, x):
+        """ 
+        Transform from simulation unit to local grid unit.
+
+        Parameters
+        ----------
+        x     : array_like (, Ndim)
+        coordinates in simulation unit
+
+        Returns
+        -------
+        ret   : array_like (, Ndim)
+        coordinates in local grid unit
+ 
+        """
         ret = (1.0 * self.Nmesh / self.BoxSize) * x - self.partition.local_i_start
         #print self.partition.local_i_start, (ret.max(axis=0), ret.min(axis=0))
         return ret
+
     def transform0(self, x):
+        """ 
+        Transform from simulation unit to global grid unit.
+
+        Parameters
+        ----------
+        x     : array_like (, Ndim)
+        coordinates in simulation unit
+
+        Returns
+        -------
+        ret   : array_like (, Ndim)
+        coordinates in global grid unit
+ 
+        """
         ret = (1.0 * self.Nmesh / self.BoxSize) * x
         #print self.partition.local_i_start, (ret.max(axis=0), ret.min(axis=0))
         return ret
 
     def decompose(self, pos):
-        """ create a domain decompose layout for particles at given mesh
-            coordinates.
+        """ 
+        Create a domain decompose layout for particles at given
+        coordinates.
 
-            position is in BoxSize coordinates (global)
+        Parameters
+        ----------
+        pos    : array_like (, Ndim)
+        position of particles in simulation  unit
 
-            This layout can be used to migrate particles and images
-            to the correct MPI ranks that hosts the PM local mesh
-
+        Returns
+        -------
+        layout  : :py:class:domain.Layout
+        layout that can be used to migrate particles and images
+        to the correct MPI ranks that hosts the PM local mesh
         """
         with self.T['Decompose']:
             return self.domain.decompose(pos, smoothing=1.0,
@@ -74,15 +151,28 @@ class ParticleMesh(object):
 
     def paint(self, pos, mass=1.0):
         """ 
-            position is in BoxSize coordinates (global position)
-            transform the particle field given by pos and mass
-            to the overdensity field in fourier space and save
-            it in the internal storage.
+        Paint particles into the internal real canvas.
 
-            self.real is NOT the density field after this operation
-            it has the dimension of density, but is divided by 
-            Nmesh **3; PFFT will adjust for this Nmesh**3 after
-            r2c .
+        Transform the particle field given by pos and mass
+        to the overdensity field in fourier space and save
+        it in the internal storage.
+        A multi-linear CIC approximation scheme is used.
+
+        Parameters
+        ----------
+        pos    : array_like (, Ndim)
+        position of particles in simulation  unit
+
+        mass   : scalar or array_like (,)
+        mass of particles in simulation  unit
+
+
+        Notes
+        -----
+        self.real is NOT the density field after this operation.
+        It has the dimension of density, but is divided by 
+        Nmesh **3; PFFT will adjust for this Nmesh**3 after r2c .
+
         """
         with self.T['Paint']:
             self.real[:] = 0
@@ -92,14 +182,19 @@ class ParticleMesh(object):
 
     def r2c(self, pos=None, mass=1.0):
         """ 
-            position is in BoxSize coordinates (global position)
+        Perform real to complex FFT on the internal canvas.
 
-            transform the particle field given by pos and mass
-            to the overdensity field in fourier space and save
-            it in the internal storage.
+        If pos and mass are given, :py:meth:`paint` is called to
+        paint the particles before running the fourier transform
 
-            if pos is None, do not paint the paritlces, directly
-            use self.real.
+        Parameters
+        ----------
+        pos    : array_like (, Ndim)
+        position of particles in simulation  unit
+
+        mass   : scalar or array_like (,)
+        mass of particles in simulation  unit
+
         """
         if pos is not None:
             self.paint(pos, mass)
@@ -119,17 +214,36 @@ class ParticleMesh(object):
             pass
 
     def push(self):
-        """ back up the old complex field """
+        """ 
+        Save the complex field 
+        
+        The complex field is saved to an internal stack. Recover the
+        complex field with :py:meth:`pop`.
+
+        """
         self.stack.append(self.complex.copy())
 
     def pop(self):
-        """ restore the last backed up complex field """
+        """ 
+        Restore the complex field 
+        
+        The complex field was saved to an internal stack by :py:meth:`push`. 
+
+        """
         self.complex[:] = self.stack.pop()
 
-    def transfer(self, *transfer_functions):
-        """ apply a chain of transfer functions to the complex field
-            this will destroy the complex field. (self.complex)
-            There is no way back. save the complex field with push()
+    def transfer(self, transfer_functions):
+        """ 
+        Apply transfer functions
+
+        Apply a chain of transfer functions to the complex field, in place.
+        If the original field shall be preserved, use :py:meth:`push`.
+    
+        Parameters
+        ----------
+        transfer_functions: list of :py:class:transfer.TransferFunction 
+        A chain of transfer functions to apply to the complex field. 
+        
         """
         w = []
         for d in range(self.partition.Ndim):
@@ -150,26 +264,36 @@ class ParticleMesh(object):
                     raise TypeError(
                     "Wrong definition of the transfer function: %s" % transfer.__name__)
 
-    def c2r(self, pos, *transfer_functions):
+    def readout(self, pos):
         """ 
-            pos is in BoxSize units (global position)
+        Read out from real field at positions
+            
+        Parameters
+        ----------
+        pos    : array_like (, Ndim)
+        position of particles in simulation  unit
+        
+        Returns
+        -------
+        rt     : array_like (,)
+        read out values from the real field.
+ 
+        """
+        with self.T['Readout']:
+            if pos is not None:
+                rt = cic.readout(self.real, pos, mode='ignore', period=self.Nmesh,
+                        transform=self.transform)
+                return rt
+        
+    def c2r(self, transfer_functions):
+        """ 
+        Complex to real transformation.
+        
+        Parameters
+        ----------
+        transfer_functions: list of :py:class:transfer.TransferFunction 
+        A chain of transfer functions to apply to the complex field. 
 
-            if pos is None, do not readout the values;
-            the transformed field is in self.real
-
-            complex is the fourier space field after applying the transfer 
-            kernel.
-
-            transfer is a callable:
-            transfer(complex, w):  
-            apply transfer function on complex field with given k:
-
-            w is a tuple of (w0, w1, w2, ...)
-            w is in circular frequency units. The dimensionful k is w * Nmesh / BoxSize 
-            (nyquist is at about w = pi)
-            they broadcast to the correct shape of complex. This is to reduce
-            memory usage somewhat.
-            complex is modified in place.
         """
         self.push()
 
@@ -186,8 +310,3 @@ class ParticleMesh(object):
         # restore the complex field, for next c2r transform
         self.pop()
 
-        with self.T['Readout']:
-            if pos is not None:
-                rt = cic.readout(self.real, pos, mode='ignore', period=self.Nmesh,
-                        transform=self.transform)
-                return rt

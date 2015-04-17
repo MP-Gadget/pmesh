@@ -140,4 +140,6 @@ try:
     readout_old = readout
     readout = _cic.readout
 except ImportError:
+    paint_old = paint
+    readout_old = readout
     pass

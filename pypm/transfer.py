@@ -18,6 +18,13 @@ class TransferFunction:
         the output of Poisson introduces a dimension to rho_k!
         the output of SuperLanzcos introduces a dimension to rho_k!
 
+        w is a tuple of (w0, w1, w2, ...)
+        w is in circular frequency units. The dimensionful k is w * Nmesh / BoxSize 
+        (nyquist is at about w = pi)
+        they broadcast to the correct shape of complex. This is to reduce
+        memory usage somewhat.
+        complex is modified in place.
+
     """
     @staticmethod
     def NormalizeDC(comm, complex, w):

@@ -6,7 +6,7 @@ transformation.
 
 Therefore, first install pfft-python via git (easy_install is not recommented yet)
 
-.. code-block:: python
+.. code-block:: sh
 
     git clone http://github.com/rainwoodman/pfft-python
     cd pfft-python
@@ -15,7 +15,7 @@ Therefore, first install pfft-python via git (easy_install is not recommented ye
 
 Next, install pypm itself
 
-.. code-block:: python
+.. code-block:: sh
 
     git clone http://github.com/rainwoodman/pypm
     cd pypm

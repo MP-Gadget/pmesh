@@ -59,13 +59,46 @@ method.</p>
 <p>ParticleMesh object is a state machine.</p>
 <p>The typical routine for calculating force is</p>
 <ol class="arabic simple">
-<li>Paint particles via <code class="xref py py-meth docutils literal"><span class="pre">paint()</span></code></li>
+<li>Paint particles via <code class="xref py py-meth docutils literal"><span class="pre">paint()</span></code> . This step uses the Cloud-in-cell approximation implemented in
+<a class="reference internal" href="pypm.cic.html#module-pypm.cic" title="pypm.cic"><code class="xref py py-mod docutils literal"><span class="pre">pypm.cic</span></code></a></li>
 <li>Real to Complex transform via <code class="xref py py-meth docutils literal"><span class="pre">r2c()</span></code></li>
-<li>Complex to Real transform via <code class="xref py py-meth docutils literal"><span class="pre">c2r()</span></code>, applying transfer functions</li>
-<li>Read out force values     via <code class="xref py py-meth docutils literal"><span class="pre">readout()</span></code></li>
-<li>go back to 3, for other force components</li>
+<li>Complex to Real transform via <code class="xref py py-meth docutils literal"><span class="pre">c2r()</span></code>, applying transfer functions. (Refer to <a class="reference internal" href="pypm.transfer.html#pypm.transfer.TransferFunction" title="pypm.transfer.TransferFunction"><code class="xref py py-class docutils literal"><span class="pre">pypm.transfer.TransferFunction</span></code></a>)</li>
+<li>Read out force values     via <code class="xref py py-meth docutils literal"><span class="pre">readout()</span></code>. This step uses the trilinear interpolation implemented in
+<a class="reference internal" href="pypm.cic.html#module-pypm.cic" title="pypm.cic"><code class="xref py py-mod docutils literal"><span class="pre">pypm.cic</span></code></a></li>
+<li>go back to 3, for other force components (eg, x, y, z)</li>
 </ol>
 <p>We provide a set of commonly used transfer functions in <a class="reference internal" href="pypm.transfer.html#pypm.transfer.TransferFunction" title="pypm.transfer.TransferFunction"><code class="xref py py-class docutils literal"><span class="pre">pypm.transfer.TransferFunction</span></code></a>.</p>
+<p>Suppose pm is a <a class="reference internal" href="pypm.particlemesh.html#pypm.particlemesh.ParticleMesh" title="pypm.particlemesh.ParticleMesh"><code class="xref py py-class docutils literal"><span class="pre">pypm.particlemesh.ParticleMesh</span></code></a> object
+and position of particles is stored in <code class="code docutils literal"><span class="pre">P['Position']</span></code> .
+Here is an example for calculating gravity:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">smoothing</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">*</span> <span class="n">pm</span><span class="o">.</span><span class="n">Nmesh</span> <span class="o">/</span> <span class="n">pm</span><span class="o">.</span><span class="n">BoxSize</span>
+<span class="c"># lets get the correct mass distribution with particles on the edge mirrored</span>
+<span class="n">layout</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">decompose</span><span class="p">(</span><span class="n">P</span><span class="p">[</span><span class="s">&#39;Position&#39;</span><span class="p">])</span>
+<span class="n">tpos</span> <span class="o">=</span> <span class="n">layout</span><span class="o">.</span><span class="n">exchange</span><span class="p">(</span><span class="n">P</span><span class="p">[</span><span class="s">&#39;Position&#39;</span><span class="p">])</span>
+<span class="n">pm</span><span class="o">.</span><span class="n">r2c</span><span class="p">(</span><span class="n">tpos</span><span class="p">,</span> <span class="n">P</span><span class="p">[</span><span class="s">&#39;Mass&#39;</span><span class="p">])</span>
+
+<span class="c"># calculate potential in k-space</span>
+<span class="n">pm</span><span class="o">.</span><span class="n">transfer</span><span class="p">(</span> <span class="p">[</span>
+        <span class="n">TransferFunction</span><span class="o">.</span><span class="n">RemoveDC</span><span class="p">,</span>
+        <span class="n">TransferFunction</span><span class="o">.</span><span class="n">Trilinear</span><span class="p">,</span>
+        <span class="n">TransferFunction</span><span class="o">.</span><span class="n">Gaussian</span><span class="p">(</span><span class="mf">1.25</span> <span class="o">*</span> <span class="n">smoothing</span><span class="p">),</span>
+        <span class="n">TransferFunction</span><span class="o">.</span><span class="n">Poisson</span><span class="p">,</span>
+        <span class="n">TransferFunction</span><span class="o">.</span><span class="n">Constant</span><span class="p">(</span><span class="mi">4</span> <span class="o">*</span> <span class="n">numpy</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="n">QPM</span><span class="o">.</span><span class="n">G</span><span class="p">),</span>
+        <span class="n">TransferFunction</span><span class="o">.</span><span class="n">Constant</span><span class="p">(</span><span class="n">pm</span><span class="o">.</span><span class="n">Nmesh</span> <span class="o">**</span> <span class="o">-</span><span class="mi">2</span> <span class="o">*</span> <span class="n">pm</span><span class="o">.</span><span class="n">BoxSize</span> <span class="o">**</span> <span class="mi">2</span><span class="p">),</span>
+        <span class="p">])</span>
+
+<span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">3</span><span class="p">):</span>
+    <span class="n">pm</span><span class="o">.</span><span class="n">c2r</span><span class="p">(</span> <span class="p">[</span>
+        <span class="n">TransferFunction</span><span class="o">.</span><span class="n">SuperLanzcos</span><span class="p">(</span><span class="n">d</span><span class="p">),</span>
+        <span class="c"># watch out negative for gravity *pulls*!</span>
+        <span class="n">TransferFunction</span><span class="o">.</span><span class="n">Constant</span><span class="p">(</span><span class="o">-</span> <span class="n">pm</span><span class="o">.</span><span class="n">Nmesh</span> <span class="o">**</span> <span class="mi">1</span> <span class="o">*</span> <span class="n">pm</span><span class="o">.</span><span class="n">BoxSize</span> <span class="o">**</span> <span class="o">-</span><span class="mi">1</span><span class="p">),</span>
+        <span class="n">TransferFunction</span><span class="o">.</span><span class="n">Trilinear</span><span class="p">,</span>
+        <span class="p">])</span>
+    <span class="n">tmp</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">readout</span><span class="p">(</span><span class="n">tpos</span><span class="p">)</span>
+    <span class="n">tmp</span> <span class="o">=</span> <span class="n">layout</span><span class="o">.</span><span class="n">gather</span><span class="p">(</span><span class="n">tmp</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s">&#39;sum&#39;</span><span class="p">)</span>
+    <span class="n">P</span><span class="p">[</span><span class="s">&#39;Accel&#39;</span><span class="p">][:,</span> <span class="n">d</span><span class="p">]</span> <span class="o">=</span> <span class="n">tmp</span>
+</pre></div>
+</div>
 </div>
 
 

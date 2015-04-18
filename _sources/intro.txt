@@ -1,0 +1,19 @@
+
+Introduction
+============
+
+PyPM provides a :py:class:`pypm.particlemesh.ParticleMesh` object for solving forces with the particle mesh
+method.
+
+ParticleMesh object is a state machine. 
+
+The typical routine for calculating force is
+
+1. Paint particles via :py:meth:`paint`
+2. Real to Complex transform via :py:meth:`r2c`
+3. Complex to Real transform via :py:meth:`c2r`, applying transfer functions
+4. Read out force values     via :py:meth:`readout`
+5. go back to 3, for other force components
+
+We provide a set of commonly used transfer functions in :py:class:`pypm.transfer.TransferFunction`.
+

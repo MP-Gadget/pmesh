@@ -1,12 +1,12 @@
 Installation
 ============
 
-PyPM depends on `pfft-python <http://github.com/rainwoodman/pfft-python`_ for fast fourier
+PyPM depends on `pfft-python <http://github.com/rainwoodman/pfft-python>`_ for fast fourier
 transformation.
 
 Therefore, first install pfft-python via git (easy_install is not recommented yet)
 
-.. code-block ::
+.. code-block:: python
 
     git clone http://github.com/rainwoodman/pfft-python
     cd pfft-python
@@ -15,7 +15,7 @@ Therefore, first install pfft-python via git (easy_install is not recommented ye
 
 Next, install pypm itself
 
-.. code-block ::
+.. code-block:: python
 
     git clone http://github.com/rainwoodman/pypm
     cd pypm

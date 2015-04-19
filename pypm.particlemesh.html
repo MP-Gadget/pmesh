@@ -23,7 +23,10 @@
     <script type="text/javascript" src="_static/jquery.js"></script>
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
-    <link rel="top" title="PyPM 0.1 documentation" href="index.html" /> 
+    <link rel="top" title="PyPM 0.1 documentation" href="index.html" />
+    <link rel="up" title="pypm package" href="pypm.html" />
+    <link rel="next" title="pypm.tools module" href="pypm.tools.html" />
+    <link rel="prev" title="pypm.domain module" href="pypm.domain.html" /> 
   </head>
   <body role="document">
     <div class="related" role="navigation" aria-label="related navigation">
@@ -35,7 +38,15 @@
         <li class="right" >
           <a href="py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li class="nav-item nav-item-0"><a href="index.html">PyPM 0.1 documentation</a> &raquo;</li> 
+        <li class="right" >
+          <a href="pypm.tools.html" title="pypm.tools module"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="pypm.domain.html" title="pypm.domain module"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">PyPM 0.1 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="modules.html" >pypm</a> &raquo;</li>
+          <li class="nav-item nav-item-2"><a href="pypm.html" accesskey="U">pypm package</a> &raquo;</li> 
       </ul>
     </div>  
 
@@ -64,6 +75,21 @@ The typical routine is</p>
 </ol>
 <p>Memory usage is twice the size of the FFT mesh. However, 
 Be aware the transfer functions may take more memory.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>np</strong> : array_like (npx, npy)</p>
+<blockquote class="last">
+<div><p>The shape of the process mesh. This is the number of domains per direction.
+The product of the items shall equal to the size of communicator. 
+For example, for 64 rank job, np = (8, 8) is a good choice.
+Since for now only 3d simulations are supported, np must be of length-2.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
 <p class="rubric">Attributes</p>
 <table border="1" class="docutils">
 <colgroup>
@@ -312,6 +338,12 @@ If the original field shall be preserved, use <a class="reference internal" href
       </div>
       <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
         <div class="sphinxsidebarwrapper">
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="pypm.domain.html"
+                        title="previous chapter">pypm.domain module</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="pypm.tools.html"
+                        title="next chapter">pypm.tools module</a></p>
   <div role="note" aria-label="source link">
     <h3>This Page</h3>
     <ul class="this-page-menu">
@@ -345,7 +377,15 @@ If the original field shall be preserved, use <a class="reference internal" href
         <li class="right" >
           <a href="py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li class="nav-item nav-item-0"><a href="index.html">PyPM 0.1 documentation</a> &raquo;</li> 
+        <li class="right" >
+          <a href="pypm.tools.html" title="pypm.tools module"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="pypm.domain.html" title="pypm.domain module"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">PyPM 0.1 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="modules.html" >pypm</a> &raquo;</li>
+          <li class="nav-item nav-item-2"><a href="pypm.html" >pypm package</a> &raquo;</li> 
       </ul>
     </div>
     <div class="footer" role="contentinfo">

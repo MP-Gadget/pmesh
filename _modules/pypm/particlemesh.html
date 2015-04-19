@@ -76,6 +76,14 @@
 <span class="sd">    Memory usage is twice the size of the FFT mesh. However, </span>
 <span class="sd">    Be aware the transfer functions may take more memory.</span>
 
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    np      : array_like (npx, npy)</span>
+<span class="sd">        The shape of the process mesh. This is the number of domains per direction.</span>
+<span class="sd">        The product of the items shall equal to the size of communicator. </span>
+<span class="sd">        For example, for 64 rank job, np = (8, 8) is a good choice.</span>
+<span class="sd">        Since for now only 3d simulations are supported, np must be of length-2.</span>
+
 <span class="sd">    Attributes</span>
 <span class="sd">    ----------</span>
 <span class="sd">    comm    : :py:class:`MPI.Comm`</span>

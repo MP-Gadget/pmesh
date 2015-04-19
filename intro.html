@@ -61,9 +61,17 @@ method.</p>
 <ol class="arabic simple">
 <li>Move particles to the correct domain via <a class="reference internal" href="pypm.particlemesh.html#pypm.particlemesh.ParticleMesh.decompose" title="pypm.particlemesh.ParticleMesh.decompose"><code class="xref py py-meth docutils literal"><span class="pre">pypm.particlemesh.ParticleMesh.decompose()</span></code></a>. In this step,
 mirror particles (ghosts) are created automatically.</li>
+<li>Clear the canvas via <a class="reference internal" href="pypm.particlemesh.html#pypm.particlemesh.ParticleMesh.clear" title="pypm.particlemesh.ParticleMesh.clear"><code class="xref py py-meth docutils literal"><span class="pre">pypm.particlemesh.ParticleMesh.clear()</span></code></a>.</li>
 <li>Paint particles via <a class="reference internal" href="pypm.particlemesh.html#pypm.particlemesh.ParticleMesh.paint" title="pypm.particlemesh.ParticleMesh.paint"><code class="xref py py-meth docutils literal"><span class="pre">pypm.particlemesh.ParticleMesh.paint()</span></code></a> . This step uses the Cloud-in-cell approximation implemented in
-<a class="reference internal" href="pypm.cic.html#module-pypm.cic" title="pypm.cic"><code class="xref py py-mod docutils literal"><span class="pre">pypm.cic</span></code></a></li>
+<a class="reference internal" href="pypm.cic.html#module-pypm.cic" title="pypm.cic"><code class="xref py py-mod docutils literal"><span class="pre">pypm.cic</span></code></a>. If it is nessesary, the paint method can be called several times.</li>
 <li>Real to Complex transform via <a class="reference internal" href="pypm.particlemesh.html#pypm.particlemesh.ParticleMesh.r2c" title="pypm.particlemesh.ParticleMesh.r2c"><code class="xref py py-meth docutils literal"><span class="pre">pypm.particlemesh.ParticleMesh.r2c()</span></code></a></li>
+</ol>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">Step 2, 3, 4 can be combined via a single call to <a class="reference internal" href="pypm.particlemesh.html#pypm.particlemesh.ParticleMesh.r2c" title="pypm.particlemesh.ParticleMesh.r2c"><code class="xref py py-meth docutils literal"><span class="pre">pypm.particlemesh.ParticleMesh.r2c()</span></code></a>, with the particle positions
+as an input parameter.</p>
+</div>
+<ol class="arabic simple" start="5">
 <li>Complex to Real transform via <a class="reference internal" href="pypm.particlemesh.html#pypm.particlemesh.ParticleMesh.c2r" title="pypm.particlemesh.ParticleMesh.c2r"><code class="xref py py-meth docutils literal"><span class="pre">pypm.particlemesh.ParticleMesh.c2r()</span></code></a>, applying transfer functions. (Refer to <a class="reference internal" href="pypm.transfer.html#pypm.transfer.TransferFunction" title="pypm.transfer.TransferFunction"><code class="xref py py-class docutils literal"><span class="pre">pypm.transfer.TransferFunction</span></code></a>)</li>
 <li>Read out force values     via <a class="reference internal" href="pypm.particlemesh.html#pypm.particlemesh.ParticleMesh.readout" title="pypm.particlemesh.ParticleMesh.readout"><code class="xref py py-meth docutils literal"><span class="pre">pypm.particlemesh.ParticleMesh.readout()</span></code></a>. This step uses the trilinear interpolation implemented in
 <a class="reference internal" href="pypm.cic.html#module-pypm.cic" title="pypm.cic"><code class="xref py py-mod docutils literal"><span class="pre">pypm.cic</span></code></a></li>
@@ -78,9 +86,11 @@ Here is an example for calculating gravity:</p>
 <div class="highlight-python"><div class="highlight"><pre><span class="n">pm</span> <span class="o">=</span> <span class="n">ParticleMesh</span><span class="p">(</span><span class="n">BoxSize</span><span class="p">,</span> <span class="n">Nmesh</span><span class="p">)</span>
 
 <span class="n">smoothing</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">*</span> <span class="n">pm</span><span class="o">.</span><span class="n">Nmesh</span> <span class="o">/</span> <span class="n">pm</span><span class="o">.</span><span class="n">BoxSize</span>
+
 <span class="c"># lets get the correct mass distribution with particles on the edge mirrored</span>
 <span class="n">layout</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">decompose</span><span class="p">(</span><span class="n">P</span><span class="p">[</span><span class="s">&#39;Position&#39;</span><span class="p">])</span>
 <span class="n">tpos</span> <span class="o">=</span> <span class="n">layout</span><span class="o">.</span><span class="n">exchange</span><span class="p">(</span><span class="n">P</span><span class="p">[</span><span class="s">&#39;Position&#39;</span><span class="p">])</span>
+
 <span class="n">pm</span><span class="o">.</span><span class="n">r2c</span><span class="p">(</span><span class="n">tpos</span><span class="p">,</span> <span class="n">P</span><span class="p">[</span><span class="s">&#39;Mass&#39;</span><span class="p">])</span>
 
 <span class="c"># calculate potential in k-space</span>

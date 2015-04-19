@@ -12,14 +12,21 @@ The typical routine for calculating force is
 
 1. Move particles to the correct domain via :py:meth:`pypm.particlemesh.ParticleMesh.decompose`. In this step,
    mirror particles (ghosts) are created automatically.
-2. Paint particles via :py:meth:`pypm.particlemesh.ParticleMesh.paint` . This step uses the Cloud-in-cell approximation implemented in
+2. Clear the canvas via :py:meth:`pypm.particlemesh.ParticleMesh.clear`.
+3. Paint particles via :py:meth:`pypm.particlemesh.ParticleMesh.paint` . This step uses the Cloud-in-cell approximation implemented in
+   :py:mod:`pypm.cic`. If it is nessesary, the paint method can be called several times.
+4. Real to Complex transform via :py:meth:`pypm.particlemesh.ParticleMesh.r2c`
+
+.. note::
+
+    Step 2, 3, 4 can be combined via a single call to :py:meth:`pypm.particlemesh.ParticleMesh.r2c`, with the particle positions
+    as an input parameter.
+
+5. Complex to Real transform via :py:meth:`pypm.particlemesh.ParticleMesh.c2r`, applying transfer functions. (Refer to :py:class:`pypm.transfer.TransferFunction`)
+6. Read out force values     via :py:meth:`pypm.particlemesh.ParticleMesh.readout`. This step uses the trilinear interpolation implemented in
    :py:mod:`pypm.cic`
-3. Real to Complex transform via :py:meth:`pypm.particlemesh.ParticleMesh.r2c`
-4. Complex to Real transform via :py:meth:`pypm.particlemesh.ParticleMesh.c2r`, applying transfer functions. (Refer to :py:class:`pypm.transfer.TransferFunction`)
-5. Read out force values     via :py:meth:`pypm.particlemesh.ParticleMesh.readout`. This step uses the trilinear interpolation implemented in
-   :py:mod:`pypm.cic`
-6. Add back the force values due to ghosts via :py:meth:`pypm.particlemesh.ParticleMesh.gather`.
-7. go back to 3, for other force components (eg, x, y, z)
+7. Add back the force values due to ghosts via :py:meth:`pypm.particlemesh.ParticleMesh.gather`.
+8. go back to 3, for other force components (eg, x, y, z)
 
 This is a fairly convoluted process; but it truthfully represents the level of complexity of distributed computation introduces.
 We may provide a higher level interface in the future.
@@ -33,9 +40,11 @@ Here is an example for calculating gravity:
         pm = ParticleMesh(BoxSize, Nmesh)
 
         smoothing = 1.0 * pm.Nmesh / pm.BoxSize
+
         # lets get the correct mass distribution with particles on the edge mirrored
         layout = pm.decompose(P['Position'])
         tpos = layout.exchange(P['Position'])
+
         pm.r2c(tpos, P['Mass'])
 
         # calculate potential in k-space

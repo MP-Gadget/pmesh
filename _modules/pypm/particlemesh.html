@@ -128,6 +128,8 @@
             <span class="n">pfft</span><span class="o">.</span><span class="n">Flags</span><span class="o">.</span><span class="n">PFFT_TRANSPOSED_OUT</span> <span class="o">|</span> <span class="n">pfft</span><span class="o">.</span><span class="n">Flags</span><span class="o">.</span><span class="n">PFFT_DESTROY_INPUT</span><span class="p">)</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">real</span> <span class="o">=</span> <span class="n">pfft</span><span class="o">.</span><span class="n">LocalBuffer</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">partition</span><span class="p">)</span><span class="o">.</span><span class="n">view_input</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">real</span><span class="p">[:]</span> <span class="o">=</span> <span class="mi">0</span>
+
         <span class="bp">self</span><span class="o">.</span><span class="n">complex</span> <span class="o">=</span> <span class="n">pfft</span><span class="o">.</span><span class="n">LocalBuffer</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">partition</span><span class="p">)</span><span class="o">.</span><span class="n">view_output</span><span class="p">()</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">T</span> <span class="o">=</span> <span class="n">Timers</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">comm</span><span class="p">)</span>
@@ -199,16 +201,34 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">T</span><span class="p">[</span><span class="s">&#39;Decompose&#39;</span><span class="p">]:</span>
             <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">domain</span><span class="o">.</span><span class="n">decompose</span><span class="p">(</span><span class="n">pos</span><span class="p">,</span> <span class="n">smoothing</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
-                    <span class="n">transform</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">transform0</span><span class="p">)</span>
+                    <span class="n">transform</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">transform0</span><span class="p">)</span></div>
+<div class="viewcode-block" id="ParticleMesh.clear"><a class="viewcode-back" href="../../pypm.particlemesh.html#pypm.particlemesh.ParticleMesh.clear">[docs]</a>    <span class="k">def</span> <span class="nf">clear</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; </span>
+<span class="sd">        Clear the internal real canvas. </span>
+
+<span class="sd">        This function simply set real[:] = 0. After :py:meth:`clear`, </span>
+<span class="sd">        :py:meth:`paint` can correctly paint to the canvas.</span>
+
+<span class="sd">        Notes</span>
+<span class="sd">        -----</span>
+<span class="sd">        A freshly created :py:class:`ParticleMesh` object come with</span>
+<span class="sd">        a cleared canvas.</span>
+<span class="sd">    </span>
+<span class="sd">        &quot;&quot;&quot;</span>
 </div>
 <div class="viewcode-block" id="ParticleMesh.paint"><a class="viewcode-back" href="../../pypm.particlemesh.html#pypm.particlemesh.ParticleMesh.paint">[docs]</a>    <span class="k">def</span> <span class="nf">paint</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pos</span><span class="p">,</span> <span class="n">mass</span><span class="o">=</span><span class="mf">1.0</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; </span>
-<span class="sd">        Paint particles into the internal real canvas.</span>
+<span class="sd">        Paint particles into the internal real canvas. </span>
 
 <span class="sd">        Transform the particle field given by pos and mass</span>
 <span class="sd">        to the overdensity field in fourier space and save</span>
-<span class="sd">        it in the internal storage.</span>
+<span class="sd">        it in the internal storage. </span>
 <span class="sd">        A multi-linear CIC approximation scheme is used.</span>
+
+<span class="sd">        The function can be called multiple times: </span>
+<span class="sd">        the result is cummulative. In a multi-step simulation where</span>
+<span class="sd">        :py:class:`ParticleMesh` object is reused,  before calling </span>
+<span class="sd">        :py:meth:`paint`, make sure the canvas is cleared with :py:meth:`clear`.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
@@ -222,22 +242,25 @@
 <span class="sd">        Notes</span>
 <span class="sd">        -----</span>
 <span class="sd">        self.real is NOT the density field after this operation.</span>
-<span class="sd">        It has the dimension of density, but is divided by </span>
-<span class="sd">        Nmesh **3; PFFT will adjust for this Nmesh**3 after r2c .</span>
+<span class="sd">        It has the dimension of mass but is divided by :code:`Nmesh**3`.</span>
+<span class="sd">        Density is :code:`real * Nmesh ** 3 / BoxSize ** 3`</span>
 
+<span class="sd">        :py:meth:`r2c` will convert to a density unit by dividing</span>
+<span class="sd">        by :code:`BoxSize**3`.</span>
+
+<span class="sd">        PFFT will adjust for this Nmesh**3 after r2c .</span>
+<span class="sd">    </span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">T</span><span class="p">[</span><span class="s">&#39;Paint&#39;</span><span class="p">]:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">real</span><span class="p">[:]</span> <span class="o">=</span> <span class="mi">0</span>
             <span class="n">cic</span><span class="o">.</span><span class="n">paint</span><span class="p">(</span><span class="n">pos</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">real</span><span class="p">,</span> <span class="n">weights</span><span class="o">=</span><span class="n">mass</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s">&#39;ignore&#39;</span><span class="p">,</span>
                     <span class="n">period</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">Nmesh</span><span class="p">,</span> <span class="n">transform</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">transform</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">real</span> <span class="o">*=</span> <span class="p">(</span><span class="mf">1.0</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">BoxSize</span><span class="p">)</span> <span class="o">**</span> <span class="mi">3</span>
 </div>
 <div class="viewcode-block" id="ParticleMesh.r2c"><a class="viewcode-back" href="../../pypm.particlemesh.html#pypm.particlemesh.ParticleMesh.r2c">[docs]</a>    <span class="k">def</span> <span class="nf">r2c</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pos</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">mass</span><span class="o">=</span><span class="mf">1.0</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; </span>
 <span class="sd">        Perform real to complex FFT on the internal canvas.</span>
 
 <span class="sd">        If pos and mass are given, :py:meth:`paint` is called to</span>
-<span class="sd">        paint the particles before running the fourier transform</span>
+<span class="sd">        paint the particles before running the fourier transform.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
@@ -249,8 +272,10 @@
 
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="n">pos</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">paint</span><span class="p">(</span><span class="n">pos</span><span class="p">,</span> <span class="n">mass</span><span class="p">)</span>
 
+        <span class="bp">self</span><span class="o">.</span><span class="n">real</span> <span class="o">*=</span> <span class="p">(</span><span class="mf">1.0</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">BoxSize</span><span class="p">)</span> <span class="o">**</span> <span class="mi">3</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span><span class="p">:</span>
             <span class="n">realsum</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">comm</span><span class="o">.</span><span class="n">allreduce</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">real</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="s">&#39;f8&#39;</span><span class="p">),</span> <span class="n">MPI</span><span class="o">.</span><span class="n">SUM</span><span class="p">)</span>
             <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">comm</span><span class="o">.</span><span class="n">rank</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>

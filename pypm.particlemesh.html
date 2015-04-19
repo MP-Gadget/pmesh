@@ -123,6 +123,17 @@ Be aware the transfer functions may take more memory.</p>
 </dd></dl>
 
 <dl class="method">
+<dt id="pypm.particlemesh.ParticleMesh.clear">
+<code class="descname">clear</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/pypm/particlemesh.html#ParticleMesh.clear"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pypm.particlemesh.ParticleMesh.clear" title="Permalink to this definition">¶</a></dt>
+<dd><p>Clear the internal real canvas.</p>
+<p>This function simply set real[:] = 0. After <a class="reference internal" href="#pypm.particlemesh.ParticleMesh.clear" title="pypm.particlemesh.ParticleMesh.clear"><code class="xref py py-meth docutils literal"><span class="pre">clear()</span></code></a>, 
+<a class="reference internal" href="#pypm.particlemesh.ParticleMesh.paint" title="pypm.particlemesh.ParticleMesh.paint"><code class="xref py py-meth docutils literal"><span class="pre">paint()</span></code></a> can correctly paint to the canvas.</p>
+<p class="rubric">Notes</p>
+<p>A freshly created <a class="reference internal" href="#pypm.particlemesh.ParticleMesh" title="pypm.particlemesh.ParticleMesh"><code class="xref py py-class docutils literal"><span class="pre">ParticleMesh</span></code></a> object come with
+a cleared canvas.</p>
+</dd></dl>
+
+<dl class="method">
 <dt id="pypm.particlemesh.ParticleMesh.decompose">
 <code class="descname">decompose</code><span class="sig-paren">(</span><em>pos</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pypm/particlemesh.html#ParticleMesh.decompose"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pypm.particlemesh.ParticleMesh.decompose" title="Permalink to this definition">¶</a></dt>
 <dd><p>Create a domain decompose layout for particles at given
@@ -154,8 +165,12 @@ coordinates.</p>
 <dd><p>Paint particles into the internal real canvas.</p>
 <p>Transform the particle field given by pos and mass
 to the overdensity field in fourier space and save
-it in the internal storage.
+it in the internal storage. 
 A multi-linear CIC approximation scheme is used.</p>
+<p>The function can be called multiple times: 
+the result is cummulative. In a multi-step simulation where
+<a class="reference internal" href="#pypm.particlemesh.ParticleMesh" title="pypm.particlemesh.ParticleMesh"><code class="xref py py-class docutils literal"><span class="pre">ParticleMesh</span></code></a> object is reused,  before calling 
+<a class="reference internal" href="#pypm.particlemesh.ParticleMesh.paint" title="pypm.particlemesh.ParticleMesh.paint"><code class="xref py py-meth docutils literal"><span class="pre">paint()</span></code></a>, make sure the canvas is cleared with <a class="reference internal" href="#pypm.particlemesh.ParticleMesh.clear" title="pypm.particlemesh.ParticleMesh.clear"><code class="xref py py-meth docutils literal"><span class="pre">clear()</span></code></a>.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
@@ -174,8 +189,11 @@ A multi-linear CIC approximation scheme is used.</p>
 </table>
 <p class="rubric">Notes</p>
 <p>self.real is NOT the density field after this operation.
-It has the dimension of density, but is divided by 
-Nmesh <a href="#id1"><span class="problematic" id="id2">**</span></a>3; PFFT will adjust for this Nmesh**3 after r2c .</p>
+It has the dimension of mass but is divided by <code class="code docutils literal"><span class="pre">Nmesh**3</span></code>.
+Density is <code class="code docutils literal"><span class="pre">real</span> <span class="pre">*</span> <span class="pre">Nmesh</span> <span class="pre">**</span> <span class="pre">3</span> <span class="pre">/</span> <span class="pre">BoxSize</span> <span class="pre">**</span> <span class="pre">3</span></code></p>
+<p><a class="reference internal" href="#pypm.particlemesh.ParticleMesh.r2c" title="pypm.particlemesh.ParticleMesh.r2c"><code class="xref py py-meth docutils literal"><span class="pre">r2c()</span></code></a> will convert to a density unit by dividing
+by <code class="code docutils literal"><span class="pre">BoxSize**3</span></code>.</p>
+<p>PFFT will adjust for this Nmesh**3 after r2c .</p>
 </dd></dl>
 
 <dl class="method">
@@ -198,7 +216,7 @@ complex field with <a class="reference internal" href="#pypm.particlemesh.Partic
 <code class="descname">r2c</code><span class="sig-paren">(</span><em>pos=None</em>, <em>mass=1.0</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pypm/particlemesh.html#ParticleMesh.r2c"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pypm.particlemesh.ParticleMesh.r2c" title="Permalink to this definition">¶</a></dt>
 <dd><p>Perform real to complex FFT on the internal canvas.</p>
 <p>If pos and mass are given, <a class="reference internal" href="#pypm.particlemesh.ParticleMesh.paint" title="pypm.particlemesh.ParticleMesh.paint"><code class="xref py py-meth docutils literal"><span class="pre">paint()</span></code></a> is called to
-paint the particles before running the fourier transform</p>
+paint the particles before running the fourier transform.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />

@@ -39,6 +39,12 @@ def main():
     def RemoveShotNoise(complex, w):
         complex[:] -= 1. / Ntot
 
+    def CIC(complex, w):
+        for wi in w:
+            # convert to 
+            tmp = 1 - 2. / 3 * numpy.sin(0.5 * wi) ** 2
+            complex[:] /= tmp
+
     wout = numpy.empty(pm.Nmesh//2)
     psout0 = numpy.empty(pm.Nmesh//2)
     psout1 = numpy.empty(pm.Nmesh//2)
@@ -62,8 +68,8 @@ def main():
     pm.transfer( [
         TransferFunction.NormalizeDC,
         TransferFunction.RemoveDC,
+        CIC,
         RemoveShotNoise,
-        TransferFunction.Trilinear,
         TransferFunction.PowerSpectrum(wout, psout1),
     ])
     wout *= pm.Nmesh / pm.BoxSize
@@ -76,14 +82,15 @@ def main():
     pm.transfer( [
         TransferFunction.NormalizeDC,
         TransferFunction.RemoveDC,
-        RemoveShotNoise,
         TransferFunction.PowerSpectrum(wout, psout2),
     ])
-    tmp = 1.0 - numpy.sin(wout * 0.5) ** 2
+
+    tmp = 1.0 - 0.666666667 * numpy.sin(wout * 0.5) ** 2
 
     wout *= pm.Nmesh / pm.BoxSize
     psout2 *= (numpy.pi / pm.BoxSize) ** -3
     psout2 /= tmp
+    psout2 -= 1.0 / Ntot
     pm.pop()
 
     if pm.comm.rank == 0:

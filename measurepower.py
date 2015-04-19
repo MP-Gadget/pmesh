@@ -37,13 +37,14 @@ def main():
     pm.r2c()
     
     def RemoveShotNoise(complex, w):
-        complex[:] -= 1 / Ntot
+        complex[:] -= 1. / Ntot
 
     wout = numpy.empty(pm.Nmesh//2)
     psout0 = numpy.empty(pm.Nmesh//2)
     psout1 = numpy.empty(pm.Nmesh//2)
     psout2 = numpy.empty(pm.Nmesh//2)
 
+    # measure the raw power spectrum, only shot noise is removed.
     pm.push()
     pm.transfer( [
         TransferFunction.NormalizeDC,
@@ -55,6 +56,8 @@ def main():
     psout0 *= (numpy.pi / pm.BoxSize) ** -3
     pm.pop()
 
+    # measure the power spectrum, correcting for CIC after shotnoise 
+    # removal
     pm.push()
     pm.transfer( [
         TransferFunction.NormalizeDC,
@@ -67,6 +70,8 @@ def main():
     psout1 *= (numpy.pi / pm.BoxSize) ** -3
     pm.pop()
 
+    # measure the power spectrum, correcting for CIC after shotnoise 
+    # removal, but in the lazy way.
     pm.push()
     pm.transfer( [
         TransferFunction.NormalizeDC,
@@ -74,16 +79,13 @@ def main():
         RemoveShotNoise,
         TransferFunction.PowerSpectrum(wout, psout2),
     ])
-    pm.pop()
-
     tmp = 1.0 - numpy.sin(wout * 0.5) ** 2
 
     wout *= pm.Nmesh / pm.BoxSize
     psout2 *= (numpy.pi / pm.BoxSize) ** -3
     psout2 /= tmp
+    pm.pop()
 
-#    psout1 -= 1. / Ntot
-#    psout2 -= 1. / Ntot
     if pm.comm.rank == 0:
         numpy.savetxt(stdout, zip(wout, psout0, psout1, psout2))
 

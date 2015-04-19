@@ -75,50 +75,38 @@ The typical routine is</p>
 </ol>
 <p>Memory usage is twice the size of the FFT mesh. However, 
 Be aware the transfer functions may take more memory.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>np</strong> : array_like (npx, npy)</p>
-<blockquote class="last">
-<div><p>The shape of the process mesh. This is the number of domains per direction.
-The product of the items shall equal to the size of communicator. 
-For example, for 64 rank job, np = (8, 8) is a good choice.
-Since for now only 3d simulations are supported, np must be of length-2.</p>
-</div></blockquote>
-</td>
-</tr>
-</tbody>
-</table>
 <p class="rubric">Attributes</p>
 <table border="1" class="docutils">
 <colgroup>
-<col width="13%" />
-<col width="88%" />
+<col width="2%" />
+<col width="98%" />
 </colgroup>
 <tbody valign="top">
-<tr class="row-odd"><td>comm</td>
-<td>(<code class="xref py py-class docutils literal"><span class="pre">MPI.Comm</span></code>) the MPI communicator</td>
+<tr class="row-odd"><td>np</td>
+<td>(array_like (npx, npy)) The shape of the process mesh. This is the number of domains per direction. The product of the items shall equal to the size of communicator. For example, for 64 rank job, np = (8, 8) is a good choice. Since for now only 3d simulations are supported, np must be of length-2. The default is try to split the total number of ranks equally. (eg, for a 64 rank job, default is (8, 8)</td>
 </tr>
-<tr class="row-even"><td>Nmesh</td>
-<td>(int) number of mesh points per side</td>
+<tr class="row-even"><td>comm</td>
+<td>(<code class="xref py py-class docutils literal"><span class="pre">MPI.Comm</span></code>) the MPI communicator, (default is MPI.COMM_WORLD)</td>
 </tr>
-<tr class="row-odd"><td>BoxSize</td>
+<tr class="row-odd"><td>Nmesh</td>
+<td>(int) number of mesh points per side. Only 3d simulations are supported by now, and the true mesh is [Nmesh, Nmesh, Nmesh]</td>
+</tr>
+<tr class="row-even"><td>BoxSize</td>
 <td>(float) size of box</td>
 </tr>
-<tr class="row-even"><td>domain</td>
+<tr class="row-odd"><td>domain</td>
 <td>(<a class="reference internal" href="pypm.domain.html#pypm.domain.GridND" title="pypm.domain.GridND"><code class="xref py py-class docutils literal"><span class="pre">pypm.domain.GridND</span></code></a>) domain decomposition (private)</td>
 </tr>
-<tr class="row-odd"><td>partition</td>
+<tr class="row-even"><td>partition</td>
 <td>(<code class="xref py py-class docutils literal"><span class="pre">pfft.Partition</span></code>) domain partition (private)</td>
 </tr>
-<tr class="row-even"><td>real</td>
+<tr class="row-odd"><td>real</td>
 <td>(array_like) the real FFT array (private)</td>
 </tr>
-<tr class="row-odd"><td>complex</td>
+<tr class="row-even"><td>complex</td>
 <td>(array_like) the complex FFT array (private)</td>
 </tr>
-<tr class="row-even"><td>T</td>
+<tr class="row-odd"><td>T</td>
 <td>(<a class="reference internal" href="pypm.tools.html#pypm.tools.Timers" title="pypm.tools.Timers"><code class="xref py py-class docutils literal"><span class="pre">pypm.tools.Timers</span></code></a>) profiling timers</td>
 </tr>
 </tbody>

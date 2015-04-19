@@ -64,14 +64,8 @@
 <span class="sd">    ParticleMesh provides an interface to solver for forces</span>
 <span class="sd">    with particle mesh method</span>
 
-<span class="sd">    ParticleMesh object is a state machine. </span>
-<span class="sd">    The typical routine is</span>
-
-<span class="sd">    1. Paint particles via :py:meth:`paint`</span>
-<span class="sd">    2. Real to Complex transform via :py:meth:`r2c`</span>
-<span class="sd">    3. Complex to Real transform via :py:meth:`c2r`, applying transfer functions</span>
-<span class="sd">    4. Read out force values     via :py:meth:`readout`</span>
-<span class="sd">    5. go back to 3, for other force components</span>
+<span class="sd">    ParticleMesh object is a state machine. Refer to :ref:`introduction` on </span>
+<span class="sd">    the standard steps to use this object.</span>
 
 <span class="sd">    Memory usage is twice the size of the FFT mesh. However, </span>
 <span class="sd">    Be aware the transfer functions may take more memory.</span>

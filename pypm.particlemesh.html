@@ -64,15 +64,8 @@
 <dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">object</span></code></p>
 <p>ParticleMesh provides an interface to solver for forces
 with particle mesh method</p>
-<p>ParticleMesh object is a state machine. 
-The typical routine is</p>
-<ol class="arabic simple">
-<li>Paint particles via <a class="reference internal" href="#pypm.particlemesh.ParticleMesh.paint" title="pypm.particlemesh.ParticleMesh.paint"><code class="xref py py-meth docutils literal"><span class="pre">paint()</span></code></a></li>
-<li>Real to Complex transform via <a class="reference internal" href="#pypm.particlemesh.ParticleMesh.r2c" title="pypm.particlemesh.ParticleMesh.r2c"><code class="xref py py-meth docutils literal"><span class="pre">r2c()</span></code></a></li>
-<li>Complex to Real transform via <a class="reference internal" href="#pypm.particlemesh.ParticleMesh.c2r" title="pypm.particlemesh.ParticleMesh.c2r"><code class="xref py py-meth docutils literal"><span class="pre">c2r()</span></code></a>, applying transfer functions</li>
-<li>Read out force values     via <a class="reference internal" href="#pypm.particlemesh.ParticleMesh.readout" title="pypm.particlemesh.ParticleMesh.readout"><code class="xref py py-meth docutils literal"><span class="pre">readout()</span></code></a></li>
-<li>go back to 3, for other force components</li>
-</ol>
+<p>ParticleMesh object is a state machine. Refer to <a class="reference internal" href="intro.html#introduction"><span>Introduction</span></a> on 
+the standard steps to use this object.</p>
 <p>Memory usage is twice the size of the FFT mesh. However, 
 Be aware the transfer functions may take more memory.</p>
 <p class="rubric">Attributes</p>

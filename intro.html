@@ -53,25 +53,31 @@
           <div class="body" role="main">
             
   <div class="section" id="introduction">
-<h1>Introduction<a class="headerlink" href="#introduction" title="Permalink to this headline">¶</a></h1>
+<span id="id1"></span><h1>Introduction<a class="headerlink" href="#introduction" title="Permalink to this headline">¶</a></h1>
 <p>PyPM provides a <a class="reference internal" href="pypm.particlemesh.html#pypm.particlemesh.ParticleMesh" title="pypm.particlemesh.ParticleMesh"><code class="xref py py-class docutils literal"><span class="pre">pypm.particlemesh.ParticleMesh</span></code></a> object for solving forces with the particle mesh
 method.</p>
 <p>ParticleMesh object is a state machine.</p>
 <p>The typical routine for calculating force is</p>
 <ol class="arabic simple">
-<li>Paint particles via <code class="xref py py-meth docutils literal"><span class="pre">paint()</span></code> . This step uses the Cloud-in-cell approximation implemented in
+<li>Move particles to the correct domain via <a class="reference internal" href="pypm.particlemesh.html#pypm.particlemesh.ParticleMesh.decompose" title="pypm.particlemesh.ParticleMesh.decompose"><code class="xref py py-meth docutils literal"><span class="pre">pypm.particlemesh.ParticleMesh.decompose()</span></code></a>. In this step,
+mirror particles (ghosts) are created automatically.</li>
+<li>Paint particles via <a class="reference internal" href="pypm.particlemesh.html#pypm.particlemesh.ParticleMesh.paint" title="pypm.particlemesh.ParticleMesh.paint"><code class="xref py py-meth docutils literal"><span class="pre">pypm.particlemesh.ParticleMesh.paint()</span></code></a> . This step uses the Cloud-in-cell approximation implemented in
 <a class="reference internal" href="pypm.cic.html#module-pypm.cic" title="pypm.cic"><code class="xref py py-mod docutils literal"><span class="pre">pypm.cic</span></code></a></li>
-<li>Real to Complex transform via <code class="xref py py-meth docutils literal"><span class="pre">r2c()</span></code></li>
-<li>Complex to Real transform via <code class="xref py py-meth docutils literal"><span class="pre">c2r()</span></code>, applying transfer functions. (Refer to <a class="reference internal" href="pypm.transfer.html#pypm.transfer.TransferFunction" title="pypm.transfer.TransferFunction"><code class="xref py py-class docutils literal"><span class="pre">pypm.transfer.TransferFunction</span></code></a>)</li>
-<li>Read out force values     via <code class="xref py py-meth docutils literal"><span class="pre">readout()</span></code>. This step uses the trilinear interpolation implemented in
+<li>Real to Complex transform via <a class="reference internal" href="pypm.particlemesh.html#pypm.particlemesh.ParticleMesh.r2c" title="pypm.particlemesh.ParticleMesh.r2c"><code class="xref py py-meth docutils literal"><span class="pre">pypm.particlemesh.ParticleMesh.r2c()</span></code></a></li>
+<li>Complex to Real transform via <a class="reference internal" href="pypm.particlemesh.html#pypm.particlemesh.ParticleMesh.c2r" title="pypm.particlemesh.ParticleMesh.c2r"><code class="xref py py-meth docutils literal"><span class="pre">pypm.particlemesh.ParticleMesh.c2r()</span></code></a>, applying transfer functions. (Refer to <a class="reference internal" href="pypm.transfer.html#pypm.transfer.TransferFunction" title="pypm.transfer.TransferFunction"><code class="xref py py-class docutils literal"><span class="pre">pypm.transfer.TransferFunction</span></code></a>)</li>
+<li>Read out force values     via <a class="reference internal" href="pypm.particlemesh.html#pypm.particlemesh.ParticleMesh.readout" title="pypm.particlemesh.ParticleMesh.readout"><code class="xref py py-meth docutils literal"><span class="pre">pypm.particlemesh.ParticleMesh.readout()</span></code></a>. This step uses the trilinear interpolation implemented in
 <a class="reference internal" href="pypm.cic.html#module-pypm.cic" title="pypm.cic"><code class="xref py py-mod docutils literal"><span class="pre">pypm.cic</span></code></a></li>
+<li>Add back the force values due to ghosts via <code class="xref py py-meth docutils literal"><span class="pre">pypm.particlemesh.ParticleMesh.gather()</span></code>.</li>
 <li>go back to 3, for other force components (eg, x, y, z)</li>
 </ol>
-<p>We provide a set of commonly used transfer functions in <a class="reference internal" href="pypm.transfer.html#pypm.transfer.TransferFunction" title="pypm.transfer.TransferFunction"><code class="xref py py-class docutils literal"><span class="pre">pypm.transfer.TransferFunction</span></code></a>.</p>
-<p>Suppose pm is a <a class="reference internal" href="pypm.particlemesh.html#pypm.particlemesh.ParticleMesh" title="pypm.particlemesh.ParticleMesh"><code class="xref py py-class docutils literal"><span class="pre">pypm.particlemesh.ParticleMesh</span></code></a> object
+<p>This is a fairly convoluted process; but it truthfully represents the level of complexity of distributed computation introduces.
+We may provide a higher level interface in the future.</p>
+<p>We provide an example to illustrate the process. Suppose pm is a <a class="reference internal" href="pypm.particlemesh.html#pypm.particlemesh.ParticleMesh" title="pypm.particlemesh.ParticleMesh"><code class="xref py py-class docutils literal"><span class="pre">pypm.particlemesh.ParticleMesh</span></code></a> object
 and position of particles is stored in <code class="code docutils literal"><span class="pre">P['Position']</span></code> .
 Here is an example for calculating gravity:</p>
-<div class="highlight-python"><div class="highlight"><pre><span class="n">smoothing</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">*</span> <span class="n">pm</span><span class="o">.</span><span class="n">Nmesh</span> <span class="o">/</span> <span class="n">pm</span><span class="o">.</span><span class="n">BoxSize</span>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">pm</span> <span class="o">=</span> <span class="n">ParticleMesh</span><span class="p">(</span><span class="n">BoxSize</span><span class="p">,</span> <span class="n">Nmesh</span><span class="p">)</span>
+
+<span class="n">smoothing</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">*</span> <span class="n">pm</span><span class="o">.</span><span class="n">Nmesh</span> <span class="o">/</span> <span class="n">pm</span><span class="o">.</span><span class="n">BoxSize</span>
 <span class="c"># lets get the correct mass distribution with particles on the edge mirrored</span>
 <span class="n">layout</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">decompose</span><span class="p">(</span><span class="n">P</span><span class="p">[</span><span class="s">&#39;Position&#39;</span><span class="p">])</span>
 <span class="n">tpos</span> <span class="o">=</span> <span class="n">layout</span><span class="o">.</span><span class="n">exchange</span><span class="p">(</span><span class="n">P</span><span class="p">[</span><span class="s">&#39;Position&#39;</span><span class="p">])</span>

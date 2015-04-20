@@ -11,6 +11,7 @@ from tpm import TPMSnapshotFile, read
 from kdcount import cluster
 from pypm.domain import GridND
 import numpy
+import mpsort
 
 parser = ArgumentParser("",
         description=
@@ -127,6 +128,40 @@ def replacesorted(arr, sorted, b, out=None):
     out[found] = b[ind[found]]
     return out
 
+def densify(minid, comm):
+    Nitem = len(minid)
+
+    data = numpy.empty(Nitem, dtype=[
+            ('origind', 'u8'), 
+            ('minid', 'u8'),
+            ])
+    data['origind'] = sum(comm.allgather(Nitem)[:comm.rank]) \
+            + numpy.arange(Nitem)
+    data['minid'] = minid
+
+    mpsort.sort(data, 'minid')
+    
+    junk, label = numpy.unique(data['minid'], return_inverse=True)
+    
+    next = comm.sendrecv(data['minid'][0], 
+                    dest=(comm.rank - 1) % comm.size,
+                    source=(comm.rank + 1) % comm.size
+                    )
+
+    # if my last item equals next ranks first, next rank
+    # shall offset such that the first label matches my last
+    Nunique = len(junk)
+    if next == data['minid'][-1]:
+        Nunique = Nunique - 1
+    
+    label += sum(comm.allgather(len(junk))[:comm.rank])
+    data['minid'] = label
+
+    mpsort.sort(data, 'origind')
+    
+    label = data['minid'].copy()
+    return label
+
 def main():
     comm = MPI.COMM_WORLD
     np = split_size_2d(comm.size)
@@ -173,9 +208,6 @@ def main():
     while True:
         # merge, if a particle belongs to several ranks
         # use the global label of the minimal
-        if comm.rank == 0:
-            print 'iteration'
-
         minid_new = layout.gather(minid, mode=numpy.fmin)
         minid_new = layout.exchange(minid_new)
 
@@ -183,7 +215,12 @@ def main():
         merged = minid_new != minid
         # if no rank has merged any, we are done
         # gl is the global label (albeit with some holes)
-        if comm.allreduce(merged.sum()) == 0:
+        total = comm.allreduce(merged.sum())
+            
+        if comm.rank == 0:
+            print 'merged ', total, 'halos'
+
+        if total == 0:
             del minid_new
             break
         old = minid[merged]
@@ -195,16 +232,20 @@ def main():
 
     minid = layout.gather(minid, mode=numpy.fmin)
 
-    # condense glmg, replace this step with something parallel
-    gminid = numpy.concatenate(comm.allgather(minid))
-    junk, glabel = numpy.unique(gminid, return_inverse=True)
-    Nhalo0 = len(junk)
-    tmp = comm.allgather(len(minid))
-    label = comm.scatter(numpy.split(glabel, numpy.cumsum(tmp)[:-1]))
-    assert len(label) == len(minid) 
+    label = densify(minid, comm)
+
+    Nhalo0 = comm.allreduce(label.max(), op=MPI.MAX) + 1
+    if False:
+        # condense glmg, replace this step with something parallel
+        gminid = numpy.concatenate(comm.allgather(minid))
+        junk, glabel = numpy.unique(gminid, return_inverse=True)
+        Nhalo0 = len(junk)
+        tmp = comm.allgather(len(minid))
+        label = comm.scatter(numpy.split(glabel, numpy.cumsum(tmp)[:-1]))
+        assert len(label) == len(minid) 
 
     # size of halos
-    N = numpy.bincount(label, minlength=Nhalo0)
+    N = numpy.bincount(label.view(dtype='i8'), minlength=Nhalo0)
     N = comm.allreduce(N, op=MPI.SUM)
     
     Nlarge = (N > 32).sum()

@@ -38,8 +38,14 @@ def bincountv(x, weights, minlength=None, dtype=None):
     return out
 
 class Layout(object):
-    """ A global all to all communication layout 
-        
+    """ 
+    The communication layout of a domain decomposition.
+
+    Given a set of particles, Layout object knows how to move particles around.
+    Do not create a Layout object directly. Always use :py:meth:`GridND.decompose`.
+
+    Useful methods are :py:meth:`exchange`, and :py:meth:`gather`.
+
     """
     def __init__(self, comm, oldlength, sendcounts, indices, recvcounts=None):
         """
@@ -73,10 +79,23 @@ class Layout(object):
         self.indices = indices
 
     def exchange(self, data):
-        """ exchange the data globally according to the layout;
+        """ 
+        Deliever data to the intersecting domains.
 
-            data shall be of the same length of the input position
-            that builds the layout
+        Parameters
+        ----------
+        data     : array_like (, extra_dimensions)
+            The data to be delievered. It shall be of the same length and of 
+            the same ordering of the input position that builds the layout.
+            Each element is a matching element of the position used in the call
+            to :py:meth:`GridND.decompose`
+
+        Returns
+        -------
+        newdata  : array_like 
+            The data delievered to the domain.
+            Ghosts are created if a particle intersects multiple domains.
+            Refer to :py:meth:`gather` for collecting data of ghosts.
 
         """
         if len(data) != self.oldlength:
@@ -119,13 +138,29 @@ class Layout(object):
 
     def gather(self, data, mode='sum'):
         """ 
-            pull the data from other ranks back to its original hosting rank
-            values of mirror items are added. 
-            mode can be 'sum' or 'any', or 'mean'. 
+        Pull the data from other ranks back to its original hosting rank.
+
+        Attributes
+        ----------
+        data    :   array_like
+            data for each received particles. 
+            
+        mode    : string 'sum', 'any', 'mean', 'all', 'min'
+            :code:`all` is to return all ghosts without any reduction
+            :code:`sum` is to add the ghosts together
+            :code:`any` is to pick value of any ghosts
+            :code:`min` is to pick value of any ghosts
+            :code:`mean` is to use the mean of all ghosts
+
+        Returns
+        -------
+        gathered  : array_like
+            gathered data. It is of the same length and ordering of the original
+            positions used in :py:meth:`domain.decompose`. When mode is 'all', 
+            all gathered particles (corresponding to self.indices) are returned.
+        
         """
         # lets check the data type first
-        if mode not in ['sum', 'any', 'mean']:
-            raise ValueError('mode has to be "sum" or "any", "mean"')
 
         if len(data) != self.newlength:
             raise ValueError(
@@ -160,24 +195,50 @@ class Layout(object):
             newshape[0] = 0
             return numpy.empty(newshape, data.dtype)
 
+        if mode == 'all':
+            return recvbuffer
+
         if mode == 'sum':
             return bincountv(self.indices, recvbuffer, minlength=self.oldlength)
+
+        if isinstance(mode, numpy.ufunc):
+            arg = self.indices.argsort()
+            recvbuffer = recvbuffer[arg]
+            N = numpy.bincount(self.indices, minlength=self.oldlength)
+            offset = numpy.zeros(self.oldlength, 'intp')
+            offset[1:] = numpy.cumsum(N)[:-1]
+            return mode.reduceat(recvbuffer, offset)
+
         if mode == 'mean':
             N = numpy.bincount(self.indices, minlength=self.oldlength)
             s = [self.oldlength] + [-1] * (len(newshape) - 1)
             N = N.reshape(s)
             return \
                     bincountv(self.indices, recvbuffer, minlength=self.oldlength) / N
-        elif mode == 'any':
-            mask = numpy.empty(len(self.indices), dtype='?')
-            if len(mask) > 0:
-                mask[0] = True
-                mask[1:] = self.indices[1:] != self.indices[:-1]
-            return recvbuffer[mask]
+        if mode == 'any':
+            data = numpy.zeros(self.oldlength, dtype=data.dtype)
+            data[self.indices] = recvbuffer
+            return data
+        raise NotImplementedError
 
 class GridND(object):
     """
-        ND domain decomposition on a uniform grid
+    GridND is domain decomposition on a uniform grid of N dimensions.
+
+    The total number of domains is prod([ len(dir) - 1 for dir in grid]).
+
+    Attributes
+    ----------
+    grid   : list  (Ndim)
+        A list of edges of the grid in each dimension.
+        grid[i] is the edges on direction i. grid[i] includes 0 and BoxSize.
+    comm   : :py:class:`MPI.Comm`
+        MPI Communicator, default is :code:`MPI.COMM_WORLD` 
+ 
+    periodic : boolean
+        Is the domain decomposition periodic? If so , grid[i][-1] is the period.
+
+
     """
     
     from _domain import gridnd_fill as _fill
@@ -194,12 +255,6 @@ class GridND(object):
             comm=MPI.COMM_WORLD,
             periodic=True):
         """ 
-            grid is a list of  grid edges. 
-            grid[0] or pos[:, 0], etc.
-        
-            grid[i][-1] are the boxsizes
-            the ranks are set up into a mesh of 
-                len(grid[0]) - 1, ...
         """
         self.dims = numpy.array([len(g) - 1 for g in grid], dtype='int32')
         self.grid = numpy.asarray(grid)
@@ -213,21 +268,40 @@ class GridND(object):
         self.myend = numpy.array([g[r + 1] for g, r in zip(grid, rank)])
 
     def decompose(self, pos, smoothing=0, transform=None):
-        """ decompose the domain according to pos,
+        """ 
+        Decompose particles into domains.
 
-            smoothing is the size of a particle:
-                any particle that intersects the domain will
-                be transported to the domain.
-            transform is the transformation on pos
-            transform(pos[:, 3]) -> newpos[:, 3]
-            returns a Layout object that can be used
-            to exchange data
+        Create a decomposition layout for particles at :code:`pos`.
+        
+        Parameters
+        ----------
+        pos       :  array_like (, Ndim)
+            position of particles, Ndim can be more than the dimenions
+            of the domain grid, in which case only the first directions are used.
+
+        smoothing : float
+            Smoothing of particles. Any particle that intersects a domain will
+            be transported to the domain. Smoothing is in the coordinate system
+            of the grid.
+
+        transform : callable
+            Apply the transformation on pos before the decompostion.
+            transform(pos[:, 3]) -> domain_pos[:, 3]
+            transform is needed if pos and the domain grid are of different units.
+            For example, pos in physical simulation units and domain grid on a mesh unit.
+
+        Returns
+        -------
+        layout :  :py:class:`Layout` object that can be used to exchange data
+
         """
 
         # we can't deal with too many points per rank, by  MPI
         assert len(pos) < 1024 * 1024 * 1024 * 2
         pos = numpy.asarray(pos)
 
+        if transform is None:
+            transform = lambda x: x
         Npoint = len(pos)
         Ndim = len(self.dims)
         counts = numpy.zeros(self.comm.size, dtype='int32')

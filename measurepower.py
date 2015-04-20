@@ -29,10 +29,11 @@ parser = ArgumentParser("Parallel Power Spectrum Calculator",
 
 parser.add_argument("filename", 
         help='basename of the input, only runpb format is supported in this script')
-parser.add_argument("Nmesh", type=int, 
-        help='size of calculation mesh, recommend 2 * Ngrid')
 parser.add_argument("BoxSize", type=float, 
         help='BoxSize in Mpc/h')
+parser.add_argument("Nmesh", type=int, 
+        help='size of calculation mesh, recommend 2 * Ngrid')
+parser.add_argument("output", help='write power to this file')
 parser.add_argument("--bunchsize", type=int, default=1024*1024*4,
         help='Number of particles to read per rank. A larger number usually means faster IO, but less memory for the FFT mesh')
 parser.add_argument("--remove-cic", default='anisotropic', metavar="anisotropic|isotropic|none",
@@ -96,6 +97,11 @@ def main():
         tmp = 1.0 - 0.666666667 * numpy.sin(wout * 0.5) ** 2
 
     if pm.comm.rank == 0:
-        numpy.savetxt(stdout, zip(kout, psout), '%0.7g')
+        if ns.output != '-':
+            myout = open(ns.output, 'w')
+        else:
+            myout = stdout
+        numpy.savetxt(myout, zip(kout, psout), '%0.7g')
+        myout.flush()
 
 main()

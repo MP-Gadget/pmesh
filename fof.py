@@ -199,25 +199,30 @@ def main():
     # size of halos
     N = numpy.bincount(label, minlength=Nhalo0)
     N = comm.allreduce(N, op=MPI.SUM)
+    
+    Nlarge = (N > 32).sum()
 
     # sort the labels by halo size
     arg = N.argsort()[::-1]
     P = arg.copy()
     P[arg] = numpy.arange(len(arg))
     label = P[label]
-
+    label[label >= Nlarge] = -1
+    label += 1
+    
+    # now label == 0 is not in large halos, label >= 1 is in halos
     # redo again
-    N = numpy.bincount(label, minlength=Nhalo0)
+    N = numpy.bincount(label, minlength=Nlarge + 1)
     N = comm.allreduce(N, op=MPI.SUM)
 
     # do center of mass
     posmin = equiv_class(label, pos, op=numpy.fmin, dense_labels=True, identity=numpy.inf,
-                    minlength=Nhalo0)
+                    minlength=len(N))
     comm.Allreduce(MPI.IN_PLACE, posmin, op=MPI.MIN)
     dpos = pos - posmin[label]
     dpos[dpos < -0.5] += 1.0
     dpos[dpos >= 0.5] -= 1.0
-    dpos = equiv_class(label, dpos, op=numpy.add, dense_labels=True, minlength=Nhalo0)
+    dpos = equiv_class(label, dpos, op=numpy.add, dense_labels=True, minlength=len(N))
     
     comm.Allreduce(MPI.IN_PLACE, dpos, op=MPI.SUM)
     dpos /= N[:, None]
@@ -234,7 +239,7 @@ def main():
         label.tofile(ff)
     with open(ns.output + '.halo', 'w') as ff:
         numpy.int32(len(N)).tofile(ff)
-        N.tofile(ff)
+        numpy.int32(N).tofile(ff)
         numpy.float32(hpos).tofile(ff)
 
     return

@@ -3,6 +3,8 @@
 
 This readme file is minimal. We shall expand it.
 
+Refer to http://rainwoodman.github.io/pypm for a full API reference.
+
 The `pypm` package provides a general purpose particle mesh solver in Python, under the module
 `pypm.particlemesh`.
 `pypm` requires `mpi4py`. 
@@ -13,7 +15,7 @@ We have compared that the force output at first time step agrees with the long r
 
 We also provide a simple (long range) gravitational strain calculator in utils/strain.py .
 The calculator have been used to calculate the strain tensor for the RunPB dark matter simulations 
-(2048**3 particles in a 1380 Mpc/h box), on 576 MPI ranks at Edison.
+(2048^3 particles in a 1380 Mpc/h box), on 576 MPI ranks at Edison.
 
 There is a power-spectrum calculator in utils/powerspectrum.py
 

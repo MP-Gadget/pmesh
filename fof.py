@@ -25,6 +25,7 @@ parser.add_argument("BoxSize", type=float,
         help='BoxSize in Mpc/h')
 parser.add_argument("LinkingLength", type=float, 
         help='LinkingLength in mean separation (0.2)')
+parser.add_argument("output", help='output file')
 
 ns = parser.parse_args()
 logging.basicConfig(level=logging.DEBUG)
@@ -89,7 +90,7 @@ def equiv_class(labels, values, op, dense_labels=False, identity=None, minlength
 
     return result
 
-def areplace(arr, sorted, b, out=None):
+def replacesorted(arr, sorted, b, out=None):
     """
     replace a with corresponding b in arr
 
@@ -111,7 +112,7 @@ def areplace(arr, sorted, b, out=None):
 
     Examples
     --------
-    >>> print areplace(numpy.arange(10), numpy.arange(5), numpy.ones(5))
+    >>> print replacesorted(numpy.arange(10), numpy.arange(5), numpy.ones(5))
     [1 1 1 1 1 5 6 7 8 9]
 
     """
@@ -183,7 +184,7 @@ def main():
         arg = old.argsort()
         new = new[arg]
         old = old[arg]
-        areplace(minid, old, new, out=minid)
+        replacesorted(minid, old, new, out=minid)
 
     minid = layout.gather(minid, mode=numpy.fmin)
 
@@ -227,14 +228,14 @@ def main():
         print 'total groups', N.shape
         print 'total particles', N.sum()
         print 'above 32', (N > 32).sum()
-
-    gid = numpy.concatenate(comm.allgather(id), axis=0)
-    arg = gid.argsort()
-    gid = gid[arg]
-    gpos = numpy.concatenate(comm.allgather(pos), axis=0)[arg]
-    glabel = numpy.concatenate(comm.allgather(label), axis=0)[arg]
-    gminid = gminid[arg]
-    numpy.savez('glmg-1xl1.npz', pos=gpos, id=gid, label=glabel, minid=gminid, hpos=hpos, N=N)
+    
+    with open(ns.output + '.%03d' % comm.rank, 'w') as ff:
+        label = numpy.int32(label)
+        label.tofile(ff)
+    with open(ns.output + '.halo', 'w') as ff:
+        numpy.int32(len(N)).tofile(ff)
+        N.tofile(ff)
+        numpy.float32(hpos).tofile(ff)
 
     return
 

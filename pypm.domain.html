@@ -23,7 +23,10 @@
     <script type="text/javascript" src="_static/jquery.js"></script>
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
-    <link rel="top" title="PyPM 0.1 documentation" href="index.html" /> 
+    <link rel="top" title="PyPM 0.1 documentation" href="index.html" />
+    <link rel="up" title="pypm package" href="pypm.html" />
+    <link rel="next" title="pypm.particlemesh module" href="pypm.particlemesh.html" />
+    <link rel="prev" title="pypm.cic module" href="pypm.cic.html" /> 
   </head>
   <body role="document">
     <div class="related" role="navigation" aria-label="related navigation">
@@ -35,7 +38,15 @@
         <li class="right" >
           <a href="py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li class="nav-item nav-item-0"><a href="index.html">PyPM 0.1 documentation</a> &raquo;</li> 
+        <li class="right" >
+          <a href="pypm.particlemesh.html" title="pypm.particlemesh module"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="pypm.cic.html" title="pypm.cic module"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">PyPM 0.1 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="modules.html" >pypm</a> &raquo;</li>
+          <li class="nav-item nav-item-2"><a href="pypm.html" accesskey="U">pypm package</a> &raquo;</li> 
       </ul>
     </div>  
 
@@ -53,20 +64,60 @@
 <dt id="pypm.domain.GridND">
 <em class="property">class </em><code class="descclassname">pypm.domain.</code><code class="descname">GridND</code><span class="sig-paren">(</span><em>grid</em>, <em>comm=&lt;mpi4py.MPI.Intracomm object&gt;</em>, <em>periodic=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pypm/domain.html#GridND"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pypm.domain.GridND" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">object</span></code></p>
-<p>ND domain decomposition on a uniform grid</p>
+<p>GridND is domain decomposition on a uniform grid of N dimensions.</p>
+<p>The total number of domains is prod([ len(dir) - 1 for dir in grid]).</p>
+<p class="rubric">Attributes</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="6%" />
+<col width="94%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td>grid</td>
+<td>(list  (Ndim)) A list of edges of the grid in each dimension. grid[i] is the edges on direction i. grid[i] includes 0 and BoxSize.</td>
+</tr>
+<tr class="row-even"><td>comm</td>
+<td>(<code class="xref py py-class docutils literal"><span class="pre">MPI.Comm</span></code>) MPI Communicator, default is <code class="code docutils literal"><span class="pre">MPI.COMM_WORLD</span></code></td>
+</tr>
+<tr class="row-odd"><td>periodic</td>
+<td>(boolean) Is the domain decomposition periodic? If so , grid[i][-1] is the period.</td>
+</tr>
+</tbody>
+</table>
 <dl class="method">
 <dt id="pypm.domain.GridND.decompose">
 <code class="descname">decompose</code><span class="sig-paren">(</span><em>pos</em>, <em>smoothing=0</em>, <em>transform=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pypm/domain.html#GridND.decompose"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pypm.domain.GridND.decompose" title="Permalink to this definition">¶</a></dt>
-<dd><p>decompose the domain according to pos,</p>
-<dl class="docutils">
-<dt>smoothing is the size of a particle:</dt>
-<dd>any particle that intersects the domain will
-be transported to the domain.</dd>
-</dl>
-<p>transform is the transformation on pos
-transform(pos[:, 3]) -&gt; newpos[:, 3]
-returns a Layout object that can be used
-to exchange data</p>
+<dd><p>Decompose particles into domains.</p>
+<p>Create a decomposition layout for particles at <code class="code docutils literal"><span class="pre">pos</span></code>.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>pos</strong> :  array_like (, Ndim)</p>
+<blockquote>
+<div><p>position of particles, Ndim can be more than the dimenions
+of the domain grid, in which case only the first directions are used.</p>
+</div></blockquote>
+<p><strong>smoothing</strong> : float</p>
+<blockquote>
+<div><p>Smoothing of particles. Any particle that intersects a domain will
+be transported to the domain. Smoothing is in the coordinate system
+of the grid.</p>
+</div></blockquote>
+<p><strong>transform</strong> : callable</p>
+<blockquote>
+<div><p>Apply the transformation on pos before the decompostion.
+transform(pos[:, 3]) -&gt; domain_pos[:, 3]
+transform is needed if pos and the domain grid are of different units.
+For example, pos in physical simulation units and domain grid on a mesh unit.</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"><strong>layout</strong> :  <a class="reference internal" href="#pypm.domain.Layout" title="pypm.domain.Layout"><code class="xref py py-class docutils literal"><span class="pre">Layout</span></code></a> object that can be used to exchange data</p>
+</td>
+</tr>
+</tbody>
+</table>
 </dd></dl>
 
 </dd></dl>
@@ -75,21 +126,71 @@ to exchange data</p>
 <dt id="pypm.domain.Layout">
 <em class="property">class </em><code class="descclassname">pypm.domain.</code><code class="descname">Layout</code><span class="sig-paren">(</span><em>comm</em>, <em>oldlength</em>, <em>sendcounts</em>, <em>indices</em>, <em>recvcounts=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pypm/domain.html#Layout"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pypm.domain.Layout" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">object</span></code></p>
-<p>A global all to all communication layout</p>
+<p>The communication layout of a domain decomposition.</p>
+<p>Given a set of particles, Layout object knows how to move particles around.
+Do not create a Layout object directly. Always use <a class="reference internal" href="#pypm.domain.GridND.decompose" title="pypm.domain.GridND.decompose"><code class="xref py py-meth docutils literal"><span class="pre">GridND.decompose()</span></code></a>.</p>
+<p>Useful methods are <a class="reference internal" href="#pypm.domain.Layout.exchange" title="pypm.domain.Layout.exchange"><code class="xref py py-meth docutils literal"><span class="pre">exchange()</span></code></a>, and <a class="reference internal" href="#pypm.domain.Layout.gather" title="pypm.domain.Layout.gather"><code class="xref py py-meth docutils literal"><span class="pre">gather()</span></code></a>.</p>
 <dl class="method">
 <dt id="pypm.domain.Layout.exchange">
 <code class="descname">exchange</code><span class="sig-paren">(</span><em>data</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pypm/domain.html#Layout.exchange"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pypm.domain.Layout.exchange" title="Permalink to this definition">¶</a></dt>
-<dd><p>exchange the data globally according to the layout;</p>
-<p>data shall be of the same length of the input position
-that builds the layout</p>
+<dd><p>Deliever data to the intersecting domains.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>data</strong> : array_like (, extra_dimensions)</p>
+<blockquote>
+<div><p>The data to be delievered. It shall be of the same length and of 
+the same ordering of the input position that builds the layout.
+Each element is a matching element of the position used in the call
+to <a class="reference internal" href="#pypm.domain.GridND.decompose" title="pypm.domain.GridND.decompose"><code class="xref py py-meth docutils literal"><span class="pre">GridND.decompose()</span></code></a></p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>newdata</strong> : array_like</p>
+<blockquote class="last">
+<div><p>The data delievered to the domain.
+Ghosts are created if a particle intersects multiple domains.
+Refer to <a class="reference internal" href="#pypm.domain.Layout.gather" title="pypm.domain.Layout.gather"><code class="xref py py-meth docutils literal"><span class="pre">gather()</span></code></a> for collecting data of ghosts.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
 </dd></dl>
 
 <dl class="method">
 <dt id="pypm.domain.Layout.gather">
 <code class="descname">gather</code><span class="sig-paren">(</span><em>data</em>, <em>mode='sum'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pypm/domain.html#Layout.gather"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pypm.domain.Layout.gather" title="Permalink to this definition">¶</a></dt>
-<dd><p>pull the data from other ranks back to its original hosting rank
-values of mirror items are added. 
-mode can be &#8216;sum&#8217; or &#8216;any&#8217;, or &#8216;mean&#8217;.</p>
+<dd><p>Pull the data from other ranks back to its original hosting rank.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>gathered</strong> : array_like</p>
+<blockquote class="last">
+<div><p>gathered data. It is of the same length and ordering of the original
+positions used in <code class="xref py py-meth docutils literal"><span class="pre">domain.decompose()</span></code>.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Attributes</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="2%" />
+<col width="98%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td>data</td>
+<td>(  array_like) data for each received particles.</td>
+</tr>
+<tr class="row-even"><td>mode</td>
+<td>(string &#8216;sum&#8217;, &#8216;any&#8217;, &#8216;mean&#8217;) <code class="code docutils literal"><span class="pre">sum</span></code> is to add the ghosts together <code class="code docutils literal"><span class="pre">any</span></code> is to pick value of any ghosts <code class="code docutils literal"><span class="pre">mean</span></code> is to use the mean of all ghosts</td>
+</tr>
+</tbody>
+</table>
 </dd></dl>
 
 </dd></dl>
@@ -114,6 +215,12 @@ mode can be &#8216;sum&#8217; or &#8216;any&#8217;, or &#8216;mean&#8217;.</p>
       </div>
       <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
         <div class="sphinxsidebarwrapper">
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="pypm.cic.html"
+                        title="previous chapter">pypm.cic module</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="pypm.particlemesh.html"
+                        title="next chapter">pypm.particlemesh module</a></p>
   <div role="note" aria-label="source link">
     <h3>This Page</h3>
     <ul class="this-page-menu">
@@ -147,7 +254,15 @@ mode can be &#8216;sum&#8217; or &#8216;any&#8217;, or &#8216;mean&#8217;.</p>
         <li class="right" >
           <a href="py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li class="nav-item nav-item-0"><a href="index.html">PyPM 0.1 documentation</a> &raquo;</li> 
+        <li class="right" >
+          <a href="pypm.particlemesh.html" title="pypm.particlemesh module"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="pypm.cic.html" title="pypm.cic module"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">PyPM 0.1 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="modules.html" >pypm</a> &raquo;</li>
+          <li class="nav-item nav-item-2"><a href="pypm.html" >pypm package</a> &raquo;</li> 
       </ul>
     </div>
     <div class="footer" role="contentinfo">

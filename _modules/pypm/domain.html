@@ -87,8 +87,14 @@
     <span class="k">return</span> <span class="n">out</span>
 </div>
 <div class="viewcode-block" id="Layout"><a class="viewcode-back" href="../../pypm.domain.html#pypm.domain.Layout">[docs]</a><span class="k">class</span> <span class="nc">Layout</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot; A global all to all communication layout </span>
-<span class="sd">        </span>
+    <span class="sd">&quot;&quot;&quot; </span>
+<span class="sd">    The communication layout of a domain decomposition.</span>
+
+<span class="sd">    Given a set of particles, Layout object knows how to move particles around.</span>
+<span class="sd">    Do not create a Layout object directly. Always use :py:meth:`GridND.decompose`.</span>
+
+<span class="sd">    Useful methods are :py:meth:`exchange`, and :py:meth:`gather`.</span>
+
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">comm</span><span class="p">,</span> <span class="n">oldlength</span><span class="p">,</span> <span class="n">sendcounts</span><span class="p">,</span> <span class="n">indices</span><span class="p">,</span> <span class="n">recvcounts</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
@@ -122,10 +128,23 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">indices</span> <span class="o">=</span> <span class="n">indices</span>
 
 <div class="viewcode-block" id="Layout.exchange"><a class="viewcode-back" href="../../pypm.domain.html#pypm.domain.Layout.exchange">[docs]</a>    <span class="k">def</span> <span class="nf">exchange</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot; exchange the data globally according to the layout;</span>
+        <span class="sd">&quot;&quot;&quot; </span>
+<span class="sd">        Deliever data to the intersecting domains.</span>
 
-<span class="sd">            data shall be of the same length of the input position</span>
-<span class="sd">            that builds the layout</span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        data     : array_like (, extra_dimensions)</span>
+<span class="sd">            The data to be delievered. It shall be of the same length and of </span>
+<span class="sd">            the same ordering of the input position that builds the layout.</span>
+<span class="sd">            Each element is a matching element of the position used in the call</span>
+<span class="sd">            to :py:meth:`GridND.decompose`</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        newdata  : array_like </span>
+<span class="sd">            The data delievered to the domain.</span>
+<span class="sd">            Ghosts are created if a particle intersects multiple domains.</span>
+<span class="sd">            Refer to :py:meth:`gather` for collecting data of ghosts.</span>
 
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">)</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">oldlength</span><span class="p">:</span>
@@ -168,9 +187,23 @@
 </div>
 <div class="viewcode-block" id="Layout.gather"><a class="viewcode-back" href="../../pypm.domain.html#pypm.domain.Layout.gather">[docs]</a>    <span class="k">def</span> <span class="nf">gather</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s">&#39;sum&#39;</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; </span>
-<span class="sd">            pull the data from other ranks back to its original hosting rank</span>
-<span class="sd">            values of mirror items are added. </span>
-<span class="sd">            mode can be &#39;sum&#39; or &#39;any&#39;, or &#39;mean&#39;. </span>
+<span class="sd">        Pull the data from other ranks back to its original hosting rank.</span>
+
+<span class="sd">        Attributes</span>
+<span class="sd">        ----------</span>
+<span class="sd">        data    :   array_like</span>
+<span class="sd">            data for each received particles. </span>
+<span class="sd">            </span>
+<span class="sd">        mode    : string &#39;sum&#39;, &#39;any&#39;, &#39;mean&#39;</span>
+<span class="sd">            :code:`sum` is to add the ghosts together</span>
+<span class="sd">            :code:`any` is to pick value of any ghosts</span>
+<span class="sd">            :code:`mean` is to use the mean of all ghosts</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        gathered  : array_like</span>
+<span class="sd">            gathered data. It is of the same length and ordering of the original</span>
+<span class="sd">            positions used in :py:meth:`domain.decompose`.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="c"># lets check the data type first</span>
         <span class="k">if</span> <span class="n">mode</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="s">&#39;sum&#39;</span><span class="p">,</span> <span class="s">&#39;any&#39;</span><span class="p">,</span> <span class="s">&#39;mean&#39;</span><span class="p">]:</span>
@@ -226,7 +259,22 @@
 </div></div>
 <div class="viewcode-block" id="GridND"><a class="viewcode-back" href="../../pypm.domain.html#pypm.domain.GridND">[docs]</a><span class="k">class</span> <span class="nc">GridND</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        ND domain decomposition on a uniform grid</span>
+<span class="sd">    GridND is domain decomposition on a uniform grid of N dimensions.</span>
+
+<span class="sd">    The total number of domains is prod([ len(dir) - 1 for dir in grid]).</span>
+
+<span class="sd">    Attributes</span>
+<span class="sd">    ----------</span>
+<span class="sd">    grid   : list  (Ndim)</span>
+<span class="sd">        A list of edges of the grid in each dimension.</span>
+<span class="sd">        grid[i] is the edges on direction i. grid[i] includes 0 and BoxSize.</span>
+<span class="sd">    comm   : :py:class:`MPI.Comm`</span>
+<span class="sd">        MPI Communicator, default is :code:`MPI.COMM_WORLD` </span>
+<span class="sd"> </span>
+<span class="sd">    periodic : boolean</span>
+<span class="sd">        Is the domain decomposition periodic? If so , grid[i][-1] is the period.</span>
+
+
 <span class="sd">    &quot;&quot;&quot;</span>
     
     <span class="kn">from</span> <span class="nn">_domain</span> <span class="kn">import</span> <span class="n">gridnd_fill</span> <span class="k">as</span> <span class="n">_fill</span>
@@ -243,12 +291,6 @@
             <span class="n">comm</span><span class="o">=</span><span class="n">MPI</span><span class="o">.</span><span class="n">COMM_WORLD</span><span class="p">,</span>
             <span class="n">periodic</span><span class="o">=</span><span class="bp">True</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; </span>
-<span class="sd">            grid is a list of  grid edges. </span>
-<span class="sd">            grid[0] or pos[:, 0], etc.</span>
-<span class="sd">        </span>
-<span class="sd">            grid[i][-1] are the boxsizes</span>
-<span class="sd">            the ranks are set up into a mesh of </span>
-<span class="sd">                len(grid[0]) - 1, ...</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">dims</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="nb">len</span><span class="p">(</span><span class="n">g</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span> <span class="k">for</span> <span class="n">g</span> <span class="ow">in</span> <span class="n">grid</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="s">&#39;int32&#39;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">grid</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">grid</span><span class="p">)</span>
@@ -262,15 +304,32 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">myend</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">g</span><span class="p">[</span><span class="n">r</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span> <span class="k">for</span> <span class="n">g</span><span class="p">,</span> <span class="n">r</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">grid</span><span class="p">,</span> <span class="n">rank</span><span class="p">)])</span>
 
 <div class="viewcode-block" id="GridND.decompose"><a class="viewcode-back" href="../../pypm.domain.html#pypm.domain.GridND.decompose">[docs]</a>    <span class="k">def</span> <span class="nf">decompose</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pos</span><span class="p">,</span> <span class="n">smoothing</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">transform</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot; decompose the domain according to pos,</span>
+        <span class="sd">&quot;&quot;&quot; </span>
+<span class="sd">        Decompose particles into domains.</span>
 
-<span class="sd">            smoothing is the size of a particle:</span>
-<span class="sd">                any particle that intersects the domain will</span>
-<span class="sd">                be transported to the domain.</span>
-<span class="sd">            transform is the transformation on pos</span>
-<span class="sd">            transform(pos[:, 3]) -&gt; newpos[:, 3]</span>
-<span class="sd">            returns a Layout object that can be used</span>
-<span class="sd">            to exchange data</span>
+<span class="sd">        Create a decomposition layout for particles at :code:`pos`.</span>
+<span class="sd">        </span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        pos       :  array_like (, Ndim)</span>
+<span class="sd">            position of particles, Ndim can be more than the dimenions</span>
+<span class="sd">            of the domain grid, in which case only the first directions are used.</span>
+
+<span class="sd">        smoothing : float</span>
+<span class="sd">            Smoothing of particles. Any particle that intersects a domain will</span>
+<span class="sd">            be transported to the domain. Smoothing is in the coordinate system</span>
+<span class="sd">            of the grid.</span>
+
+<span class="sd">        transform : callable</span>
+<span class="sd">            Apply the transformation on pos before the decompostion.</span>
+<span class="sd">            transform(pos[:, 3]) -&gt; domain_pos[:, 3]</span>
+<span class="sd">            transform is needed if pos and the domain grid are of different units.</span>
+<span class="sd">            For example, pos in physical simulation units and domain grid on a mesh unit.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        layout :  :py:class:`Layout` object that can be used to exchange data</span>
+
 <span class="sd">        &quot;&quot;&quot;</span>
 
         <span class="c"># we can&#39;t deal with too many points per rank, by  MPI</span>

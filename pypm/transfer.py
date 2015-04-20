@@ -117,22 +117,44 @@ class TransferFunction:
         def PS(comm, complex, w):
             wedges = numpy.linspace(0, numpy.pi, wout.size + 1, endpoint=True)
             w2edges = wedges ** 2
-            w2 = 0.0
-            for wi in w:
-                w2 = w2 + wi ** 2
-            dig = numpy.digitize(w2.flat, w2edges)
-            w2 = numpy.bincount(dig, weights=w2.flat, minlength=wout.size + 2)[1: -1]
-            w2 = comm.allreduce(w2, MPI.SUM)
 
-            N = numpy.bincount(dig, minlength=wout.size + 2)[1: -1]
+            # pickup the singular plane that is single counted (r2c transform)
+            singular = w[-1] == 0
+
+            scratch = 0.0
+            for wi in w:
+                scratch = scratch + wi ** 2
+
+            # now scratch stores w ** 2
+            dig = numpy.digitize(scratch.flat, w2edges)
+
+            # take the sum of w
+            scratch **= 0.5
+            # the singular plane is down weighted by 0.5
+            scratch[singular] *= 0.5
+
+            wsum = numpy.bincount(dig, weights=scratch.flat, minlength=wout.size + 2)[1: -1]
+            wsum = comm.allreduce(wsum, MPI.SUM)
+
+            # take the sum of weights
+            scratch[...] = 1.0
+            # the singular plane is down weighted by 0.5
+            scratch[singular] = 0.5
+
+            N = numpy.bincount(dig, weights=scratch.flat, minlength=wout.size + 2)[1: -1]
             N = comm.allreduce(N, MPI.SUM)
 
-            P = numpy.abs(complex) ** 2
-            P = numpy.bincount(dig, weights=P.flat, minlength=wout.size + 2)[1: -1]
+            # take the sum of power
+            numpy.abs(complex, out=scratch)
+            scratch[...] **= 2.0
+            # the singular plane is down weighted by 0.5
+            scratch[singular] *= 0.5
+
+            P = numpy.bincount(dig, weights=scratch.flat, minlength=wout.size + 2)[1: -1]
             P = comm.allreduce(P, MPI.SUM)
 
             psout[:] = P / N 
-            wout[:] = (w2 / N) ** 0.5
+            wout[:] = wsum / N
         return PS
 
     @staticmethod

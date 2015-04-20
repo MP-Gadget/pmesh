@@ -136,7 +136,8 @@ def main():
         numpy.linspace(0, 1.0, np[1] + 1, endpoint=True),
     ]
     domain = GridND(grid)
-    logging.info('grid %s' % str(grid) )
+    if comm.rank == 0:
+        logging.info('grid %s' % str(grid) )
     for i, P in enumerate(read(comm, ns.filename, TPMSnapshotFile)):
         pass
     # make sure in one round all particles are in
@@ -146,7 +147,8 @@ def main():
     id = P['ID'][::1]
     Ntot = sum(comm.allgather(len(pos)))
 
-    logging.info('Total number of particles %d, ll %g' % (Ntot, ns.LinkingLength))
+    if comm.rank == 0:
+        logging.info('Total number of particles %d, ll %g' % (Ntot, ns.LinkingLength))
     ll = ns.LinkingLength * Ntot ** -0.3333333
 
     #print pos
@@ -156,13 +158,17 @@ def main():
 
     tpos = layout.exchange(pos)
     tid = layout.exchange(id)
-    logging.info('domain has %d particles' % len(tid))
+    logging.info('domain %d has %d particles' % (comm.rank, len(tid)))
 
     data = cluster.dataset(tpos, boxsize=1.0)
     fof = cluster.fof(data, linking_length=ll, np=0, verbose=True)
     
     # initialize global labels
     minid = equiv_class(fof.labels, tid, op=numpy.fmin)[fof.labels]
+    del fof
+    del data
+    del tpos
+    del tid
 
     while True:
         # merge, if a particle belongs to several ranks
@@ -178,6 +184,7 @@ def main():
         # if no rank has merged any, we are done
         # gl is the global label (albeit with some holes)
         if comm.allreduce(merged.sum()) == 0:
+            del minid_new
             break
         old = minid[merged]
         new = minid_new[merged]

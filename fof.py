@@ -11,7 +11,8 @@ from tpm import TPMSnapshotFile, read
 from kdcount import cluster
 from pypm.domain import GridND
 import numpy
-import mpsort
+
+from distributedarray import DistributedArray
 
 parser = ArgumentParser("",
         description=
@@ -128,7 +129,7 @@ def replacesorted(arr, sorted, b, out=None):
     out[found] = b[ind[found]]
     return out
 
-def densify(minid, comm):
+def densify(minid, comm, thresh):
     Nitem = len(minid)
 
     data = numpy.empty(Nitem, dtype=[
@@ -138,28 +139,35 @@ def densify(minid, comm):
     data['origind'] = sum(comm.allgather(Nitem)[:comm.rank]) \
             + numpy.arange(Nitem)
     data['minid'] = minid
+    data = DistributedArray(data, comm)
 
-    mpsort.sort(data, 'minid')
-    
-    junk, label = numpy.unique(data['minid'], return_inverse=True)
-    
-    next = comm.sendrecv(data['minid'][0], 
-                    dest=(comm.rank - 1) % comm.size,
-                    source=(comm.rank + 1) % comm.size
-                    )
+    data.sort('minid')
 
-    # if my last item equals next ranks first, next rank
-    # shall offset such that the first label matches my last
-    Nunique = len(junk)
-    if next == data['minid'][-1]:
-        Nunique = Nunique - 1
+    label = data['minid'].unique()
     
-    label += sum(comm.allgather(len(junk))[:comm.rank])
-    data['minid'] = label
+    N = label.bincount()
+    
+    small = N.local <= 32
 
-    mpsort.sort(data, 'origind')
+    Nlocal = label.bincount(local=True)
+    mask = numpy.repeat(small, Nlocal)
+ 
+    # globally shift halo id by one
+    label.local += 1
+    label.local[mask] = 0
+
+    data['minid'].local[:] = label.local[:]
+
+    data.sort('minid')
+
+    label = data['minid'].unique() 
+
+    data['minid'].local[:] = label.local[:]
+
+    data.sort('origind')
     
-    label = data['minid'].copy()
+    label = data['minid'].local.copy().view('i8')
+
     return label
 
 def main():
@@ -232,35 +240,27 @@ def main():
 
     minid = layout.gather(minid, mode=numpy.fmin)
 
-    label = densify(minid, comm)
+    label = densify(minid, comm, thresh=32)
 
-    Nhalo0 = comm.allreduce(label.max(), op=MPI.MAX) + 1
-    if False:
-        # condense glmg, replace this step with something parallel
-        gminid = numpy.concatenate(comm.allgather(minid))
-        junk, glabel = numpy.unique(gminid, return_inverse=True)
-        Nhalo0 = len(junk)
-        tmp = comm.allgather(len(minid))
-        label = comm.scatter(numpy.split(glabel, numpy.cumsum(tmp)[:-1]))
-        assert len(label) == len(minid) 
+    Nhalo0 = max(comm.allgather(label.max())) + 1
+
+    if comm.rank == 0:
+        print 'total halos is', Nhalo0
 
     # size of halos
     N = numpy.bincount(label.view(dtype='i8'), minlength=Nhalo0)
     N = comm.allreduce(N, op=MPI.SUM)
     
-    Nlarge = (N > 32).sum()
+    # N[0] is nonhalo
 
     # sort the labels by halo size
-    arg = N.argsort()[::-1]
-    P = arg.copy()
+    arg = N[1:].argsort()[::-1] + 1
+    P = numpy.arange(Nhalo0, dtype='i4')
     P[arg] = numpy.arange(len(arg))
     label = P[label]
-    label[label >= Nlarge] = -1
-    label += 1
     
-    # now label == 0 is not in large halos, label >= 1 is in halos
     # redo again
-    N = numpy.bincount(label, minlength=Nlarge + 1)
+    N = numpy.bincount(label, minlength=Nhalo0)
     N = comm.allreduce(N, op=MPI.SUM)
 
     # do center of mass

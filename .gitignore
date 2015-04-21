@@ -1,0 +1,4 @@
+build/
+*.pyc
+pypm/_domain.c
+*.so

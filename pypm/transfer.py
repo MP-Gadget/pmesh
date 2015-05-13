@@ -200,10 +200,11 @@ class TransferFunction:
 
             where this function performs only the :math:`- \omega **-2` part.
         """
-        w2 = 0.0
-        for wi in w:
-            w2 = w2 + wi ** 2
-        w2[w2 == 0] = numpy.inf
-        w2 *= -1
-        complex[:] /= w2
+        for row in len(complex.shape[0]):
+            w2 = w[0][row] ** 2
+            for wi in w[1:]:
+                w2 = w2 + wi[0] ** 2
+            w2[w2 == 0] = numpy.inf
+            w2 *= -1
+            complex[row] /= w2
 

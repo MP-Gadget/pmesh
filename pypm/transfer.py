@@ -118,40 +118,43 @@ class TransferFunction:
             wedges = numpy.linspace(0, numpy.pi, wout.size + 1, endpoint=True)
             w2edges = wedges ** 2
 
-            # pickup the singular plane that is single counted (r2c transform)
-            singular = w[-1] == 0
+            P = numpy.zeros(len(psout))
+            N = numpy.zeros(len(psout))
 
-            scratch = 0.0
-            for wi in w:
-                scratch = scratch + wi ** 2
+            for row in range(complex.shape[0]):
+                # pickup the singular plane that is single counted (r2c transform)
+                singular = w[0][-1] == 0
+                scratch = w[0][row] ** 2
+                for wi in w[1:]:
+                    scratch = scratch + wi[0] ** 2
 
-            # now scratch stores w ** 2
-            dig = numpy.digitize(scratch.flat, w2edges)
+                # now scratch stores w ** 2
+                dig = numpy.digitize(scratch.flat, w2edges)
 
-            # take the sum of w
-            scratch **= 0.5
-            # the singular plane is down weighted by 0.5
-            scratch[singular] *= 0.5
+                # take the sum of w
+                scratch **= 0.5
+                # the singular plane is down weighted by 0.5
+                scratch[singular] *= 0.5
 
-            wsum = numpy.bincount(dig, weights=scratch.flat, minlength=wout.size + 2)[1: -1]
-            wsum = comm.allreduce(wsum, MPI.SUM)
+                wsum = numpy.bincount(dig, weights=scratch.flat, minlength=wout.size + 2)[1: -1]
+                wsum = comm.allreduce(wsum, MPI.SUM)
 
-            # take the sum of weights
-            scratch[...] = 1.0
-            # the singular plane is down weighted by 0.5
-            scratch[singular] = 0.5
+                # take the sum of weights
+                scratch[...] = 1.0
+                # the singular plane is down weighted by 0.5
+                scratch[singular] = 0.5
 
-            N = numpy.bincount(dig, weights=scratch.flat, minlength=wout.size + 2)[1: -1]
-            N = comm.allreduce(N, MPI.SUM)
+                N1 = numpy.bincount(dig, weights=scratch.flat, minlength=wout.size + 2)[1: -1]
+                N += comm.allreduce(N1, MPI.SUM)
 
-            # take the sum of power
-            numpy.abs(complex, out=scratch)
-            scratch[...] **= 2.0
-            # the singular plane is down weighted by 0.5
-            scratch[singular] *= 0.5
+                # take the sum of power
+                numpy.abs(complex[row], out=scratch)
+                scratch[...] **= 2.0
+                # the singular plane is down weighted by 0.5
+                scratch[singular] *= 0.5
 
-            P = numpy.bincount(dig, weights=scratch.flat, minlength=wout.size + 2)[1: -1]
-            P = comm.allreduce(P, MPI.SUM)
+                P1 = numpy.bincount(dig, weights=scratch.flat, minlength=wout.size + 2)[1: -1]
+                P += comm.allreduce(P1, MPI.SUM)
 
             psout[:] = P / N 
             wout[:] = wsum / N
@@ -169,10 +172,12 @@ class TransferFunction:
             - k ** 2 * complex = (Nmesh / BoxSize) ** 2 (-w**2) * complex
 
         """
-        w2 = 0.0
-        for wi in w:
-            w2 = w2 + wi ** 2
-        w2 *= -1
+        for row in range(complex.shape[0]):
+            w2 = w[0][row] ** 2
+            for wi in w[1:]:
+                w2 = w2 + wi[0] ** 2
+            w2[w2 == 0] = numpy.inf
+            w2 *= -1
         complex[:] *= w2
 
     @staticmethod
@@ -200,7 +205,7 @@ class TransferFunction:
 
             where this function performs only the :math:`- \omega **-2` part.
         """
-        for row in len(complex.shape[0]):
+        for row in range(complex.shape[0]):
             w2 = w[0][row] ** 2
             for wi in w[1:]:
                 w2 = w2 + wi[0] ** 2
@@ -208,3 +213,18 @@ class TransferFunction:
             w2 *= -1
             complex[row] /= w2
 
+if __name__ == '__main__':
+    def test():
+        complex = numpy.ones((2, 3))
+        ndim = len(complex.shape)
+        w = []
+        for d in range(ndim):
+            s = numpy.ones(ndim, dtype='intp')
+            s[d] = complex.shape[d]
+            wi = numpy.arange(s[d], dtype='f8')
+            w.append(wi.reshape(s))
+            
+        print w
+        TransferFunction.Laplace(complex, w)
+        print complex
+    test()

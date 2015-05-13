@@ -78,10 +78,11 @@ class ParticleMesh(object):
             self.procmesh,
             pfft.Flags.PFFT_TRANSPOSED_OUT | pfft.Flags.PFFT_DESTROY_INPUT)
 
-        self.real = pfft.LocalBuffer(self.partition).view_input()
+        buffer = pfft.LocalBuffer(self.partition)
+        self.real = buffer.view_input()
         self.real[:] = 0
 
-        self.complex = pfft.LocalBuffer(self.partition).view_output()
+        self.complex = buffer.view_output()
 
         self.T = Timers(self.comm)
         with self.T['Plan']:

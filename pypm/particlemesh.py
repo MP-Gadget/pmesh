@@ -57,7 +57,7 @@ class ParticleMesh(object):
         profiling timers
 
     """
-    def __init__(self, BoxSize, Nmesh, comm=None, np=None, verbose=False):
+    def __init__(self, BoxSize, Nmesh, comm=None, np=None, verbose=False, dtype='f8'):
         """ create a PM object.  """
         # this weird sequence to intialize comm is because
         # we want to be compatible with None comm == MPI.COMM_WORLD
@@ -70,10 +70,20 @@ class ParticleMesh(object):
         if np is None:
                 np = pfft.split_size_2d(self.comm.size)
 
+        dtype = numpy.dtype(dtype)
+        if dtype is numpy.dtype('f8'):
+            forward = pfft.Type.PFFT_R2C
+            backward = pfft.Type.PFFT_C2R
+        elif dtype is numpy.dtype('f4'):
+            forward = pfft.Type.PFFTF_R2C
+            backward = pfft.Type.PFFTF_C2R
+        else:
+            raise ValueError("dtype must be f8 or f4")
+
         self.procmesh = pfft.ProcMesh(np, comm=comm)
         self.Nmesh = Nmesh
         self.BoxSize = BoxSize
-        self.partition = pfft.Partition(pfft.Type.PFFT_R2C, 
+        self.partition = pfft.Partition(forward,
             [Nmesh, Nmesh, Nmesh], 
             self.procmesh,
             pfft.Flags.PFFT_TRANSPOSED_OUT | pfft.Flags.PFFT_DESTROY_INPUT)
@@ -87,10 +97,10 @@ class ParticleMesh(object):
         self.T = Timers(self.comm)
         with self.T['Plan']:
             self.forward = pfft.Plan(self.partition, pfft.Direction.PFFT_FORWARD,
-                    self.real.base, self.complex.base, pfft.Type.PFFT_R2C,
+                    self.real.base, self.complex.base, forward,
                     pfft.Flags.PFFT_ESTIMATE | pfft.Flags.PFFT_TRANSPOSED_OUT | pfft.Flags.PFFT_DESTROY_INPUT)
             self.backward = pfft.Plan(self.partition, pfft.Direction.PFFT_BACKWARD,
-                    self.complex.base, self.real.base, pfft.Type.PFFT_C2R, 
+                    self.complex.base, self.real.base, backward, 
                     pfft.Flags.PFFT_ESTIMATE | pfft.Flags.PFFT_TRANSPOSED_IN | pfft.Flags.PFFT_DESTROY_INPUT)
 
         self.domain = domain.GridND(self.partition.i_edges)
@@ -278,7 +288,7 @@ class ParticleMesh(object):
         for d in range(self.partition.Ndim):
             s = numpy.ones(self.partition.Ndim, dtype='intp')
             s[d] = self.partition.local_no[d]
-            wi = numpy.arange(s[d], dtype='f8') + self.partition.local_o_start[d] 
+            wi = numpy.arange(s[d], dtype='f4') + self.partition.local_o_start[d] 
             wi[wi >= self.Nmesh // 2] -= self.Nmesh
             wi *= (2 * numpy.pi / self.Nmesh)
             w.append(wi.reshape(s))
@@ -326,7 +336,7 @@ class ParticleMesh(object):
         """
         self.push()
 
-        self.transfer(*transfer_functions)
+        self.transfer(transfer_functions)
 
         with self.T['C2R']:
             self.backward.execute(self.complex.base, self.real.base)

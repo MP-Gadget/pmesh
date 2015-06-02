@@ -112,7 +112,7 @@ class QPM(object):
         logaout = numpy.log(aout)
         logaout.sort()
 
-        pm = ParticleMesh(self.BoxSize, self.Nmesh, verbose=False)
+        pm = ParticleMesh(self.BoxSize, self.Nmesh, verbose=False, dtype='f4')
         self.pm = pm
         #SaveSnapshot(pm.comm, 'gridic-256', P)
 

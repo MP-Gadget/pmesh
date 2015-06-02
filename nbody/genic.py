@@ -48,7 +48,7 @@ def GridIC(PowerSpectrum, BoxSize, Ngrid, order=3, preshift=False,
     D1 = 1.0
     D2 = D1 ** 2 
 
-    pm = ParticleMesh(BoxSize, Ngrid, verbose=False)
+    pm = ParticleMesh(BoxSize, Ngrid, verbose=False, dtype='f4')
 
     x0 = pm.partition.local_i_start
     ni = pm.partition.local_ni
@@ -126,7 +126,7 @@ def GridIC(PowerSpectrum, BoxSize, Ngrid, order=3, preshift=False,
                 TransferFunction.SuperLanzcos(dir, order=order),
                 TransferFunction.Constant(-1.0 * Ngrid / BoxSize),
                 ])
-        tpm = pm.readout(tpos)
+        tmp = pm.readout(tpos)
         tmp = layout.gather(tmp, mode='sum')
         P['ZA'][:, dir] = tmp
 

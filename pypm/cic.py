@@ -72,8 +72,6 @@ def paint(pos, mesh, weights=1.0, mode="raise", period=None, transform=None):
 
     return mesh
 
-from tools import Timers
-RT = Timers()
 def readout(mesh, pos, mode="raise", period=None, transform=None, out=None):
     """ CIC approximation, reading out mesh values at pos,
         see document of paint. 
@@ -93,43 +91,40 @@ def readout(mesh, pos, mode="raise", period=None, transform=None, out=None):
             numpy.arange(Ndim)[None, :]) & 1)
     for start in range(0, Np, chunksize):
         chunk = slice(start, start+chunksize)
-        with RT['transform']:
-            if mode == 'raise':
-                gridpos = transform(pos[chunk])
-                rmi_mode = 'raise'
-                intpos = numpy.intp(numpy.floor(gridpos))
-            elif mode == 'ignore':
-                gridpos = transform(pos[chunk])
-                rmi_mode = 'raise'
-                intpos = numpy.intp(numpy.floor(gridpos))
 
-        with RT['iteration']:
-            for i, neighbour in enumerate(neighbours):
-                neighbour = neighbour[None, :]
-                with RT['shift']:
-                    targetpos = intpos + neighbour
+        if mode == 'raise':
+            gridpos = transform(pos[chunk])
+            rmi_mode = 'raise'
+            intpos = numpy.intp(numpy.floor(gridpos))
+        elif mode == 'ignore':
+            gridpos = transform(pos[chunk])
+            rmi_mode = 'raise'
+            intpos = numpy.intp(numpy.floor(gridpos))
 
-                    kernel = (1.0 - numpy.abs(gridpos - targetpos)).prod(axis=-1)
+        for i, neighbour in enumerate(neighbours):
+            neighbour = neighbour[None, :]
 
-                    if period is not None:
-                        numpy.remainder(targetpos, period, targetpos)
+            targetpos = intpos + neighbour
 
-                with RT['masking']:
-                    if mode == 'ignore':
-                        # filter out those outside of the mesh
-                        mask = (targetpos >= 0).all(axis=-1)
-                        for d in range(Ndim):
-                            mask &= (targetpos[..., d] < mesh.shape[d])
-                        targetpos = targetpos[mask]
-                        kernel = kernel[mask]
-                    else:
-                        mask = Ellipsis
+            kernel = (1.0 - numpy.abs(gridpos - targetpos)).prod(axis=-1)
 
-                with RT['ravel']:
-                    if len(targetpos) > 0:
-                        targetindex = numpy.ravel_multi_index(
-                                targetpos.T, mesh.shape, mode=rmi_mode)
-                        out[chunk][mask] += kernel * mesh.flat[targetindex]
+            if period is not None:
+                numpy.remainder(targetpos, period, targetpos)
+
+            if mode == 'ignore':
+                # filter out those outside of the mesh
+                mask = (targetpos >= 0).all(axis=-1)
+                for d in range(Ndim):
+                    mask &= (targetpos[..., d] < mesh.shape[d])
+                targetpos = targetpos[mask]
+                kernel = kernel[mask]
+            else:
+                mask = Ellipsis
+
+            if len(targetpos) > 0:
+                targetindex = numpy.ravel_multi_index(
+                        targetpos.T, mesh.shape, mode=rmi_mode)
+                out[chunk][mask] += kernel * mesh.flat[targetindex]
     return out
 
 

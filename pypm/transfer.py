@@ -45,7 +45,7 @@ class TransferFunction:
         value = comm.allreduce(value, MPI.SUM)
         complex[:] /= value
     @staticmethod
-    def RemoveDC(complex, w):
+    def RemoveDC(comm, complex, w):
         ind = []
         for wi in w:
             if (wi != 0).all():
@@ -54,7 +54,7 @@ class TransferFunction:
         ind = tuple(ind)
         complex[ind] = 0
     @staticmethod
-    def Trilinear(complex, w):
+    def Trilinear(comm, complex, w):
         for wi in w:
             # convert to 
             tmp = numpy.sinc(wi / (2 * numpy.pi)) ** 2
@@ -68,7 +68,7 @@ class TransferFunction:
             complex * i * k which is
             complex * i * w * Nmesh / BoxSize
         """
-        def SuperLanzcosDir(complex, w):
+        def SuperLanzcosDir(comm, complex, w):
             wi = w[dir] * 1.0
         #    tmp = (1. / 594 * 
         #       (126 * numpy.sin(wi) + 193 * numpy.sin(2 * wi) + 142 * numpy.sin (3 *
@@ -88,7 +88,7 @@ class TransferFunction:
         """
         sm2 = smoothing ** 2
 
-        def GaussianS(complex, w):
+        def GaussianS(comm, complex, w):
             w2 = 0
             for wi in w:
                 wi2 = wi ** 2
@@ -96,7 +96,7 @@ class TransferFunction:
         return GaussianS
     @staticmethod
     def Constant(C):
-        def Constant(complex, w):
+        def Constant(comm, complex, w):
             complex *= C
         return Constant
     @staticmethod
@@ -161,7 +161,7 @@ class TransferFunction:
         return PS
 
     @staticmethod
-    def Laplace(complex, w):
+    def Laplace(comm, complex, w):
         """ 
             Take the Laplacian k-space: complex *= -w2
 
@@ -181,7 +181,7 @@ class TransferFunction:
         complex[:] *= w2
 
     @staticmethod
-    def Poisson(complex, w):
+    def Poisson(comm, complex, w):
         """ 
             Solve Poisson equation in k-space: complex /= -w2
 
@@ -225,6 +225,6 @@ if __name__ == '__main__':
             w.append(wi.reshape(s))
             
         print w
-        TransferFunction.Laplace(complex, w)
+        TransferFunction.Laplace(None, complex, w)
         print complex
     test()

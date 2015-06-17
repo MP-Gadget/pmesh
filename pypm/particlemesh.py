@@ -295,13 +295,7 @@ class ParticleMesh(object):
 
         with self.T['Transfer']:
             for transfer in transfer_functions:
-                if transfer.func_code.co_argcount == 2:
-                    transfer(self.complex, w)
-                elif transfer.func_code.co_argcount == 3:
-                    transfer(self.comm, self.complex, w)
-                else:
-                    raise TypeError(
-                    "Wrong definition of the transfer function: %s" % transfer.__name__)
+                transfer(self.comm, self.complex, w)
 
     def readout(self, pos):
         """ 

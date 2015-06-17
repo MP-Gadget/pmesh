@@ -95,7 +95,7 @@ def GridIC(PowerSpectrum, BoxSize, Ngrid, order=3, preshift=False,
 #    if pm.comm.rank == 0:
 #        print 'complex std', (realstd / (1. + pm.Nmesh//2 +1) / pm.Nmesh ** 2) ** 0.5
 
-    def Transfer(complex, w):
+    def Transfer(comm, complex, w):
         w2 = 0
         for wi in w:
             w2 = w2 + wi ** 2

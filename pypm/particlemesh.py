@@ -53,6 +53,9 @@ class ParticleMesh(object):
     complex : array_like
         the complex FFT array (private)
 
+    w   : list
+        a list of the circular frequencies along each direction
+
     T    : :py:class:`pypm.tools.Timers`
         profiling timers
 
@@ -106,6 +109,17 @@ class ParticleMesh(object):
         self.domain = domain.GridND(self.partition.i_edges)
         self.verbose = verbose
         self.stack = []
+
+        w = []
+        for d in range(self.partition.Ndim):
+            s = numpy.ones(self.partition.Ndim, dtype='intp')
+            s[d] = self.partition.local_no[d]
+            wi = numpy.arange(s[d], dtype='f4') + self.partition.local_o_start[d] 
+            wi[wi >= self.Nmesh // 2] -= self.Nmesh
+            wi *= (2 * numpy.pi / self.Nmesh)
+            w.append(wi.reshape(s))
+
+        self.w = w
 
     def transform(self, x):
         """ 
@@ -284,18 +298,10 @@ class ParticleMesh(object):
             A chain of transfer functions to apply to the complex field. 
         
         """
-        w = []
-        for d in range(self.partition.Ndim):
-            s = numpy.ones(self.partition.Ndim, dtype='intp')
-            s[d] = self.partition.local_no[d]
-            wi = numpy.arange(s[d], dtype='f4') + self.partition.local_o_start[d] 
-            wi[wi >= self.Nmesh // 2] -= self.Nmesh
-            wi *= (2 * numpy.pi / self.Nmesh)
-            w.append(wi.reshape(s))
 
         with self.T['Transfer']:
             for transfer in transfer_functions:
-                transfer(self.comm, self.complex, w)
+                transfer(self.comm, self.complex, self.w)
 
     def readout(self, pos):
         """ 

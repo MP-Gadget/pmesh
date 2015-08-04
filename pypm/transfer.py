@@ -106,7 +106,7 @@ class TransferFunction:
         """
         def Inspect(comm, complex, w):
             V = ['%s = %s' %(str(i), str(complex[tuple(i)])) for i in indices]
-            print name, ','.join(V)
+            print(name, ','.join(V))
         return Inspect
 
     @staticmethod
@@ -224,7 +224,5 @@ if __name__ == '__main__':
             wi = numpy.arange(s[d], dtype='f8')
             w.append(wi.reshape(s))
             
-        print w
         TransferFunction.Laplace(None, complex, w)
-        print complex
     test()

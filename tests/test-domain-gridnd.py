@@ -35,10 +35,10 @@ def inspect(layout):
 
         for p in pos:
             art[p[0], p[1], 1] = ' '
-        print 'sending to', t, 'counts', layout.sendcounts[t]
+        print('sending to', t, 'counts', layout.sendcounts[t])
         for p in chunk:
             art[p[0], p[1], 1] = '%d' % t
-        print art.view(dtype='S2').reshape(10, 10)
+        print(art.view(dtype='S2').reshape(10, 10))
 
 def test0():
     """ 
@@ -133,14 +133,14 @@ def test5():
     for i in range(dcop.comm.size):
         dcop.comm.barrier()
         if dcop.comm.rank == i:
-            print dcop.comm.rank, 'pos', pos
-            print 'oldpos', oldpos
-            print 'data', data
-            print 'olddata', olddata
+            print(dcop.comm.rank, 'pos', pos)
+            print('oldpos', oldpos)
+            print('data', data)
+            print('olddata', olddata)
             #print 'indices', layout.indices, 'sc', layout.sendcounts
-            print 'newpos', newpos
-            print 'newdata', newdata
-            print '-----'
+            print('newpos', newpos)
+            print('newdata', newdata)
+            print('-----')
     assert numpy.allclose(oldpos, pos)
     assert numpy.allclose(olddata, data)
     # I am still not sure what the correct output is so just dump them out.
@@ -166,13 +166,4 @@ def test_wrongdtype():
         newpos = layout.exchange(pos)
         raise AssertionError
     except TypeError as e:
-        print 'Expected Exception', e
-
-test0()
-test1()
-test2()
-test3()
-test4()
-test5()
-test_wrongdtype()
-
+        print('Expected Exception', e)

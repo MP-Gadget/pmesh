@@ -137,7 +137,6 @@ class ParticleMesh(object):
  
         """
         ret = (1.0 * self.Nmesh / self.BoxSize) * x - self.partition.local_i_start
-        #print self.partition.local_i_start, (ret.max(axis=0), ret.min(axis=0))
         return ret
 
     def transform0(self, x):
@@ -156,7 +155,6 @@ class ParticleMesh(object):
  
         """
         ret = (1.0 * self.Nmesh / self.BoxSize) * x
-        #print self.partition.local_i_start, (ret.max(axis=0), ret.min(axis=0))
         return ret
 
     def decompose(self, pos):
@@ -234,7 +232,7 @@ class ParticleMesh(object):
         if self.verbose:
             realsum = self.comm.allreduce(self.real.sum(dtype='f8'), MPI.SUM)
             if self.comm.rank == 0:
-                print 'before r2c, sum of real', realsum
+                print('before r2c, sum of real', realsum)
             self.comm.barrier()
 
         with self.T['R2C']:
@@ -323,6 +321,6 @@ class ParticleMesh(object):
         if self.verbose:
             realsum = self.comm.allreduce(self.real.sum(dtype='f8'), MPI.SUM)
             if self.comm.rank == 0:
-                print 'after c2r, sum of real', realsum
+                print('after c2r, sum of real', realsum)
             self.comm.barrier()
 

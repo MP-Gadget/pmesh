@@ -112,7 +112,7 @@ def test4():
 def test5():
     """ empty pos """
 
-    assert MPI.COMM_WORLD.size ==9
+    if MPI.COMM_WORLD.size != 9: return
 
     dcop = domain.GridND(grid, 
             comm=MPI.COMM_WORLD,
@@ -148,7 +148,7 @@ def test5():
 def test_wrongdtype():
     """ empty pos """
 
-    assert MPI.COMM_WORLD.size == 9
+    if MPI.COMM_WORLD.size != 9: return
 
     dcop = domain.GridND(grid, 
             comm=MPI.COMM_WORLD,

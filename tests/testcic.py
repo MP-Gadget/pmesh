@@ -1,10 +1,4 @@
-import sys
-import os.path
-import traceback
 import numpy
-
-d = os.path.join(os.path.dirname(__file__), '..')
-sys.path.insert(0, d)
 from pypm import cic
 
 def test_paint1():
@@ -70,7 +64,6 @@ def test_paint1():
     mesh = numpy.zeros((2, 2))
     pos = [[-.1, 0.0]]
     cic.paint(pos, mesh, period=2.0)
-    print mesh
     assert numpy.allclose(
             mesh, 
             [[ 0.9,  0. ],
@@ -154,7 +147,6 @@ def test_paintignore3():
     mesh = numpy.zeros((2, 2))
     pos = [[-.1, 0.0]]
     cic.paint(pos, mesh, mode='ignore')
-    print mesh
     assert numpy.allclose(
             mesh, 
             [[ 0.9,  0.0 ],
@@ -218,7 +210,6 @@ def test_readout2():
         [1., 1.],
         [0., 1.]])
     values = cic.readout(mesh, pos, period=2.0)
-    print values
     assert numpy.allclose(values, 0.9)
 
 def test_readout3():
@@ -230,10 +221,10 @@ def test_readout3():
     values = cic.readout(mesh, pos, period=4.0, mode='ignore')
     assert numpy.allclose(values, 0.0)
 
-test_readout1()
-test_readout2()
-test_readout3()
 
+#test_readout1()
+#test_readout2()
+#test_readout3()
 
 from pypm.tools import Timers
 def test_speed():
@@ -250,5 +241,4 @@ def test_speed():
         cic.readout(mesh, pos, transform=transform, mode='ignore', period=100)
     with t['oldreadout']:
         cic.readout_old(mesh, pos, transform=transform, mode='ignore', period=100)
-    print t
-test_speed()
+#test_speed()

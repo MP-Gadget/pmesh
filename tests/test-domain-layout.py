@@ -1,8 +1,3 @@
-import sys
-import os.path
-
-d = os.path.join(os.path.dirname(__file__), '..')
-sys.path.insert(0, d)
 import numpy
 from mpi4py import MPI
 
@@ -45,5 +40,4 @@ def test1():
         comm.barrier()
         if comm.rank == 0:
             print 'arrived batch', batch
-
-test1()
+del test1

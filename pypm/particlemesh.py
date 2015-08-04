@@ -191,6 +191,7 @@ class ParticleMesh(object):
         a cleared canvas.
     
         """
+        self.real[:] = 0
 
     def paint(self, pos, mass=1.0):
         """ 
@@ -217,41 +218,19 @@ class ParticleMesh(object):
 
         Notes
         -----
-        self.real is NOT the density field after this operation.
-        It has the dimension of mass but is divided by :code:`Nmesh**3`.
-        Density is :code:`real * Nmesh ** 3 / BoxSize ** 3`
-
-        :py:meth:`r2c` will convert to a density unit by dividing
-        by :code:`BoxSize**3`.
-
-        PFFT will adjust for this Nmesh**3 after r2c .
+        self.real is the density field after this operation. (In units of per cubic distance)
     
         """
         with self.T['Paint']:
-            cic.paint(pos, self.real, weights=mass, mode='ignore',
+            cic.paint(pos, self.real, weights=mass * (self.Nmesh ** 3 * self.BoxSize ** -3), mode='ignore',
                     period=self.Nmesh, transform=self.transform)
 
-    def r2c(self, pos=None, mass=1.0):
+    def r2c(self):
         """ 
         Perform real to complex FFT on the internal canvas.
 
-        If pos and mass are given, :py:meth:`paint` is called to
-        paint the particles before running the fourier transform.
-
-        Parameters
-        ----------
-        pos    : array_like (, Ndim)
-            position of particles in simulation  unit
-
-        mass   : scalar or array_like (,)
-            mass of particles in simulation  unit
-
         """
-        if pos is not None:
-            self.clear()
-            self.paint(pos, mass)
 
-        self.real *= (1.0 / self.BoxSize) ** 3
         if self.verbose:
             realsum = self.comm.allreduce(self.real.sum(dtype='f8'), MPI.SUM)
             if self.comm.rank == 0:
@@ -260,6 +239,9 @@ class ParticleMesh(object):
 
         with self.T['R2C']:
             self.forward.execute(self.real.base, self.complex.base)
+
+        # PFFT normalization
+        self.complex *= self.Nmesh ** -3
 
         if self.procmesh.rank == 0:
             # remove the mean !
@@ -324,7 +306,7 @@ class ParticleMesh(object):
                         transform=self.transform)
                 return rt
         
-    def c2r(self, transfer_functions):
+    def c2r(self, transfer_functions=[]):
         """ 
         Complex to real transformation.
         
@@ -334,8 +316,6 @@ class ParticleMesh(object):
             A chain of transfer functions to apply to the complex field. 
 
         """
-        self.push()
-
         self.transfer(transfer_functions)
 
         with self.T['C2R']:
@@ -345,7 +325,4 @@ class ParticleMesh(object):
             if self.comm.rank == 0:
                 print 'after c2r, sum of real', realsum
             self.comm.barrier()
-
-        # restore the complex field, for next c2r transform
-        self.pop()
 

@@ -85,7 +85,8 @@ class ParticleMesh(object):
 
         self.procmesh = pfft.ProcMesh(np, comm=comm)
         self.Nmesh = Nmesh
-        self.BoxSize = BoxSize
+        self.BoxSize = numpy.empty(3, dtype='f8')
+        self.BoxSize[:] = BoxSize
         self.partition = pfft.Partition(forward,
             [Nmesh, Nmesh, Nmesh], 
             self.procmesh,
@@ -111,15 +112,19 @@ class ParticleMesh(object):
         self.stack = []
 
         w = []
+        k = []
         for d in range(self.partition.Ndim):
             s = numpy.ones(self.partition.Ndim, dtype='intp')
             s[d] = self.partition.local_no[d]
             wi = numpy.arange(s[d], dtype='f4') + self.partition.local_o_start[d] 
             wi[wi >= self.Nmesh // 2] -= self.Nmesh
             wi *= (2 * numpy.pi / self.Nmesh)
+            ki = wi * self.Nmesh / self.BoxSize[d]
             w.append(wi.reshape(s))
+            k.append(ki.reshape(s))
 
         self.w = w
+        self.k = k
 
     def transform(self, x):
         """ 

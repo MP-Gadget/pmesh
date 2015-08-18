@@ -221,7 +221,7 @@ class ParticleMesh(object):
 
         Notes
         -----
-        self.real is the density field after this operation. (In units of per cubic distance)
+        self.real is the density field (:math:`\\rho(x)`) after this operation. (In units of per cubic distance)
     
         """
         with self.T['Paint']:
@@ -231,6 +231,11 @@ class ParticleMesh(object):
     def r2c(self):
         """ 
         Perform real to complex FFT on the internal canvas.
+
+        The complex field will have the same units as :math:`L^3`. 
+        (from the :math:`dx^3` factor of CFT)
+
+        Therefore, the mean of the complex field is :math:`L^3\\bar\\rho`.
 
         """
 
@@ -244,7 +249,7 @@ class ParticleMesh(object):
             self.forward.execute(self.real.base, self.complex.base)
 
         # PFFT normalization
-        self.complex *= self.Nmesh ** -3
+        self.complex[:] *= self.BoxSize.prod() * self.Nmesh ** -3
 
         if self.procmesh.rank == 0:
             # remove the mean !
@@ -323,6 +328,9 @@ class ParticleMesh(object):
 
         with self.T['C2R']:
             self.backward.execute(self.complex.base, self.real.base)
+
+        self.real[:] *= (1 / self.BoxSize.prod())
+
         if self.verbose:
             realsum = self.comm.allreduce(self.real.sum(dtype='f8'), MPI.SUM)
             if self.comm.rank == 0:

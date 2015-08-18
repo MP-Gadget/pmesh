@@ -106,7 +106,7 @@ class ParticleMesh(object):
                     self.complex.base, self.real.base, backward, 
                     pfft.Flags.PFFT_ESTIMATE | pfft.Flags.PFFT_TRANSPOSED_IN | pfft.Flags.PFFT_DESTROY_INPUT)
 
-        self.domain = domain.GridND(self.partition.i_edges)
+        self.domain = domain.GridND(self.partition.i_edges, comm=self.comm)
         self.verbose = verbose
         self.stack = []
 

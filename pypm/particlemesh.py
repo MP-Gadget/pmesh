@@ -225,7 +225,7 @@ class ParticleMesh(object):
     
         """
         with self.T['Paint']:
-            cic.paint(pos, self.real, weights=mass * (self.Nmesh ** 3 * self.BoxSize ** -3), mode='ignore',
+            cic.paint(pos, self.real, weights=mass * (self.Nmesh ** 3 / self.BoxSize.prod()), mode='ignore',
                     period=self.Nmesh, transform=self.transform)
 
     def r2c(self):

@@ -54,7 +54,13 @@ class ParticleMesh(object):
         the complex FFT array (private)
 
     w   : list
-        a list of the circular frequencies along each direction
+        a list of the circular frequencies along each direction (-pi to pi)
+    k   : list
+        a list of the wave numbers k along each direction (- pi N/ L to pi N/ L)
+    x   : list
+        a list of the position along each direction (-L/2 to L/ 2). x is conjugate of k.
+    r   : list
+        a list of the mesh position along each direction (-N/2 to N/2). r is conjugate of w.
 
     T    : :py:class:`pypm.tools.Timers`
         profiling timers
@@ -111,20 +117,35 @@ class ParticleMesh(object):
         self.verbose = verbose
         self.stack = []
 
-        w = []
         k = []
+        x = []
+        w = []
+        r = []
+
         for d in range(self.partition.Ndim):
+            t = numpy.ones(self.partition.Ndim, dtype='intp')
             s = numpy.ones(self.partition.Ndim, dtype='intp')
+            t[d] = self.partition.local_ni[d]
             s[d] = self.partition.local_no[d]
             wi = numpy.arange(s[d], dtype='f4') + self.partition.local_o_start[d] 
+            ri = numpy.arange(t[d], dtype='f4') + self.partition.local_i_start[d] 
+
             wi[wi >= self.Nmesh // 2] -= self.Nmesh
+            ri[ri >= self.Nmesh // 2] -= self.Nmesh
+
             wi *= (2 * numpy.pi / self.Nmesh)
             ki = wi * self.Nmesh / self.BoxSize[d]
+            xi = ri * self.BoxSize[d] / self.Nmesh
+
             w.append(wi.reshape(s))
+            r.append(ri.reshape(s))
             k.append(ki.reshape(s))
+            x.append(xi.reshape(s))
 
         self.w = w
+        self.r = r
         self.k = k
+        self.x = x
 
     def transform(self, x):
         """ 

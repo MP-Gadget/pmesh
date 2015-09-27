@@ -138,9 +138,9 @@ class ParticleMesh(object):
             xi = ri * self.BoxSize[d] / self.Nmesh
 
             w.append(wi.reshape(s))
-            r.append(ri.reshape(s))
+            r.append(ri.reshape(t))
             k.append(ki.reshape(s))
-            x.append(xi.reshape(s))
+            x.append(xi.reshape(t))
 
         self.w = w
         self.r = r

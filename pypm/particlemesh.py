@@ -253,10 +253,12 @@ class ParticleMesh(object):
         """ 
         Perform real to complex FFT on the internal canvas.
 
-        The complex field will have the same units as :math:`L^3`. 
-        (from the :math:`dx^3` factor of CFT)
+        The complex field will be dimensionless; this is to ensure if NormalizeDC
+        is applyed, c2r produces :math:`1 + \delta` as expected.
 
-        Therefore, the mean of the complex field is :math:`L^3\\bar\\rho`.
+        (To obtain CFT, multiply by :math:`L^3` from the :math:`dx^3` factor )
+
+        Therefore, the zeroth component of the complex field is :math:`\\bar\\rho`.
 
         """
 
@@ -270,7 +272,7 @@ class ParticleMesh(object):
             self.forward.execute(self.real.base, self.complex.base)
 
         # PFFT normalization
-        self.complex[:] *= self.BoxSize.prod() * self.Nmesh ** -3
+        self.complex[:] *= self.Nmesh ** -3
 
         if self.procmesh.rank == 0:
             # remove the mean !
@@ -349,8 +351,6 @@ class ParticleMesh(object):
 
         with self.T['C2R']:
             self.backward.execute(self.complex.base, self.real.base)
-
-        self.real[:] *= (1 / self.BoxSize.prod())
 
         if self.verbose:
             realsum = self.comm.allreduce(self.real.sum(dtype='f8'), MPI.SUM)

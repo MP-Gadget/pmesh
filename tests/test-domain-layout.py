@@ -28,16 +28,16 @@ def test1():
         for rr in range(comm.size):
             comm.Barrier()
             if rr != comm.rank: continue
-            print comm.rank, '----'
+            print(comm.rank, '----')
             if (sendcounts != 0).any():
-                print 'sendcounts', sendcounts, numpy.nonzero(sendcounts)
+                print('sendcounts', sendcounts, numpy.nonzero(sendcounts))
             if (recvcounts != 0).any():
-                print 'recvcounts', recvcounts, numpy.nonzero(recvcounts)
+                print('recvcounts', recvcounts, numpy.nonzero(recvcounts))
         data = numpy.ones(100, 'f8') * rank
         newdata = numpy.zeros(100, 'f8') * rank
         comm.Alltoallv((data, sendcounts, sendoffsets, MPI.DOUBLE), 
                             (newdata, recvcounts, recvoffsets, MPI.DOUBLE))
         comm.barrier()
         if comm.rank == 0:
-            print 'arrived batch', batch
+            print('arrived batch', batch)
 del test1

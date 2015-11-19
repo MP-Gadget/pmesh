@@ -54,6 +54,7 @@ def paint(pos, mesh, weights=1.0, mode="raise", period=None, transform=None):
             add = wchunk * kernel
 
             if period is not None:
+                period = numpy.int32(period)
                 numpy.remainder(targetpos, period, targetpos)
 
             if mode == 'ignore':
@@ -109,6 +110,7 @@ def readout(mesh, pos, mode="raise", period=None, transform=None, out=None):
             kernel = (1.0 - numpy.abs(gridpos - targetpos)).prod(axis=-1)
 
             if period is not None:
+                period = numpy.int32(period)
                 numpy.remainder(targetpos, period, targetpos)
 
             if mode == 'ignore':

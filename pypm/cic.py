@@ -129,7 +129,7 @@ def readout(mesh, pos, mode="raise", period=None, transform=None, out=None):
 
 
 try:
-    import _cic
+    from . import _cic
     paint_old = paint
     paint = _cic.paint
     readout_old = readout

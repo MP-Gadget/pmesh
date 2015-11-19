@@ -3,12 +3,13 @@ PyPM: A Particle Mesh code in Python
 
 """
 import pfft
-import domain
-import cic
 import numpy
 import time
 from mpi4py import MPI
-from tools import Timers
+
+from .tools import Timers
+from . import domain
+from . import cic
 
 class ParticleMesh(object):
     """

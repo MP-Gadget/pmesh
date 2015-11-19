@@ -241,7 +241,7 @@ class GridND(object):
 
     """
     
-    from _domain import gridnd_fill as _fill
+    from ._domain import gridnd_fill as _fill
     _fill = staticmethod(_fill)
     @staticmethod
     def _digitize(data, bins):

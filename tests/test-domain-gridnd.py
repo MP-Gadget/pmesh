@@ -3,8 +3,6 @@ import sys
 import os.path
 import traceback
 
-d = os.path.join(os.path.dirname(__file__), '..')
-sys.path.insert(0, d)
 import numpy
 from pypm import domain
 

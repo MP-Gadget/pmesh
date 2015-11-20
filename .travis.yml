@@ -24,4 +24,4 @@ install:
     - python setup.py install
 
 script: 
-    - python tests/runtests.py
+    - (cd tests; python runtests.py)

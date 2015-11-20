@@ -12,7 +12,7 @@ extensions = [
         ]
 
 setup(
-    name="pmesh", version="0.0.2",
+    name="pmesh", version="0.0.3",
     author="Yu Feng",
     description="Particle Mesh in Python",
     package_dir = {'pmesh': 'pmesh'},

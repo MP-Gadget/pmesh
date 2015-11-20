@@ -4,7 +4,7 @@ import os.path
 import traceback
 
 import numpy
-from pypm import domain
+from pmesh import domain
 
 fakecomm = lambda : None
 

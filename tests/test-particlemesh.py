@@ -1,4 +1,4 @@
-from pypm.particlemesh import ParticleMesh
+from pmesh.particlemesh import ParticleMesh
 from numpy.testing import assert_allclose
 
 def test_roundtrip_normalization():

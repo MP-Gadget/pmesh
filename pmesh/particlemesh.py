@@ -42,7 +42,7 @@ class ParticleMesh(object):
     BoxSize : float
         size of box
     
-    domain   : :py:class:`pypm.domain.GridND`
+    domain   : :py:class:`pmesh.domain.GridND`
         domain decomposition (private)
 
     partition : :py:class:`pfft.Partition`
@@ -63,7 +63,7 @@ class ParticleMesh(object):
     r   : list
         a list of the mesh position along each direction (-N/2 to N/2). r is conjugate of w.
 
-    T    : :py:class:`pypm.tools.Timers`
+    T    : :py:class:`pmesh.tools.Timers`
         profiling timers
 
     """

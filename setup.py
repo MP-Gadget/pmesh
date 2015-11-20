@@ -8,16 +8,16 @@ def myext(*args):
     return Extension(*args, include_dirs=["./", numpy.get_include()])
 
 extensions = [
-        myext("pypm._domain", ["pypm/_domain.pyx"]),
+        myext("pmesh._domain", ["pmesh/_domain.pyx"]),
         ]
 
 setup(
-    name="pypm", version="0.0",
+    name="pmesh", version="0.0.1",
     author="Yu Feng",
     description="Particle Mesh in Python",
-    package_dir = {'pypm': 'pypm'},
+    package_dir = {'pmesh': 'pmesh'},
     install_requires=['cython', 'numpy'],
-    packages= ['pypm'],
+    packages= ['pmesh'],
     requires=['numpy', 'mpi4py'],
     ext_modules = cythonize(extensions)
 )

@@ -1,5 +1,5 @@
 import numpy
-from pypm import cic
+from pmesh import cic
 
 def test_paint1():
     mesh = numpy.zeros((2, 2))
@@ -226,7 +226,7 @@ def test_readout3():
 #test_readout2()
 #test_readout3()
 
-from pypm.tools import Timers
+from pmesh.tools import Timers
 def test_speed():
     t = Timers()
     mesh = numpy.zeros((100, 100, 100))

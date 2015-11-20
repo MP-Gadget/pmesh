@@ -1,7 +1,7 @@
-pypm: Particle Mesh in Python
+pmesh: Particle Mesh in Python
 =============================
 
-The `pypm` package lays out the fundation of a parallel
+The `pmesh` package lays out the fundation of a parallel
 Fourier transform particle mesh solver in Python. 
 
 Build Status
@@ -14,7 +14,7 @@ This readme file is minimal. We shall expand it.
 
 API Reference
 -------------
-Refer to http://rainwoodman.github.io/pypm for a full API reference.
+Refer to http://rainwoodman.github.io/pmesh for a full API reference.
 
 
 Description

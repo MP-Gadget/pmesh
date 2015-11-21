@@ -6,6 +6,10 @@ python:
     - 3.4
     - 3.3
 
+cache:
+    directories:
+        - $HOME/.cache/pip
+
 env:
     - NUMPY_VERSION=1.9 OMP_NUM_THREADS=2
 

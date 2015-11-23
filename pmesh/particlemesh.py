@@ -3,12 +3,13 @@ PyPM: A Particle Mesh code in Python
 
 """
 import pfft
-import domain
-import cic
 import numpy
 import time
 from mpi4py import MPI
-from tools import Timers
+
+from .tools import Timers
+from . import domain
+from . import cic
 
 class ParticleMesh(object):
     """
@@ -41,7 +42,7 @@ class ParticleMesh(object):
     BoxSize : float
         size of box
     
-    domain   : :py:class:`pypm.domain.GridND`
+    domain   : :py:class:`pmesh.domain.GridND`
         domain decomposition (private)
 
     partition : :py:class:`pfft.Partition`
@@ -54,9 +55,15 @@ class ParticleMesh(object):
         the complex FFT array (private)
 
     w   : list
-        a list of the circular frequencies along each direction
+        a list of the circular frequencies along each direction (-pi to pi)
+    k   : list
+        a list of the wave numbers k along each direction (- pi N/ L to pi N/ L)
+    x   : list
+        a list of the position along each direction (-L/2 to L/ 2). x is conjugate of k.
+    r   : list
+        a list of the mesh position along each direction (-N/2 to N/2). r is conjugate of w.
 
-    T    : :py:class:`pypm.tools.Timers`
+    T    : :py:class:`pmesh.tools.Timers`
         profiling timers
 
     """
@@ -111,20 +118,35 @@ class ParticleMesh(object):
         self.verbose = verbose
         self.stack = []
 
-        w = []
         k = []
+        x = []
+        w = []
+        r = []
+
         for d in range(self.partition.Ndim):
+            t = numpy.ones(self.partition.Ndim, dtype='intp')
             s = numpy.ones(self.partition.Ndim, dtype='intp')
+            t[d] = self.partition.local_ni[d]
             s[d] = self.partition.local_no[d]
             wi = numpy.arange(s[d], dtype='f4') + self.partition.local_o_start[d] 
+            ri = numpy.arange(t[d], dtype='f4') + self.partition.local_i_start[d] 
+
             wi[wi >= self.Nmesh // 2] -= self.Nmesh
+            ri[ri >= self.Nmesh // 2] -= self.Nmesh
+
             wi *= (2 * numpy.pi / self.Nmesh)
             ki = wi * self.Nmesh / self.BoxSize[d]
+            xi = ri * self.BoxSize[d] / self.Nmesh
+
             w.append(wi.reshape(s))
+            r.append(ri.reshape(t))
             k.append(ki.reshape(s))
+            x.append(xi.reshape(t))
 
         self.w = w
+        self.r = r
         self.k = k
+        self.x = x
 
     def transform(self, x):
         """ 
@@ -232,10 +254,12 @@ class ParticleMesh(object):
         """ 
         Perform real to complex FFT on the internal canvas.
 
-        The complex field will have the same units as :math:`L^3`. 
-        (from the :math:`dx^3` factor of CFT)
+        The complex field will be dimensionless; this is to ensure if NormalizeDC
+        is applyed, c2r produces :math:`1 + \delta` as expected.
 
-        Therefore, the mean of the complex field is :math:`L^3\\bar\\rho`.
+        (To obtain CFT, multiply by :math:`L^3` from the :math:`dx^3` factor )
+
+        Therefore, the zeroth component of the complex field is :math:`\\bar\\rho`.
 
         """
 
@@ -249,7 +273,7 @@ class ParticleMesh(object):
             self.forward.execute(self.real.base, self.complex.base)
 
         # PFFT normalization
-        self.complex[:] *= self.BoxSize.prod() * self.Nmesh ** -3
+        self.complex[:] *= self.Nmesh ** -3
 
         if self.procmesh.rank == 0:
             # remove the mean !
@@ -328,8 +352,6 @@ class ParticleMesh(object):
 
         with self.T['C2R']:
             self.backward.execute(self.complex.base, self.real.base)
-
-        self.real[:] *= (1 / self.BoxSize.prod())
 
         if self.verbose:
             realsum = self.comm.allreduce(self.real.sum(dtype='f8'), MPI.SUM)

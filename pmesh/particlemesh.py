@@ -315,7 +315,7 @@ class ParticleMesh(object):
 
         with self.T['Transfer']:
             for transfer in transfer_functions:
-                transfer(self.comm, self.complex, self.w)
+                transfer(self, self.complex)
 
     def readout(self, pos):
         """ 

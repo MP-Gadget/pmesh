@@ -27,10 +27,12 @@ class TransferFunction:
 
     """
     @staticmethod
-    def NormalizeDC(comm, complex, w):
+    def NormalizeDC(pm, complex):
         """ removes the DC amplitude. This effectively
             divides by the mean
         """
+        w = pm.w
+        comm = pm.comm
         ind = []
         value = 0.0
         found = True
@@ -45,7 +47,9 @@ class TransferFunction:
         value = comm.allreduce(value, MPI.SUM)
         complex[:] /= value
     @staticmethod
-    def RemoveDC(comm, complex, w):
+    def RemoveDC(pm, complex):
+        w = pm.w
+        comm = pm.comm
         ind = []
         for wi in w:
             if (wi != 0).all():
@@ -68,7 +72,9 @@ class TransferFunction:
             complex * i * k which is
             complex * i * w * Nmesh / BoxSize
         """
-        def SuperLanzcosDir(comm, complex, w):
+        def SuperLanzcosDir(pm, complex):
+            w = pm.w
+            comm = pm.comm
             wi = w[dir] * 1.0
         #    tmp = (1. / 594 * 
         #       (126 * numpy.sin(wi) + 193 * numpy.sin(2 * wi) + 142 * numpy.sin (3 *
@@ -88,7 +94,9 @@ class TransferFunction:
         """
         sm2 = smoothing ** 2
 
-        def GaussianS(comm, complex, w):
+        def GaussianS(pm, complex):
+            w = pm.w
+            comm = pm.comm
             w2 = 0
             for wi in w:
                 wi2 = wi ** 2
@@ -96,7 +104,9 @@ class TransferFunction:
         return GaussianS
     @staticmethod
     def Constant(C):
-        def Constant(comm, complex, w):
+        def Constant(pm, complex):
+            w = pm.w
+            comm = pm.comm
             complex *= C
         return Constant
     @staticmethod
@@ -104,7 +114,9 @@ class TransferFunction:
         """ inspect the complex array at given indices
             mostly for debugging.
         """
-        def Inspect(comm, complex, w):
+        def Inspect(pm, complex):
+            w = pm.w
+            comm = pm.comm
             V = ['%s = %s' %(str(i), str(complex[tuple(i)])) for i in indices]
             print(name, ','.join(V))
         return Inspect
@@ -114,7 +126,9 @@ class TransferFunction:
         """ calculate the power spectrum.
             This shall be done after NormalizeDC and RemoveDC
         """
-        def PS(comm, complex, w):
+        def PS(pm, complex):
+            w = pm.w
+            comm = pm.comm
             wedges = numpy.linspace(0, numpy.pi, wout.size + 1, endpoint=True)
             w2edges = wedges ** 2
 
@@ -161,7 +175,7 @@ class TransferFunction:
         return PS
 
     @staticmethod
-    def Laplace(comm, complex, w):
+    def Laplace(pm, complex):
         """ 
             Take the Laplacian k-space: complex *= -w2
 
@@ -172,6 +186,8 @@ class TransferFunction:
             - k ** 2 * complex = (Nmesh / BoxSize) ** 2 (-w**2) * complex
 
         """
+        w = pm.w
+        comm = pm.comm
         for row in range(complex.shape[0]):
             w2 = w[0][row] ** 2
             for wi in w[1:]:
@@ -181,7 +197,7 @@ class TransferFunction:
         complex[:] *= w2
 
     @staticmethod
-    def Poisson(comm, complex, w):
+    def Poisson(pm, complex):
         """ 
             Solve Poisson equation in k-space: complex /= -w2
 
@@ -205,6 +221,8 @@ class TransferFunction:
 
             where this function performs only the :math:`- \omega **-2` part.
         """
+        w = pm.w
+        comm = pm.comm
         for row in range(complex.shape[0]):
             w2 = w[0][row] ** 2
             for wi in w[1:]:
@@ -223,6 +241,8 @@ if __name__ == '__main__':
             s[d] = complex.shape[d]
             wi = numpy.arange(s[d], dtype='f8')
             w.append(wi.reshape(s))
-            
-        TransferFunction.Laplace(None, complex, w)
+        pm = lambda : None
+        pm.w = w 
+        pm.comm = None
+        TransferFunction.Laplace(pm, complex)
     test()

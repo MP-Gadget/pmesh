@@ -1,4 +1,6 @@
 build/
 *.pyc
-pypm/_domain.c
+pmesh/_domain.c
+MANIFEST
 *.so
+dist/

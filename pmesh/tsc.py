@@ -101,7 +101,7 @@ def paint_some(pos, mesh, meshflat, weights, period):
             if ignore:
                 outbound += 1
                 continue
-            meshflat[ind/mesh.itemsize] += w * kernel
+            meshflat[int(ind/mesh.itemsize)] += w * kernel
 
     return outbound
 

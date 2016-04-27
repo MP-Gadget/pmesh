@@ -150,9 +150,9 @@ class ParticleMesh(object):
         
         # set the painter
         self.paintbrush = paintbrush.lower()
-        if painter == 'cic':
+        if paintbrush == 'cic':
             self.painter = cic.paint
-        elif painter == 'tsc':
+        elif paintbrush == 'tsc':
             self.painter = tsc.paint
         else:
             raise ValueError("valid `painter` values are: ['cic', 'tsc']")

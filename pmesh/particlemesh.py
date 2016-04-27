@@ -9,7 +9,7 @@ from mpi4py import MPI
 
 from .tools import Timers
 from . import domain
-from . import cic
+from . import cic, tsc
 
 class ParticleMesh(object):
     """
@@ -67,7 +67,7 @@ class ParticleMesh(object):
         profiling timers
 
     """
-    def __init__(self, BoxSize, Nmesh, comm=None, np=None, verbose=False, dtype='f8'):
+    def __init__(self, BoxSize, Nmesh, paintbrush='cic', comm=None, np=None, verbose=False, dtype='f8'):
         """ create a PM object.  """
         # this weird sequence to intialize comm is because
         # we want to be compatible with None comm == MPI.COMM_WORLD
@@ -147,6 +147,15 @@ class ParticleMesh(object):
         self.r = r
         self.k = k
         self.x = x
+        
+        # set the painter
+        self.paintbrush = paintbrush.lower()
+        if painter == 'cic':
+            self.painter = cic.paint
+        elif painter == 'tsc':
+            self.painter = tsc.paint
+        else:
+            raise ValueError("valid `painter` values are: ['cic', 'tsc']")
 
     def transform(self, x):
         """ 
@@ -247,8 +256,8 @@ class ParticleMesh(object):
     
         """
         with self.T['Paint']:
-            cic.paint(pos, self.real, weights=mass * (self.Nmesh ** 3 / self.BoxSize.prod()), mode='ignore',
-                    period=self.Nmesh, transform=self.transform)
+            self.painter(pos, self.real, weights=mass * (self.Nmesh ** 3 / self.BoxSize.prod()), 
+                            mode='ignore', period=self.Nmesh, transform=self.transform)
 
     def r2c(self):
         """ 

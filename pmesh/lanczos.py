@@ -145,4 +145,3 @@ p = numpy.zeros((1, 2)) + 2.5
 #paint(p, d, window=lanczos2, period=6)
 paint(p, d, window=lanczos3, period=6)
 #paint(p, d, window=bilinear, period=6)
-print d

@@ -75,7 +75,7 @@ def paint_some(pos, mesh, meshflat, weights, period):
             kernel = 1.0
             ind = 0
             for d in range(Ndim):
-                intpos = int(pos[i, d] + 0.5) # NGP index
+                intpos = numpy.rint(pos[i, d]) # NGP index
                 diff = intpos - pos[i, d]
                 rel = (n // 3**d) % 3 - 1 # maps offset (rel. to NGP) to (-1, 0, 1)
                 targetpos = intpos + rel - 1

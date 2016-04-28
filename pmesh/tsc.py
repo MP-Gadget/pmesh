@@ -80,7 +80,7 @@ def paint_some(pos, mesh, meshflat, weights, period):
                 rel = (n // 3**d) % 3 - 1 # maps offset (rel. to NGP) to (-1, 0, 1)
                 targetpos = intpos + rel - 1
                 if rel == -1: # before NGP
-                    kernel *= 0.5 * (0.5+diff)*(0.5*diff)
+                    kernel *= 0.5 * (0.5+diff)*(0.5+diff)
                 elif rel == 0: # NGP
                     kernel *= 0.75 - diff*diff
                 else: # after NGPs

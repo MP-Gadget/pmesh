@@ -37,7 +37,7 @@ class RealField(numpy.ndarray):
         self.pm.forward.execute(self.local_buffer, out.local_buffer)
 
         # PFFT normalization, same as FastPM
-        self[...] *= numpy.prod(self.pm.Nmesh ** -1.0)
+        out[...] *= numpy.prod(self.pm.Nmesh ** -1.0)
 
     def paint(self, pos, mass=1.0, resample="cic", hold=False):
         """ 
@@ -109,10 +109,10 @@ class RealField(numpy.ndarray):
         axissort = numpy.argsort(self.strides)[::-1]
 
         optimized = self.transpose(axissort)
-        x = [pm.x[d].transpose(axissort) for d in range(len(self.shape))]
+        x = [self.pm.x[d].transpose(axissort) for d in range(len(self.shape))]
 
-        for irow in self.shape[axissort[0]]: # iterator the slowest axis in memory
-            kk = [x[d] if d != axissort[0] else x[d][irow] for d in range(len(self.shape))]
+        for irow in range(self.shape[axissort[0]]): # iterator the slowest axis in memory
+            kk = [x[d][0] if d != axissort[0] else x[d][irow] for d in range(len(self.shape))]
             yield kk, optimized[irow]
 
 
@@ -136,10 +136,10 @@ class ComplexField(numpy.ndarray):
         axissort = numpy.argsort(self.strides)[::-1]
 
         optimized = self.transpose(axissort)
-        k = [pm.k[d].transpose(axissort) for d in range(len(self.shape))]
+        k = [self.pm.k[d].transpose(axissort) for d in range(len(self.shape))]
 
-        for irow in self.shape[axissort[0]]: # iterator the slowest axis in memory
-            kk = [k[d] if d != axissort[0] else k[d][irow] for d in range(len(self.shape))]
+        for irow in range(self.shape[axissort[0]]): # iterator the slowest axis in memory
+            kk = [k[d][0] if d != axissort[0] else k[d][irow] for d in range(len(self.shape))]
             yield kk, optimized[irow]
 
     def copy(self):
@@ -225,7 +225,7 @@ class ParticleMesh(object):
         self.partition = pfft.Partition(forward,
             self.Nmesh,
             self.procmesh,
-            pfft.Flags.PFFT_TRANSPOSED_OUT | pfft.Flags.PFFT_PADDED_R2C)
+            pfft.Flags.PFFT_TRANSPOSED_OUT) # | pfft.Flags.PFFT_PADDED_R2C)
 
         bufferin = pfft.LocalBuffer(self.partition)
         bufferout = pfft.LocalBuffer(self.partition)
@@ -238,10 +238,10 @@ class ParticleMesh(object):
 
         self.forward = pfft.Plan(self.partition, pfft.Direction.PFFT_FORWARD,
                 bufferin, bufferout, forward,
-                plan_method | pfft.Flags.PFFT_TRANSPOSED_OUT | pfft.Flags.PFFT_TUNE | pfft.Flags.PFFT_PADDED_R2C)
+                plan_method | pfft.Flags.PFFT_TRANSPOSED_OUT | pfft.Flags.PFFT_TUNE)# | pfft.Flags.PFFT_PADDED_R2C)
         self.backward = pfft.Plan(self.partition, pfft.Direction.PFFT_BACKWARD,
                 bufferout, bufferin, backward, 
-                plan_method | pfft.Flags.PFFT_TRANSPOSED_IN | pfft.Flags.PFFT_TUNE | pfft.Flags.PFFT_PADDED_C2R)
+                plan_method | pfft.Flags.PFFT_TRANSPOSED_IN | pfft.Flags.PFFT_TUNE)# | pfft.Flags.PFFT_PADDED_C2R)
 
         self.domain = domain.GridND(self.partition.i_edges, comm=self.comm)
 

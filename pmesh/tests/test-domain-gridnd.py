@@ -1,11 +1,11 @@
-from mpi4py import MPI
+from mpi4py_test import MPIWorld
 import sys
 import os.path
 import traceback
 
 import numpy
 from pmesh import domain
-
+from numpy.testing import assert_allclose
 fakecomm = lambda : None
 
 fakecomm.size = 9
@@ -107,13 +107,11 @@ def test4():
     #inspect(layout)
     assert (layout.sendcounts == [36, 30, 36, 30, 25, 30, 36, 30, 36]).all()
 
-def test5():
+@MPIWorld(NTask=9, required=9)
+def test5(comm):
     """ empty pos """
 
-    if MPI.COMM_WORLD.size != 9: return
-
-    dcop = domain.GridND(grid, 
-            comm=MPI.COMM_WORLD,
+    dcop = domain.GridND(grid, comm=comm,
             periodic=True)
     pos = numpy.empty((0, 2), dtype='f4')
     data = numpy.empty((0, 4), dtype='f4')
@@ -128,6 +126,7 @@ def test5():
     newpos = layout.exchange(pos)
     oldpos = layout.gather(newpos, mode='any')
     olddata = layout.gather(newdata, mode='mean')
+    print 'any', comm.rank
     for i in range(dcop.comm.size):
         dcop.comm.barrier()
         if dcop.comm.rank == i:
@@ -139,17 +138,16 @@ def test5():
             print('newpos', newpos)
             print('newdata', newdata)
             print('-----')
-    assert numpy.allclose(oldpos, pos)
-    assert numpy.allclose(olddata, data)
+    assert_allclose(oldpos, pos)
+    assert_allclose(olddata, data)
     # I am still not sure what the correct output is so just dump them out.
 
-def test_wrongdtype():
+@MPIWorld(NTask=9, required=9)
+def test_wrongdtype(comm):
     """ empty pos """
 
-    if MPI.COMM_WORLD.size != 9: return
-
     dcop = domain.GridND(grid, 
-            comm=MPI.COMM_WORLD,
+            comm=comm,
             periodic=True)
     pos = numpy.empty((0, 2), dtype='f4')
     data = numpy.empty((0, 4), dtype='f4')

@@ -17,7 +17,7 @@ setup(
     description="Particle Mesh in Python",
     package_dir = {'pmesh': 'pmesh'},
     install_requires=['cython', 'numpy'],
-    packages= ['pmesh'],
+    packages= ['pmesh', 'pmesh.tests'],
     requires=['numpy', 'mpi4py'],
     ext_modules = cythonize(extensions)
 )

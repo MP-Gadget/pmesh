@@ -70,7 +70,7 @@ class RealField(numpy.ndarray):
 
         """
         # Transform from simulation unit to local grid unit.
-        def transform(self, x):
+        def transform(x):
             ret = (1.0 * self.Nmesh / self.BoxSize) * x - self.partition.local_i_start
             return ret
 
@@ -96,7 +96,7 @@ class RealField(numpy.ndarray):
  
         """
         # Transform from simulation unit to local grid unit.
-        def transform(self, x):
+        def transform(x):
             ret = (1.0 * self.Nmesh / self.BoxSize) * x - self.partition.local_i_start
             return ret
 
@@ -293,10 +293,10 @@ class ParticleMesh(object):
         """
 
         # Transform from simulation unit to global grid unit.
-        def transform0(self, x):
+        def transform0(x):
             ret = (1.0 * self.Nmesh / self.BoxSize) * x
             return ret
 
         return self.domain.decompose(pos, smoothing=1.0,
-                transform=self.transform0)
+                transform=transform0)
 

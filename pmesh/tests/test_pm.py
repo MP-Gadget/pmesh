@@ -4,6 +4,7 @@ from numpy.testing import assert_allclose
 from numpy.testing import assert_almost_equal
 
 from pmesh.pm import ParticleMesh, RealField, ComplexField
+
 import numpy
 
 @MPIWorld(NTask=(1, 4), required=(1, 4))
@@ -17,9 +18,14 @@ def test_fft(comm):
     else:
         Npar = 10
 
-    pos = numpy.random.uniform(size=(Npar, len(pm.Nmesh))) * pm.BoxSize
+    pos = numpy.arange(Npar * len(pm.Nmesh)).reshape(-1, len(pm.Nmesh))
 
-    real.paint(pos)
+    layout = pm.decompose(pos)
+
+    npos = layout.exchange(pos)
+    print comm.allgather(len(npos))
+    real.paint(layout.exchange(pos))
+
     real2 = real.copy()
 
     real.r2c(complex)

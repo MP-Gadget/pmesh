@@ -40,13 +40,19 @@ def driver(pos, mesh, weights, mode, period, transform,
     Ndim = pos.shape[-1]
     Np = pos.shape[0]
 
-    if not mesh.flags['C_CONTIGUOUS']:
-        raise ValueError('mesh must be C continguous')
+#    if not mesh.flags['C_CONTIGUOUS']:
+#        raise ValueError('mesh must be C continguous')
+#   I don't see why it must be C contiguous
 
     # scratch 
     if transform is None:
         transform = lambda x:x
-    if period is None: period = 0
+    if period is None: period = numpy.zeros(Ndim, dtype='i4')
+    else:
+        p = numpy.empty(Ndim, dtype='i4')
+        p[...] = period
+        period = p
+
     for start in range(0, Np, chunksize):
         chunk = slice(start, start+chunksize)
         mypos = transform(pos[chunk])
@@ -65,7 +71,6 @@ def paint_some(pos, mesh, meshflat, weights, period):
     Np = pos.shape[0]
     Nmax = int(2 ** Ndim)
     ignore = False
-    period = int(period)
     outbound = 0
     for i in range(Np):
         w = float(weights[i])
@@ -82,11 +87,11 @@ def paint_some(pos, mesh, meshflat, weights, period):
                     kernel *= diff
                 else:
                     kernel *= (1.0 - diff)
-                if period > 0:
-                    while targetpos >= period:
-                        targetpos -= period
+                if period[d] > 0:
+                    while targetpos >= period[d]:
+                        targetpos -= period[d]
                     while targetpos < 0:
-                        targetpos += period
+                        targetpos += period[d]
                 if targetpos < 0 or \
                         targetpos >= mesh.shape[d]:
                     ignore = True
@@ -108,7 +113,6 @@ def readout_some(pos, mesh, meshflat, myvalue, period):
     Np = pos.shape[0]
     Nmax = int(2 ** Ndim)
     ignore = False
-    period = int(period)
     outbound = 0
     for i in range(Np):
         tmp = 0.0
@@ -125,11 +129,11 @@ def readout_some(pos, mesh, meshflat, myvalue, period):
                     kernel *= diff
                 else:
                     kernel *= (1.0 - diff)
-                if period > 0:
-                    while targetpos >= period:
-                        targetpos -= period
+                if period[d] > 0:
+                    while targetpos >= period[d]:
+                        targetpos -= period[d]
                     while targetpos < 0:
-                        targetpos += period
+                        targetpos += period[d]
                 if targetpos < 0 or \
                         targetpos >= mesh.shape[d]:
                     ignore = True

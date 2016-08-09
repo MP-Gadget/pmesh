@@ -26,5 +26,5 @@ install:
     - python setup.py install
 
 script: 
-    - python install mpi4py_test
+    - pip install mpi4py_test
     - python runtests.py --mpirun="mpirun -np 9"

@@ -116,9 +116,6 @@ class Layout(object):
         
         buffer = data.take(self.indices, axis=0)
 
-        newshape = list(data.shape)
-        newshape[0] = self.newlength
-
         # build a dtype for communication
         # this is to avoid 2GB limit from bytes.
         duplicity = numpy.product(numpy.array(data.shape[1:], 'intp')) 
@@ -126,7 +123,7 @@ class Layout(object):
         dt = MPI.BYTE.Create_contiguous(itemsize)
         dt.Commit()
 
-        recvbuffer = numpy.empty(newshape, dtype=data.dtype, order='C')
+        recvbuffer = numpy.empty(self.newlength, dtype=(data.dtype, data.shape[1:]), order='C')
         self.comm.Barrier()
 
         # now fire
@@ -171,10 +168,6 @@ class Layout(object):
             raise TypeError('dtype of input differ on different ranks. %s' %
                     str(dtypes))
 
-
-        newshape = list(data.shape)
-        newshape[0] = len(self.indices)
-
         # build a dtype for communication
         # this is to avoid 2GB limit from bytes.
         duplicity = numpy.product(numpy.array(data.shape[1:], 'intp')) 
@@ -182,8 +175,9 @@ class Layout(object):
         dt = MPI.BYTE.Create_contiguous(itemsize)
         dt.Commit()
 
-        recvbuffer = numpy.empty(newshape, dtype=data.dtype, order='C')
+        recvbuffer = numpy.empty(len(self.indices), dtype=(data.dtype, data.shape[1:]), order='C')
         self.comm.Barrier()
+
 
         # now fire
         rt = self.comm.Alltoallv((data, (self.recvcounts, self.recvoffsets), dt), 
@@ -192,8 +186,8 @@ class Layout(object):
         self.comm.Barrier()
 
         if self.oldlength == 0:
-            newshape[0] = 0
-            return numpy.empty(newshape, data.dtype)
+            r = numpy.empty(self.oldlength, dtype=(data.dtype, data.shape[1:]))
+            return r
 
         if mode == 'all':
             return recvbuffer
@@ -211,12 +205,12 @@ class Layout(object):
 
         if mode == 'mean':
             N = numpy.bincount(self.indices, minlength=self.oldlength)
-            s = [self.oldlength] + [-1] * (len(newshape) - 1)
+            s = [self.oldlength] + [1] * (len(recvbuffer.shape) - 1)
             N = N.reshape(s)
             return \
                     bincountv(self.indices, recvbuffer, minlength=self.oldlength) / N
         if mode == 'any':
-            data = numpy.zeros(self.oldlength, dtype=data.dtype)
+            data = numpy.zeros(self.oldlength, dtype=(data.dtype, data.shape[1:]))
             data[self.indices] = recvbuffer
             return data
         raise NotImplementedError

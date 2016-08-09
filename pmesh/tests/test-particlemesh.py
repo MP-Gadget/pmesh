@@ -1,17 +1,19 @@
 from pmesh.particlemesh import ParticleMesh
 from numpy.testing import assert_allclose
+from mpi4py_test import MPIWorld
 
-def test_roundtrip_normalization():
-    pm = ParticleMesh(10.0, 2)
+@MPIWorld(NTask=1, required=1)
+def test_roundtrip_normalization(comm):
+    pm = ParticleMesh(10.0, 2, comm=comm)
     pm.real[:] = 1.0
     pm.r2c()
     assert_allclose(abs(pm.complex[0, 0, 0]), 1.0)
     pm.c2r()
     assert_allclose(pm.real, 1.0)
 
-    
-def test_xkrw():
-    pm = ParticleMesh(10.0, 2)
+@MPIWorld(NTask=1, required=1)
+def test_xkrw(comm):
+    pm = ParticleMesh(10.0, 2, comm=comm)
 
     for i in range(3):
         assert(pm.r[i].shape[i] == 2)

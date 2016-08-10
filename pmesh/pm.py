@@ -3,21 +3,43 @@ import pfft
 from . import domain
 from . import cic
 
-class RealField(numpy.ndarray):
-    def __new__(kls, pm):
-        buffer = pfft.LocalBuffer(pm.partition)
-        self = buffer.view_input().view(type=kls)
+class Field(numpy.ndarray):
+    """ Base class for RealField and ComplexField.
+
+        It only supports those two subclasses.
+    """
+    def copy(self):
+        other = self.__class__(self.pm)
+        other[...] = self
+        return other
+
+    def add_attrs(self, buffer, pm):
         self.local_buffer = buffer
         self.pm = pm
         self.partition = pm.partition
         self.BoxSize = pm.BoxSize
         self.Nmesh = pm.Nmesh
-        return self
 
-    def copy(self):
-        other = RealField(self.pm)
-        other[...] = self
-        return other
+    def slabiter(self):
+        """ returns a iterator of (x, y, z, ...), realfield """
+        axissort = numpy.argsort(self.strides)[::-1]
+
+        optimized = self.transpose(axissort)
+        if isinstance(self, RealField):
+            x = [self.pm.x[d].transpose(axissort) for d in range(len(self.shape))]
+        elif isinstance(self, ComplexField):
+            x = [self.pm.k[d].transpose(axissort) for d in range(len(self.shape))]
+
+        for irow in range(self.shape[axissort[0]]): # iterator the slowest axis in memory
+            kk = [x[d][0] if d != axissort[0] else x[d][irow] for d in range(len(self.shape))]
+            yield kk, optimized[irow]
+
+class RealField(Field):
+    def __new__(kls, pm):
+        buffer = pfft.LocalBuffer(pm.partition)
+        self = buffer.view_input().view(type=kls)
+        Field.add_attrs(self, buffer, pm)
+        return self
 
     def r2c(self, out):
         """ 
@@ -39,7 +61,7 @@ class RealField(numpy.ndarray):
         # PFFT normalization, same as FastPM
         out[...] *= numpy.prod(self.pm.Nmesh ** -1.0)
 
-    def paint(self, pos, mass=1.0, resample="cic", hold=False):
+    def paint(self, pos, mass=1.0, method="cic", hold=False):
         """ 
         Paint particles into the internal real canvas. 
 
@@ -80,7 +102,7 @@ class RealField(numpy.ndarray):
         cic.paint(pos, self, weights=mass,
                             mode='ignore', period=self.Nmesh, transform=transform)
 
-    def readout(self, pos, resample="cic"):
+    def readout(self, pos, method="cic"):
         """ 
         Read out from real field at positions
 
@@ -104,48 +126,22 @@ class RealField(numpy.ndarray):
                 transform=transform)
         return rt
 
-    def slabiter(self):
-        """ returns a iterator of (x, y, z, ...), realfield """
-        axissort = numpy.argsort(self.strides)[::-1]
 
-        optimized = self.transpose(axissort)
-        x = [self.pm.x[d].transpose(axissort) for d in range(len(self.shape))]
-
-        for irow in range(self.shape[axissort[0]]): # iterator the slowest axis in memory
-            kk = [x[d][0] if d != axissort[0] else x[d][irow] for d in range(len(self.shape))]
-            yield kk, optimized[irow]
-
-
-class ComplexField(numpy.ndarray):
+class ComplexField(Field):
     def __new__(kls, pm):
         buffer = pfft.LocalBuffer(pm.partition)
         self = buffer.view_output().view(type=kls)
-        self.pm = pm
-        self.partition = pm.partition
-        self.local_buffer = buffer
-        self.BoxSize = pm.BoxSize
-        self.Nmesh = pm.Nmesh
+        Field.add_attrs(self, buffer, pm)
         return self
 
     def c2r(self, out):
         assert isinstance(out, RealField)
         self.pm.backward.execute(self.local_buffer, out.local_buffer)
 
-    def slabiter(self):
-        """ returns a iterator of (kx, ky, kz), complexfield"""
-        axissort = numpy.argsort(self.strides)[::-1]
+    def resample(self, out):
+        assert isinstance(out, ComplexField)
 
-        optimized = self.transpose(axissort)
-        k = [self.pm.k[d].transpose(axissort) for d in range(len(self.shape))]
-
-        for irow in range(self.shape[axissort[0]]): # iterator the slowest axis in memory
-            kk = [k[d][0] if d != axissort[0] else k[d][irow] for d in range(len(self.shape))]
-            yield kk, optimized[irow]
-
-    def copy(self):
-        other = ComplexField(self.pm)
-        other[...] = self
-        return other
+        raise NotImplementedError
 
 class ParticleMesh(object):
     """

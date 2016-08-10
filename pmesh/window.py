@@ -1,4 +1,4 @@
-from ._window import WindowResampler as _WindowResampler
+from ._window import ResampleWindow as _ResampleWindow
 
 import numpy
 from numpy.lib.stride_tricks import as_strided
@@ -16,7 +16,7 @@ def _mkarr(var, shape, dtype):
         return r
 
 class Affine(object):
-    """ Defines an affine Transformation, used by WindowResampler.
+    """ Defines an affine Transformation, used by ResampleWindow.
     """
     def __init__(self, ndim, scale=None, translate=None, period=None):
         if scale is None:
@@ -34,14 +34,14 @@ class Affine(object):
         self.translate = translate
         self.period = period
 
-class WindowResampler(_WindowResampler):
+class ResampleWindow(_ResampleWindow):
     def __init__(self, kind, support):
         kind = {
-                'linear' : _WindowResampler.PAINTER_LINEAR,
-                'lanczos' : _WindowResampler.PAINTER_LANCZOS,
+                'linear' : _ResampleWindow.PAINTER_LINEAR,
+                'lanczos' : _ResampleWindow.PAINTER_LANCZOS,
                }[kind]
 
-        _WindowResampler.__init__(self, kind, support)
+        _ResampleWindow.__init__(self, kind, support)
 
     def paint(self, real, pos, mass=None, diffdir=None, transform=None):
         if transform is None:
@@ -61,7 +61,7 @@ class WindowResampler(_WindowResampler):
         mass = _mkarr(mass, len(pos), mass.dtype)
 
 
-        _WindowResampler.paint(self, real, pos, mass, diffdir, transform.scale, transform.translate, transform.period)
+        _ResampleWindow.paint(self, real, pos, mass, diffdir, transform.scale, transform.translate, transform.period)
 
     def readout(self, real, pos, out=None, diffdir=None, transform=None):
         if transform is None:
@@ -76,6 +76,10 @@ class WindowResampler(_WindowResampler):
         if out is None:
             out = numpy.zeros(pos.shape[1:], dtype='f8')
 
-        _WindowResampler.readout(self, real, pos, out, diffdir, transform.scale, transform.translate, transform.period)
+        _ResampleWindow.readout(self, real, pos, out, diffdir, transform.scale, transform.translate, transform.period)
 
         return out
+
+CIC = ResampleWindow(kind="linear", support=2)
+LANCZOS2 = ResampleWindow(kind="lanczos", support=4)
+LANCZOS3 = ResampleWindow(kind="lanczos", support=6)

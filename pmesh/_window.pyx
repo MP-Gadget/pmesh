@@ -32,7 +32,7 @@ cdef extern from "_window_imp.h":
     void fastpm_painter_paint(FastPMPainter * painter, double pos[], double mass)
     double fastpm_painter_readout(FastPMPainter * painter, double pos[])
 
-cdef class WindowResampler(object):
+cdef class ResampleWindow(object):
     cdef FastPMPainter painter[1]
 
     PAINTER_LINEAR = FASTPM_PAINTER_LINEAR

@@ -1,11 +1,9 @@
-from pmesh.window import WindowResampler, Affine
+from pmesh.window import ResampleWindow, Affine, CIC, LANCZOS2
 
 import numpy
-from numpy.testing import assert_array_equal, assert_allclose
+from numpy.testing import assert_array_equal, assert_allclose, assert_almost_equal
 
 def test_unweighted():
-    wcic = WindowResampler("linear", 2)
-
     real = numpy.zeros((4, 4))
     pos = [
         [0, 0],
@@ -13,7 +11,7 @@ def test_unweighted():
         [2, 2],
         [3, 3],
     ]
-    wcic.paint(real, pos)
+    CIC.paint(real, pos)
 
     assert_array_equal(real,
         [[1, 0, 0, 0],
@@ -22,8 +20,6 @@ def test_unweighted():
          [0, 0, 0, 1]])
 
 def test_weighted():
-    wcic = WindowResampler("linear", 2)
-
     real = numpy.zeros((4, 4))
     pos = [
         [0, 0],
@@ -32,7 +28,7 @@ def test_weighted():
         [3, 3],
     ]
     mass = [0, 1, 2, 3]
-    wcic.paint(real, pos, mass)
+    CIC.paint(real, pos, mass)
     assert_array_equal(real,
         [[0, 0, 0, 0],
          [0, 1, 0, 0],
@@ -40,7 +36,7 @@ def test_weighted():
          [0, 0, 0, 3]])
 
 def test_wide():
-    wcic = WindowResampler("linear", 4)
+    wcic = ResampleWindow("linear", 4)
     real = numpy.zeros((4, 4))
     pos = [
         [1.5, 1.5],
@@ -54,13 +50,12 @@ def test_wide():
 
 
 def test_wrap():
-    wcic = WindowResampler("linear", 2)
     affine = Affine(ndim=2, period=2)
     real = numpy.zeros((2, 2))
     pos = [
         [-.5, -.5],
     ]
-    wcic.paint(real, pos, transform=affine)
+    CIC.paint(real, pos, transform=affine)
     assert_array_equal(real,
         [[0.25, 0.25],
          [0.25, 0.25]])
@@ -69,7 +64,7 @@ def test_wrap():
     pos = [
         [-.5, .5],
     ]
-    wcic.paint(real, pos, transform=affine)
+    CIC.paint(real, pos, transform=affine)
     assert_array_equal(real,
         [[0.25, 0.25],
          [0.25, 0.25]])
@@ -78,49 +73,45 @@ def test_wrap():
     pos = [
         [-.5, 1.5],
     ]
-    wcic.paint(real, pos, transform=affine)
+    CIC.paint(real, pos, transform=affine)
     assert_array_equal(real,
         [[0.25, 0.25],
          [0.25, 0.25]])
 
 def test_translate():
-    wcic = WindowResampler("linear", 2)
     affine = Affine(ndim=2, translate=[-1, 0])
     real = numpy.zeros((2, 2))
     pos = [
         [1., 0],
     ]
-    wcic.paint(real, pos, transform=affine)
+    CIC.paint(real, pos, transform=affine)
     assert_array_equal(real,
         [[1., 0.],
          [0., 0.]])
 
 def test_scale():
-    wcic = WindowResampler("linear", 2)
     affine = Affine(ndim=2, translate=[-1, 0], scale=0.1)
     real = numpy.zeros((2, 2))
     pos = [
         [10., 0],
     ]
-    wcic.paint(real, pos, transform=affine)
+    CIC.paint(real, pos, transform=affine)
     assert_array_equal(real,
         [[1., 0.],
          [0., 0.]])
 
 
 def test_strides():
-    wcic = WindowResampler("linear", 2)
     real = numpy.zeros((20, 20))[::10, ::10]
     pos = [
         [1., 0],
     ]
-    wcic.paint(real, pos)
+    CIC.paint(real, pos)
     assert_array_equal(real,
         [[0, 0],
          [1, 0]])
 
 def test_anisotropic():
-    wcic = WindowResampler("linear", 2)
     real = numpy.zeros((2, 4))
     pos = [
         [0., 0],
@@ -129,24 +120,35 @@ def test_anisotropic():
         [0., 2],
         [0., 3],
     ]
-    wcic.paint(real, pos)
+    CIC.paint(real, pos)
     assert_array_equal(real,
         [[1, 1, 1, 1],
          [1, 0, 0, 0]])
 
 def test_diff():
-    wcic = WindowResampler("linear", 2)
     real = numpy.zeros((2, 2))
     pos = [
         [0., 0],
     ]
-    wcic.paint(real, pos, diffdir=0)
+    CIC.paint(real, pos, diffdir=0)
     assert_array_equal(real,
         [[-1, 0],
          [1, 0]])
 
     real = numpy.zeros((2, 2))
-    wcic.paint(real, pos, diffdir=1)
+    CIC.paint(real, pos, diffdir=1)
     assert_array_equal(real,
         [[-1, 1],
          [0, 0]])
+
+def test_lanczos2():
+    real = numpy.zeros((4, 4))
+    pos = [
+        [1.5, 1.5],
+    ]
+    LANCZOS2.paint(real, pos)
+    assert_allclose(real,
+    [[ 0.003906, -0.035156, -0.035156,  0.003906],
+     [-0.035156,  0.316406,  0.316406, -0.035156],
+     [-0.035156,  0.316406,  0.316406, -0.035156],
+     [ 0.003906, -0.035156, -0.035156,  0.003906]], atol=1e-5)

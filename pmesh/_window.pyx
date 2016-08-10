@@ -8,95 +8,81 @@ ctypedef cython.floating postype
 ctypedef cython.floating realtype
 
 cdef extern from "_window_imp.h":
-    ctypedef struct PMInterface:
-        int ndim
-        ptrdiff_t Nmesh[32]
-        double BoxSize[32]
-
-        ptrdiff_t start[32]
-        ptrdiff_t size[32]
-        ptrdiff_t strides[32]
-
-    struct D:
-        void   (*paint)(FastPMPainter * painter, double * canvas, ptrdiff_t strides[], double pos[], double weight, int diffdir) nogil
-        double (*readout)(FastPMPainter * painter, double * canvas, ptrdiff_t strides[], double pos[], int diffdir) nogil
-    struct S:
-        void   (*paint)(FastPMPainter * painter, float * canvas, ptrdiff_t strides[], double pos[], double weight, int diffdir) nogil
-        double (*readout)(FastPMPainter * painter, float * canvas, ptrdiff_t strides[], double pos[], int diffdir) nogil
-    ctypedef struct FastPMPainter:
-        D DOUBLE
-        S SINGLE
-        int support
-        int diffdir
 
     ctypedef enum FastPMPainterType:
         FASTPM_PAINTER_LINEAR
         FASTPM_PAINTER_LANCZOS
 
-    void fastpm_painter_init(FastPMPainter * painter, PMInterface * pm,
-            FastPMPainterType type, int support)
+    ctypedef struct FastPMPainter:
+        FastPMPainterType type
+        int support
+        int ndim
+        double scale[32]
+        ptrdiff_t translate[32]
+        ptrdiff_t Nmesh[32]
 
-    void fastpm_painter_init_diff(FastPMPainter * painter, FastPMPainter * base, int diffdir)
+        # determined during paint / readout
+        int diffdir
+        void * canvas
+        int canvas_dtype_elsize
+        ptrdiff_t size[32]
+        ptrdiff_t strides[32]
 
-cdef class Painter(object):
+    void fastpm_painter_init(FastPMPainter * painter)
+    void fastpm_painter_paint(FastPMPainter * painter, double pos[], double mass)
+    double fastpm_painter_readout(FastPMPainter * painter, double pos[])
+
+cdef class WindowResampler(object):
     cdef FastPMPainter painter[1]
-    cdef PMInterface pmi[1]
-    cdef readonly object pm
-    property support:
-        def __get__(self):
-            return self.painter.support
-    cdef readonly int ndim
 
-    def __cinit__(self, pm, support=2, window_type="linear", diffdir=None):
-        """ create a painter.
+    PAINTER_LINEAR = FASTPM_PAINTER_LINEAR
+    PAINTER_LANCZOS = FASTPM_PAINTER_LANCZOS
 
-            Parameters
-            ----------
-            window_type : "linear", "lanczos"
+    def __init__(self, FastPMPainterType kind, int support, int ndim,
+        double [:] scale, ptrdiff_t [:] translate, ptrdiff_t [:] period
+        ):
 
-        """
-        self.pmi.ndim = len(pm.Nmesh)
-        self.ndim = self.pmi.ndim
-        for d in range(self.pmi.ndim):
-            self.pmi.Nmesh[d] = pm.Nmesh[d]
-            self.pmi.BoxSize[d] = pm.BoxSize[d]
-            self.pmi.start[d] = pm.partition.local_i_start[d]
-            self.pmi.size[d] = pm.partition.local_ni[d]
+        self.painter.ndim = ndim
+        self.painter.support = support
 
-        type = {
-                'linear' : FASTPM_PAINTER_LINEAR,
-                'lanczos' : FASTPM_PAINTER_LANCZOS,
-               }[window_type]
+        self.painter.type = kind
 
-        fastpm_painter_init(self.painter, self.pmi, type, support)
-        if diffdir is not None:
-            diffdir %= len(self.pm.Nmesh)
-            fastpm_painter_init_diff(self.painter, self.painter, diffdir)
+        for d in range(ndim):
+            self.painter.Nmesh[d] = period[d]
+            self.painter.scale[d] = scale[d]
+            self.painter.translate[d] = translate[d]
 
-        self.pm = pm
-
-    def paint(self, numpy.ndarray real, postype [:, :] pos, masstype [:] mass):
+    def paint(self, numpy.ndarray real, postype [:, :] pos, masstype [:] mass, int diffdir):
         cdef double x[32]
-        cdef ptrdiff_t strides[32]
         cdef double m
         cdef int d
         cdef int i
 
         assert real.dtype.kind == 'f'
+        assert self.painter.ndim == real.ndim
 
-        for d in range(self.ndim):
-            strides[d] = real.strides[d] / real.dtype.itemsize
+        cdef FastPMPainter painter[1]
+
+        painter[0] = self.painter[0]
+
+        painter.canvas = <void*> real.data
+        painter.canvas_dtype_elsize = real.dtype.itemsize
+        painter.diffdir = diffdir
+
+        for d in range(painter.ndim):
+            painter.size[d] = real.shape[d]
+            painter.strides[d] = real.strides[d]
+
+        fastpm_painter_init(painter)
 
         for i in range(pos.shape[0]):
-            for d in range(self.ndim):
+            for d in range(painter.ndim):
                 x[d] = pos[i, d]
             m = mass[i]
-            if real.dtype.itemsize == 8:
-                self.painter.DOUBLE.paint(self.painter, <double*> (real.data), strides, x, m, self.painter.diffdir)
-            if real.dtype.itemsize == 4:
-                self.painter.SINGLE.paint(self.painter, <float*> (real.data), strides, x, m, self.painter.diffdir)
+            fastpm_painter_paint(painter, x, m)
 
-    def readout(self, numpy.ndarray real, postype [:, :] pos, masstype [:] out):
+    def readout(self, numpy.ndarray real, postype [:, :] pos, masstype [:] out, int diffdir):
+
         cdef double x[32]
         cdef ptrdiff_t strides[32]
         cdef double m
@@ -104,15 +90,24 @@ cdef class Painter(object):
         cdef int i
 
         assert real.dtype.kind == 'f'
+        assert self.painter.ndim == real.ndim
 
-        for d in range(self.ndim):
-            strides[d] = real.strides[d] / real.dtype.itemsize
+        cdef FastPMPainter painter[1]
+
+        painter[0] = self.painter[0]
+
+        painter.canvas = <void*> real.data
+        painter.canvas_dtype_elsize = real.dtype.itemsize
+        painter.diffdir = diffdir
+
+        for d in range(painter.ndim):
+            painter.size[d] = real.shape[d]
+            painter.strides[d] = real.strides[d]
+
+        fastpm_painter_init(painter)
 
         for i in range(pos.shape[0]):
-            for d in range(self.ndim):
+            for d in range(painter.ndim):
                 x[d] = pos[i, d]
-                if real.dtype.itemsize == 8:
-                    result = self.painter.DOUBLE.readout(self.painter, <double*> (real.data), strides, x, self.painter.diffdir)
-                if real.dtype.itemsize == 4:
-                    result = self.painter.SINGLE.readout(self.painter, <float*> (real.data), strides, x, self.painter.diffdir)
-                out[i] = result
+            out[i] = fastpm_painter_readout(painter, x)
+

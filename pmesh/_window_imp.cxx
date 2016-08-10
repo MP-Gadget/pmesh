@@ -8,11 +8,11 @@
 
 template <typename FLOAT>
 static void
-_generic_paint(FastPMPainter * painter, FLOAT * canvas, ptrdiff_t strides[], double pos[], double weight, int diffdir);
+_generic_paint(FastPMPainter * painter, double pos[], double weight);
 
 template <typename FLOAT>
 static double
-_generic_readout(FastPMPainter * painter, FLOAT * canvas, ptrdiff_t strides[], double pos[], int diffdir);
+_generic_readout(FastPMPainter * painter, double pos[]);
 
 extern "C" {
 
@@ -94,22 +94,21 @@ _lanczos_diff(double x, double invh) {
 }
 
 void
-fastpm_painter_init(FastPMPainter * painter, PMInterface * pm,
-    FastPMPainterType type, int support)
+fastpm_painter_init(FastPMPainter * painter)
 {
-    painter->pm = pm;
-    painter->DOUBLE.paint = _generic_paint<double>;
-    painter->DOUBLE.readout = _generic_readout<double>;
-    painter->SINGLE.paint = _generic_paint<float>;
-    painter->SINGLE.readout = _generic_readout<float>;
+    if(painter->canvas_dtype_elsize == 8) {
+        painter->paint = _generic_paint<double>;
+        painter->readout = _generic_readout<double>;
+    } else {
+        painter->paint = _generic_paint<float>;
+        painter->readout = _generic_readout<float>;
+    }
 
-    painter->support = support;
-    painter->hsupport = 0.5 * support;
-    painter->invh= 1 / (0.5 * support);
-    painter->left = (support  - 1) / 2;
-    painter->diffdir = -1;
+    painter->hsupport = 0.5 * painter->support;
+    painter->invh= 1 / (0.5 * painter->support);
+    painter->left = (painter->support  - 1) / 2;
 
-    switch(type) {
+    switch(painter->type) {
         case FASTPM_PAINTER_LINEAR:
             painter->kernel = _linear_kernel;
             painter->diff = _linear_diff;
@@ -121,28 +120,31 @@ fastpm_painter_init(FastPMPainter * painter, PMInterface * pm,
     }
     int nmax = 1;
     int d;
-    for(d = 0; d < pm->ndim; d++) {
-        nmax *= (support);
-        painter->InvCellSize[d] = pm->Nmesh[d] / pm->BoxSize[d];
+    for(d = 0; d < painter->ndim; d++) {
+        nmax *= (painter->support);
     }
     painter->Npoints = nmax;
 }
 
 void
-fastpm_painter_init_diff(FastPMPainter * painter, FastPMPainter * base, int diffdir)
+fastpm_painter_paint(FastPMPainter * painter, double pos[], double weight)
 {
-    *painter = *base;
-    painter->diffdir = diffdir;
+    painter->paint(painter, pos, weight);
+}
+
+double
+fastpm_painter_readout(FastPMPainter * painter, double pos[])
+{
+    return painter->readout(painter, pos);
 }
 
 static void
-_fill_k(FastPMPainter * painter, double pos[], int ipos[], double k[][64], int diffdir)
+_fill_k(FastPMPainter * painter, double pos[], int ipos[], double k[][64])
 {
-    PMInterface * pm = painter->pm;
-    double gpos[pm->ndim];
+    double gpos[painter->ndim];
     int d;
-    for(d = 0; d < pm->ndim; d++) {
-        gpos[d] = pos[d] * painter->InvCellSize[d];
+    for(d = 0; d < painter->ndim; d++) {
+        gpos[d] = pos[d] * painter->scale[d];
         ipos[d] = floor(gpos[d]) - painter->left;
         double dx = gpos[d] - ipos[d];
         int i;
@@ -155,15 +157,15 @@ _fill_k(FastPMPainter * painter, double pos[], int ipos[], double k[][64], int d
              * norm is still from the true kernel,
              * but we replace the value with the derivative
              * */
-            if(d == diffdir) {
-                k[d][i] = painter->diff(dx - i, painter->invh) * painter->InvCellSize[d];
+            if(d == painter->diffdir) {
+                k[d][i] = painter->diff(dx - i, painter->invh) * painter->scale[d];
             }
         }
         /* normalize the kernel to conserve mass */
         for(i = 0; i < painter->support; i ++) {
             k[d][i] /= sum;
         }
-        ipos[d] -= pm->start[d];
+        ipos[d] += painter->translate[d];
     }
 }
 
@@ -171,41 +173,46 @@ _fill_k(FastPMPainter * painter, double pos[], int ipos[], double k[][64], int d
 
 template <typename FLOAT>
 static void
-_generic_paint(FastPMPainter * painter, FLOAT * canvas, ptrdiff_t strides[], double pos[], double weight, int diffdir)
+_generic_paint(FastPMPainter * painter, double pos[], double weight)
 {
-    PMInterface * pm = painter->pm;
-    int ipos[pm->ndim];
+    int ipos[painter->ndim];
     /* the max support is 32 */
-    double k[pm->ndim][64];
+    double k[painter->ndim][64];
 
-    _fill_k(painter, pos, ipos, k, diffdir);
+    char * canvas = (char*) painter->canvas;
 
-    int rel[pm->ndim] = {0};
+    _fill_k(painter, pos, ipos, k);
+
+    int rel[painter->ndim] = {0};
     int s2 = painter->support;
     while(rel[0] != s2) {
         double kernel = 1.0;
         ptrdiff_t ind = 0;
         int d;
-        for(d = 0; d < pm->ndim; d++) {
+        for(d = 0; d < painter->ndim; d++) {
             int r = rel[d];
             int targetpos = ipos[d] + r;
             kernel *= k[d][r];
-            while(targetpos >= pm->Nmesh[d]) {
-                targetpos -= pm->Nmesh[d];
+            if(painter->Nmesh[d] > 0) {
+                while(targetpos >= painter->Nmesh[d]) {
+                    targetpos -= painter->Nmesh[d];
+                }
+                while(targetpos < 0) {
+                    targetpos += painter->Nmesh[d];
+                }
             }
-            while(targetpos < 0) {
-                targetpos += pm->Nmesh[d];
-            }
-            ind += strides[d] * targetpos;
-            if(UNLIKELY(targetpos >= pm->size[d]))
+            if(UNLIKELY(targetpos >= painter->size[d]))
                 goto outside;
+            if(UNLIKELY(targetpos < 0))
+                goto outside;
+            ind += painter->strides[d] * targetpos;
         }
 #pragma omp atomic
-        canvas[ind] += weight * kernel;
+        * (FLOAT*) (canvas + ind) += weight * kernel;
 
     outside:
-        rel[pm->ndim - 1] ++;
-        for(d = pm->ndim - 1; d > 0; d --) {
+        rel[painter->ndim - 1] ++;
+        for(d = painter->ndim - 1; d > 0; d --) {
             if(UNLIKELY(rel[d] == s2)) {
                 rel[d - 1] ++;
                 rel[d] = 0;
@@ -217,44 +224,49 @@ _generic_paint(FastPMPainter * painter, FLOAT * canvas, ptrdiff_t strides[], dou
 
 template <typename FLOAT>
 static double
-_generic_readout(FastPMPainter * painter, FLOAT * canvas, ptrdiff_t strides[], double pos[], int diffdir)
+_generic_readout(FastPMPainter * painter, double pos[])
 {
-    PMInterface * pm = painter->pm;
     double value = 0;
-    int ipos[pm->ndim];
-    double k[pm->ndim][64];
+    int ipos[painter->ndim];
+    double k[painter->ndim][64];
 
-    _fill_k(painter, pos, ipos, k, diffdir);
+    char * canvas = (char*) painter->canvas;
 
-    int rel[pm->ndim] = {0};
+    _fill_k(painter, pos, ipos, k);
+
+    int rel[painter->ndim] = {0};
 
     int s2 = painter->support;
     while(rel[0] != s2) {
         double kernel = 1.0;
         ptrdiff_t ind = 0;
         int d;
-        for(d = 0; d < pm->ndim; d++) {
+        for(d = 0; d < painter->ndim; d++) {
             int r = rel[d];
 
             kernel *= k[d][r];
 
             int targetpos = ipos[d] + r;
 
-            while(targetpos >= pm->Nmesh[d]) {
-                targetpos -= pm->Nmesh[d];
+            if(painter->Nmesh[d] > 0) {
+                while(targetpos >= painter->Nmesh[d]) {
+                    targetpos -= painter->Nmesh[d];
+                }
+                while(targetpos < 0) {
+                    targetpos += painter->Nmesh[d];
+                }
             }
-            while(targetpos < 0) {
-                targetpos += pm->Nmesh[d];
-            }
-            if(UNLIKELY(targetpos >= pm->size[d])) {
+            if(UNLIKELY(targetpos >= painter->size[d])) {
                 goto outside;
             }
-            ind += strides[d] * targetpos;
+            if(UNLIKELY(targetpos < 0))
+                goto outside;
+            ind += painter->strides[d] * targetpos;
         }
-        value += kernel * canvas[ind];
+        value += kernel * *(FLOAT* )(canvas + ind);
 outside:
-        rel[pm->ndim - 1] ++;
-        for(d = pm->ndim - 1; d > 0; d --) {
+        rel[painter->ndim - 1] ++;
+        for(d = painter->ndim - 1; d > 0; d --) {
             if(UNLIKELY(rel[d] == s2)) {
                 rel[d - 1] ++;
                 rel[d] = 0;

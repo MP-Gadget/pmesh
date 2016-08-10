@@ -15,13 +15,10 @@ def _mkarr(var, shape, dtype):
         r[...] = var
         return r
 
-class WindowResampler(_WindowResampler):
-    def __init__(self, kind, support, ndim, scale=None, translate=None, period=None):
-        kind = {
-                'linear' : _WindowResampler.PAINTER_LINEAR,
-                'lanczos' : _WindowResampler.PAINTER_LANCZOS,
-               }[kind]
-
+class Affine(object):
+    """ Defines an affine Transformation, used by WindowResampler.
+    """
+    def __init__(self, ndim, scale=None, translate=None, period=None):
         if scale is None:
             scale = 1.0
         if translate is None:
@@ -33,15 +30,27 @@ class WindowResampler(_WindowResampler):
         period = _mkarr(period, ndim, 'intp')
         translate = _mkarr(translate, ndim, 'intp')
 
-        self.ndim = ndim
         self.scale = scale
         self.translate = translate
         self.period = period
-        _WindowResampler.__init__(self, kind, support, ndim, scale, translate, period)
 
-    def paint(self, real, pos, mass=None, diffdir=None):
+class WindowResampler(_WindowResampler):
+    def __init__(self, kind, support):
+        kind = {
+                'linear' : _WindowResampler.PAINTER_LINEAR,
+                'lanczos' : _WindowResampler.PAINTER_LANCZOS,
+               }[kind]
+
+        _WindowResampler.__init__(self, kind, support)
+
+    def paint(self, real, pos, mass=None, diffdir=None, transform=None):
+        if transform is None:
+            transform = Affine(real.ndim)
+
+        assert isinstance(transform, Affine)
+
         if diffdir is None: diffdir = -1
-        else: diffdir %= self.ndim
+        else: diffdir %= real.ndim
 
         pos = numpy.asfarray(pos)
         if mass is None:
@@ -51,16 +60,22 @@ class WindowResampler(_WindowResampler):
 
         mass = _mkarr(mass, len(pos), mass.dtype)
 
-        _WindowResampler.paint(self, real, pos, mass, diffdir)
 
-    def readout(self, real, pos, out=None, diffdir=None):
+        _WindowResampler.paint(self, real, pos, mass, diffdir, transform.scale, transform.translate, transform.period)
+
+    def readout(self, real, pos, out=None, diffdir=None, transform=None):
+        if transform is None:
+            transform = Affine(real.ndim)
+
+        assert isinstance(transform, Affine)
+
         if diffdir is None: diffdir = -1
-        else: diffdir %= self.ndim
+        else: diffdir %= real.ndim
 
         pos = numpy.asfarray(pos)
         if out is None:
             out = numpy.zeros(pos.shape[1:], dtype='f8')
 
-        _WindowResampler.readout(self, real, pos, out, diffdir)
+        _WindowResampler.readout(self, real, pos, out, diffdir, transform.scale, transform.translate, transform.period)
 
         return out

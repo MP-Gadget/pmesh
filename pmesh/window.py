@@ -74,7 +74,7 @@ class ResampleWindow(_ResampleWindow):
 
         pos = numpy.asfarray(pos)
         if out is None:
-            out = numpy.zeros(pos.shape[1:], dtype='f8')
+            out = numpy.zeros(pos.shape[:-1], dtype='f8')
 
         _ResampleWindow.readout(self, real, pos, out, diffdir, transform.scale, transform.translate, transform.period)
 

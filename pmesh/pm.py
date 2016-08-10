@@ -2,6 +2,7 @@ import numpy
 import pfft
 from . import domain
 from . import cic
+from . import window
 
 class Field(numpy.ndarray):
     """ Base class for RealField and ComplexField.
@@ -35,6 +36,12 @@ class Field(numpy.ndarray):
             yield kk, optimized[irow]
 
 class RealField(Field):
+    methods = {
+        'cic' : window.CIC,
+        'lanczos2' : window.LANCZOS2,
+        'lanczos3' : window.LANCZOS3,
+    }
+
     def __new__(kls, pm):
         buffer = pfft.LocalBuffer(pm.partition)
         self = buffer.view_input().view(type=kls)
@@ -92,17 +99,19 @@ class RealField(Field):
 
         """
         # Transform from simulation unit to local grid unit.
-        def transform(x):
-            ret = (1.0 * self.Nmesh / self.BoxSize) * x - self.partition.local_i_start
-            return ret
+        affine = window.Affine(self.ndim,
+                    translate=-self.partition.local_i_start,
+                    scale=1.0 * self.Nmesh / self.BoxSize,
+                    period = self.Nmesh)
+
+        method = self.methods[method]
 
         if not hold:
             self[...] = 0
 
-        cic.paint(pos, self, weights=mass,
-                            mode='ignore', period=self.Nmesh, transform=transform)
+        method.paint(self, pos, mass, transform=affine)
 
-    def readout(self, pos, method="cic"):
+    def readout(self, pos, out=None, method="cic"):
         """ 
         Read out from real field at positions
 
@@ -115,16 +124,17 @@ class RealField(Field):
         -------
         rt     : array_like (,)
             read out values from the real field.
- 
+
         """
         # Transform from simulation unit to local grid unit.
-        def transform(x):
-            ret = (1.0 * self.Nmesh / self.BoxSize) * x - self.partition.local_i_start
-            return ret
+        affine = window.Affine(self.ndim,
+                    translate=-self.partition.local_i_start,
+                    scale=1.0 * self.Nmesh / self.BoxSize,
+                    period = self.Nmesh)
 
-        rt = cic.readout(self, pos, mode='ignore', period=self.Nmesh,
-                transform=transform)
-        return rt
+        method = self.methods[method]
+
+        return method.readout(self, pos, out=out, transform=affine)
 
 
 class ComplexField(Field):

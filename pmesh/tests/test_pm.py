@@ -7,7 +7,7 @@ from pmesh.pm import ParticleMesh, RealField, ComplexField
 
 import numpy
 
-@MPIWorld(NTask=(1, 4), required=(1, 4))
+@MPIWorld(NTask=(1, 4), required=(1))
 def test_fft(comm):
     pm = ParticleMesh(BoxSize=8.0, Nmesh=[8, 8], comm=comm, dtype='f8')
     real = RealField(pm)
@@ -32,7 +32,7 @@ def test_fft(comm):
     real.readout(npos)
     assert_almost_equal(real, real2)
 
-@MPIWorld(NTask=(1, 4), required=(1, 4))
+@MPIWorld(NTask=(1, 4), required=(1))
 def test_real_iter(comm):
     pm = ParticleMesh(BoxSize=8.0, Nmesh=[8, 8], comm=comm, dtype='f8')
     real = RealField(pm)
@@ -41,7 +41,7 @@ def test_real_iter(comm):
         assert slab.base is real
         slab[...] = sum(x[d] ** 2 for d in range(len(pm.Nmesh)))
 
-@MPIWorld(NTask=(1, 4), required=(1, 4))
+@MPIWorld(NTask=(1, 4), required=1)
 def test_complex_iter(comm):
     pm = ParticleMesh(BoxSize=8.0, Nmesh=[8, 8], comm=comm, dtype='f8')
     complex = ComplexField(pm)

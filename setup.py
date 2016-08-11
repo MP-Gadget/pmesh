@@ -19,6 +19,7 @@ def myext(*args):
 
 extensions = [
         myext("pmesh._domain", ["pmesh/_domain.pyx"]),
+        myext("pmesh._window", ["pmesh/_window.pyx", "pmesh/_window_imp.cxx"]),
         ]
 
 setup(

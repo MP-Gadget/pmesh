@@ -1,5 +1,6 @@
 import numpy
 import pfft
+import mpsort
 from . import domain
 from . import cic
 from . import window
@@ -16,40 +17,59 @@ class Field(numpy.ndarray):
 
     def add_attrs(self, buffer, pm):
         """ Used internally to add shortcuts of attributes from pm """
-        self.local_buffer = buffer
         self.pm = pm
         self.partition = pm.partition
         self.BoxSize = pm.BoxSize
         self.Nmesh = pm.Nmesh
+        if isinstance(self, RealField):
+            self.start = self.partition.local_i_start
+            self.global_shape = pm.Nmesh
+            self.x = pm.x
+        else:
+            self.start = self.partition.local_o_start
+            self.global_shape = pm.Nmesh.copy()
+            self.global_shape[-1] = self.global_shape[-1] // 2 + 1
+            self.x = pm.k
+
+        self.slices = tuple([
+                slice(s, s + n)
+                for s, n in zip(self.start, self.shape)
+                ])
+
+    def sort(self, out=None):
+        """ Sort the field to a C_CONTIGUOUS array, partitioned by MPI ranks. """
+        ind = numpy.ravel_multi_index(numpy.mgrid[self.slices],
+                self.global_shape)
+
+        return mpsort.permute(self.flat, ind.flat, self.pm.comm, out=out)
+
 
     def slabiter(self, index_type="coordinate"):
         """ returns a iterator of (x, y, z, ...), slab """
-        axissort = numpy.argsort(self.strides)[::-1]
 
+        # we iterate over the slowest axis to gain locality.
+        axissort = numpy.argsort(self.strides)[::-1]
         optimized = self.transpose(axissort)
         if index_type == "coordinate":
-            if isinstance(self, RealField):
-                x = [self.pm.x[d].transpose(axissort) for d in range(len(self.shape))]
-            elif isinstance(self, ComplexField):
-                x = [self.pm.k[d].transpose(axissort) for d in range(len(self.shape))]
+            x = [self.x[d].transpose(axissort) for d in range(len(self.shape))]
         else:
             raise
-
         for irow in range(self.shape[axissort[0]]): # iterator the slowest axis in memory
             kk = [x[d][0] if d != axissort[0] else x[d][irow] for d in range(len(self.shape))]
             yield kk, optimized[irow]
 
-
 class RealField(Field):
     methods = {
         'cic' : window.CIC,
+        'tsc' : window.TSC,
+        'cubic' : window.CUBIC,
         'lanczos2' : window.LANCZOS2,
         'lanczos3' : window.LANCZOS3,
     }
 
     def __new__(kls, pm):
         buffer = pfft.LocalBuffer(pm.partition)
-        self = buffer.view_input().view(type=kls)
+        self = buffer.view_input(type=kls)
         Field.add_attrs(self, buffer, pm)
         return self
 
@@ -68,7 +88,7 @@ class RealField(Field):
 
         assert isinstance(out, ComplexField)
 
-        self.pm.forward.execute(self.local_buffer, out.local_buffer)
+        self.pm.forward.execute(self.base, out.base)
 
         # PFFT normalization, same as FastPM
         out[...] *= numpy.prod(self.pm.Nmesh ** -1.0)
@@ -105,7 +125,7 @@ class RealField(Field):
         """
         # Transform from simulation unit to local grid unit.
         affine = window.Affine(self.ndim,
-                    translate=-self.partition.local_i_start,
+                    translate=-self.start,
                     scale=1.0 * self.Nmesh / self.BoxSize,
                     period = self.Nmesh)
 
@@ -133,7 +153,7 @@ class RealField(Field):
         """
         # Transform from simulation unit to local grid unit.
         affine = window.Affine(self.ndim,
-                    translate=-self.partition.local_i_start,
+                    translate=-self.start,
                     scale=1.0 * self.Nmesh / self.BoxSize,
                     period = self.Nmesh)
 
@@ -145,18 +165,21 @@ class RealField(Field):
 class ComplexField(Field):
     def __new__(kls, pm):
         buffer = pfft.LocalBuffer(pm.partition)
-        self = buffer.view_output().view(type=kls)
+        self = buffer.view_output(type=kls)
         Field.add_attrs(self, buffer, pm)
         return self
 
     def c2r(self, out):
         assert isinstance(out, RealField)
-        self.pm.backward.execute(self.local_buffer, out.local_buffer)
+        self.pm.backward.execute(self.base, out.base)
 
     def resample(self, out):
         assert isinstance(out, ComplexField)
 
         raise NotImplementedError
+
+    def downsample(self, out):
+        assert isinstance(out, ComplexField)
 
 class ParticleMesh(object):
     """

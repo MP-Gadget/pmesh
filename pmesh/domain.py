@@ -7,17 +7,6 @@
 from mpi4py import MPI
 import numpy
 
-class Rotator(object):
-    def __init__(self, comm):
-        self.comm = comm
-    def __enter__(self):
-        self.comm.Barrier()
-        for i in range(self.comm.rank):
-            self.comm.Barrier()
-    def __exit__(self, type, value, tb):
-        for i in range(self.comm.rank, self.comm.size):
-            self.comm.Barrier()
-        self.comm.Barrier()
 def bincountv(x, weights, minlength=None, dtype=None):
     """ bincount with vector weights """
     weights = numpy.array(weights)

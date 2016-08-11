@@ -15,25 +15,30 @@ class Field(numpy.ndarray):
         return other
 
     def add_attrs(self, buffer, pm):
+        """ Used internally to add shortcuts of attributes from pm """
         self.local_buffer = buffer
         self.pm = pm
         self.partition = pm.partition
         self.BoxSize = pm.BoxSize
         self.Nmesh = pm.Nmesh
 
-    def slabiter(self):
-        """ returns a iterator of (x, y, z, ...), realfield """
+    def slabiter(self, index_type="coordinate"):
+        """ returns a iterator of (x, y, z, ...), slab """
         axissort = numpy.argsort(self.strides)[::-1]
 
         optimized = self.transpose(axissort)
-        if isinstance(self, RealField):
-            x = [self.pm.x[d].transpose(axissort) for d in range(len(self.shape))]
-        elif isinstance(self, ComplexField):
-            x = [self.pm.k[d].transpose(axissort) for d in range(len(self.shape))]
+        if index_type == "coordinate":
+            if isinstance(self, RealField):
+                x = [self.pm.x[d].transpose(axissort) for d in range(len(self.shape))]
+            elif isinstance(self, ComplexField):
+                x = [self.pm.k[d].transpose(axissort) for d in range(len(self.shape))]
+        else:
+            raise
 
         for irow in range(self.shape[axissort[0]]): # iterator the slowest axis in memory
             kk = [x[d][0] if d != axissort[0] else x[d][irow] for d in range(len(self.shape))]
             yield kk, optimized[irow]
+
 
 class RealField(Field):
     methods = {
@@ -84,7 +89,7 @@ class RealField(Field):
 
         Parameters
         ----------
-        pos    : array_like (, Ndim)
+        pos    : array_like (, ndim)
             position of particles in simulation unit
 
         mass   : scalar or array_like (,)
@@ -117,7 +122,7 @@ class RealField(Field):
 
         Parameters
         ----------
-        pos    : array_like (, Ndim)
+        pos    : array_like (, ndim)
             position of particles in simulation  unit
 
         Returns
@@ -231,7 +236,7 @@ class ParticleMesh(object):
         self.partition = pfft.Partition(forward,
             self.Nmesh,
             self.procmesh,
-            pfft.Flags.PFFT_TRANSPOSED_OUT) # | pfft.Flags.PFFT_PADDED_R2C)
+            pfft.Flags.PFFT_TRANSPOSED_OUT | pfft.Flags.PFFT_PADDED_R2C)
 
         bufferin = pfft.LocalBuffer(self.partition)
         bufferout = pfft.LocalBuffer(self.partition)
@@ -244,10 +249,10 @@ class ParticleMesh(object):
 
         self.forward = pfft.Plan(self.partition, pfft.Direction.PFFT_FORWARD,
                 bufferin, bufferout, forward,
-                plan_method | pfft.Flags.PFFT_TRANSPOSED_OUT | pfft.Flags.PFFT_TUNE)# | pfft.Flags.PFFT_PADDED_R2C)
+                plan_method | pfft.Flags.PFFT_TRANSPOSED_OUT | pfft.Flags.PFFT_TUNE | pfft.Flags.PFFT_PADDED_R2C)
         self.backward = pfft.Plan(self.partition, pfft.Direction.PFFT_BACKWARD,
                 bufferout, bufferin, backward, 
-                plan_method | pfft.Flags.PFFT_TRANSPOSED_IN | pfft.Flags.PFFT_TUNE)# | pfft.Flags.PFFT_PADDED_C2R)
+                plan_method | pfft.Flags.PFFT_TRANSPOSED_IN | pfft.Flags.PFFT_TUNE | pfft.Flags.PFFT_PADDED_C2R)
 
         self.domain = domain.GridND(self.partition.i_edges, comm=self.comm)
 
@@ -256,11 +261,11 @@ class ParticleMesh(object):
         w = []
         r = []
 
-        for d in range(self.partition.Ndim):
-            t = numpy.ones(self.partition.Ndim, dtype='intp')
-            s = numpy.ones(self.partition.Ndim, dtype='intp')
-            t[d] = self.partition.local_ni[d]
-            s[d] = self.partition.local_no[d]
+        for d in range(self.partition.ndim):
+            t = numpy.ones(self.partition.ndim, dtype='intp')
+            s = numpy.ones(self.partition.ndim, dtype='intp')
+            t[d] = self.partition.local_i_shape[d]
+            s[d] = self.partition.local_o_shape[d]
             wi = numpy.arange(s[d], dtype='f4') + self.partition.local_o_start[d] 
             ri = numpy.arange(t[d], dtype='f4') + self.partition.local_i_start[d] 
 
@@ -288,7 +293,7 @@ class ParticleMesh(object):
 
         Parameters
         ----------
-        pos    : array_like (, Ndim)
+        pos    : array_like (, ndim)
             position of particles in simulation  unit
 
         Returns

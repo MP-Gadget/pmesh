@@ -40,9 +40,9 @@ class Field(numpy.ndarray):
         """ Sort the field to a C_CONTIGUOUS array, partitioned by MPI ranks. """
         ind = numpy.ravel_multi_index(numpy.mgrid[self.slices],
                 self.global_shape)
-
-        return mpsort.permute(self.flat, ind.flat, self.pm.comm, out=out)
-
+        if out is None:
+            out = self.flat
+        return mpsort.sort(self.flat, orderby=ind.flat, comm=self.pm.comm, out=out)
 
     def slabiter(self, index_type="coordinate"):
         """ returns a iterator of (x, y, z, ...), slab """

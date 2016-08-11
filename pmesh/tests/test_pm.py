@@ -32,6 +32,7 @@ def test_fft(comm):
     complex.c2r(real)
     real.readout(npos)
     assert_almost_equal(real, real2)
+
 @MPIWorld(NTask=(1), required=(1))
 def test_indices(comm):
     pm = ParticleMesh(BoxSize=8.0, Nmesh=[2, 2], comm=comm, dtype='f8')
@@ -48,6 +49,23 @@ def test_real_iter(comm):
     for x, slab in real.slabiter():
         assert slab.base is real
         assert_array_equal(slab.shape, sum(x[d] ** 2 for d in range(len(pm.Nmesh))).shape)
+
+@MPIWorld(NTask=(1, 2), required=(1))
+def test_sort(comm):
+    pm = ParticleMesh(BoxSize=8.0, Nmesh=[8, 6], comm=comm, dtype='f8')
+    real = RealField(pm)
+    truth = numpy.arange(8 * 6)
+    real[...] = truth.reshape(8, 6)[real.slices]
+    real.sort()
+    conjecture = numpy.concatenate(comm.allgather(real.ravel()))
+    assert_array_equal(conjecture, truth)
+
+    complex = ComplexField(pm)
+    truth = numpy.arange(8 * 4)
+    complex[...] = truth.reshape(8, 4)[complex.slices]
+    complex.sort()
+    conjecture = numpy.concatenate(comm.allgather(complex.ravel()))
+    assert_array_equal(conjecture, truth)
 
 @MPIWorld(NTask=(1, 4), required=1)
 def test_complex_iter(comm):

@@ -2,7 +2,6 @@ import numpy
 import pfft
 import mpsort
 from . import domain
-from . import cic
 from . import window
 
 class Field(numpy.ndarray):

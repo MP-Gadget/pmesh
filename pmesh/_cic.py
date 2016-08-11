@@ -1,3 +1,5 @@
+import warnings
+warnings.warn("numba based cic is deprecated; _window.pyx implementes a c version of the windows.", DeprecationWarning)
 # numba version of the cic.
 import numpy
 import numba

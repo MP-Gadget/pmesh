@@ -1,3 +1,5 @@
+import warnings
+warnings.warn("tsc.py is deprecated; switch to window.TSC", DeprecationWarning)
 # numba version of the tsc.
 import numpy
 import numba

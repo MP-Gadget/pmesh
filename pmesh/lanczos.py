@@ -1,3 +1,5 @@
+import warnings
+warnings.warn("kernels are implemented in window.py", DeprecationWarning)
 # painting with any kernel 
 #
 import numpy

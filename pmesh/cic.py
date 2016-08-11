@@ -1,5 +1,8 @@
 # cloud in cell painting
 #
+import warnings
+warnings.warn("cic.py is deprecated; switch to window.py", DeprecationWarning)
+
 import numpy
 def paint(pos, mesh, weights=1.0, mode="raise", period=None, transform=None):
     """ CIC approximation (trilinear), painting points to Nmesh,

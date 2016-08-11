@@ -1,3 +1,5 @@
+import warnings
+warnings.warn("tools.py is deprecated", DeprecationWarning)
 from mpi4py import MPI
 
 class Rotator(object):

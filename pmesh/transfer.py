@@ -1,3 +1,6 @@
+import warnings
+warnings.warn("transfer.py is deprecated. Directly operate over slabiter.", DeprecationWarning)
+
 import numpy
 from mpi4py import MPI
 try:

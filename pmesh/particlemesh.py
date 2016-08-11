@@ -2,6 +2,9 @@
 PyPM: A Particle Mesh code in Python
 
 """
+import warnings
+warnings.warn("particlemesh.ParticleMesh is deprecated; switch to pm.ParticleMesh", DeprecationWarning)
+
 import pfft
 import numpy
 import time

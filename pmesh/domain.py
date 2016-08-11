@@ -37,6 +37,12 @@ def bincountv(x, weights, minlength=None, dtype=None):
         out[ind] = numpy.bincount(x, weights[ind], minlength=minlength)
     return out
 
+def promote(data, comm):
+    data = numpy.asarray(data)
+    dtypes = comm.allgather(data.dtype.str)
+    dtype = numpy.find_common_type(list(set(dtypes)), [])
+    return numpy.asarray(data, dtype)
+
 class Layout(object):
     """ 
     The communication layout of a domain decomposition.
@@ -98,14 +104,12 @@ class Layout(object):
             Refer to :py:meth:`gather` for collecting data of ghosts.
 
         """
-        if len(data) != self.oldlength:
+        # first convert to array
+        data = promote(data, self.comm)
+
+        if any(self.comm.allgather(len(data) != self.oldlength)):
             raise ValueError(
             'the length of data does not match that used to build the layout')
-        # lets check the data type first
-        dtypes = self.comm.allgather(data.dtype.str)
-        if len(set(dtypes)) != 1:
-            raise TypeError('dtype of input differ on different ranks. %s' %
-                    str(dtypes))
 
         #build buffer
         # Watch out: 
@@ -157,16 +161,12 @@ class Layout(object):
             all gathered particles (corresponding to self.indices) are returned.
         
         """
+        data = promote(data, self.comm)
         # lets check the data type first
 
-        if len(data) != self.newlength:
+        if any(self.comm.allgather(len(data) != self.newlength)):
             raise ValueError(
             'the length of data does not match result of a domain.exchange')
-
-        dtypes = self.comm.allgather(data.dtype.str)
-        if len(set(dtypes)) != 1:
-            raise TypeError('dtype of input differ on different ranks. %s' %
-                    str(dtypes))
 
         # build a dtype for communication
         # this is to avoid 2GB limit from bytes.

@@ -29,7 +29,7 @@ setup(
     package_dir = {'pmesh': 'pmesh'},
     install_requires=['cython', 'numpy'],
     packages= ['pmesh', 'pmesh.tests'],
-    requires=['numpy', 'mpi4py'],
+    requires=['numpy', 'mpi4py', 'mpsort'],
     ext_modules = cythonize(extensions)
 )
 

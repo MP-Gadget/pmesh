@@ -38,6 +38,8 @@ class ResampleWindow(_ResampleWindow):
     def __init__(self, kind, support):
         kind = {
                 'linear' : _ResampleWindow.PAINTER_LINEAR,
+                'cubic' : _ResampleWindow.PAINTER_CUBIC,
+                'quadratic' : _ResampleWindow.PAINTER_QUADRATIC,
                 'lanczos' : _ResampleWindow.PAINTER_LANCZOS,
                }[kind]
 
@@ -81,5 +83,7 @@ class ResampleWindow(_ResampleWindow):
         return out
 
 CIC = ResampleWindow(kind="linear", support=2)
+TSC = ResampleWindow(kind="quadratic", support=3)
+CUBIC = ResampleWindow(kind="cubic", support=4)
 LANCZOS2 = ResampleWindow(kind="lanczos", support=4)
 LANCZOS3 = ResampleWindow(kind="lanczos", support=6)

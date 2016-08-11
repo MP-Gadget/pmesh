@@ -30,6 +30,77 @@ _linear_diff(double x, double invh) {
     }
 }
 
+static double
+_quadratic_kernel(double x, double invh) {
+    /*
+     * Take from https://arxiv.org/abs/0804.0070
+     * */
+    x = fabs(x * invh * 1.5);
+    if(x <= 0.5) {
+        return 0.75 - x * x;
+    } else {
+        x = 1.5 - x;
+        return (x * x) * 0.5;
+    }
+}
+
+static double
+_quadratic_diff(double x, double invh) {
+    double factor;
+    if ( x < 0) {
+        x = -x;
+        factor = -1 * invh * 1.5;
+    } else {
+        factor = +1 * invh * 1.5;
+    }
+
+    if(x < 0.5) {
+        return factor * (- 2 * x);
+    } else {
+        return factor * (- (1.5 - x));
+    }
+}
+
+static double
+_cubic_kernel(double x, double invh) {
+    const double alpha = -0.5;
+    /*
+     * alpha = -0.5 is good. taken from
+     * http://www.ipol.im/pub/art/2011/g_lmii/revisions/2011-09-27/g_lmii.html
+     * */
+    x = fabs(x * invh * 2);
+    double xx = x * x;
+    if(x < 1.0) {
+        return (alpha + 2) * xx * x - (alpha + 3) * xx + 1;
+    } else {
+        return (alpha * xx * x) - 5 * alpha * xx + 8 * alpha * x - 4 * alpha;
+    }
+}
+
+static double
+_cubic_diff(double x, double invh) {
+    const double alpha = -0.5;
+    /*
+     * alpha = -0.5 is good. taken from
+     * http://www.ipol.im/pub/art/2011/g_lmii/revisions/2011-09-27/g_lmii.html
+     * */
+    double factor;
+    x = x * invh * 2;
+    if (x < 0) {
+        factor = -1 * (invh * 2);
+        x = -x;
+    } else {
+        factor = +1 * (invh * 2);
+    }
+
+    double xx = x * x;
+    if(x < 1.0) {
+        return factor * (3 * (alpha + 2) * xx - (alpha + 3));
+    } else {
+        return factor * (3 * (alpha * xx) - 10 * alpha * x + 8 * alpha);
+    }
+}
+
 static inline double __cached__(int *status, double * table, double x, double (*func)(double)){
     const double dx = 1e-3;
     const double tablemax = dx * 16384;
@@ -106,12 +177,23 @@ fastpm_painter_init(FastPMPainter * painter)
 
     painter->hsupport = 0.5 * painter->support;
     painter->invh= 1 / (0.5 * painter->support);
-    painter->left = (painter->support  - 1) / 2;
-
+    if (painter->support % 2 == 0){
+        painter->left = (painter->support - 1) / 2;
+    } else {
+        painter->left = (painter->support - 1) / 2;
+    }
     switch(painter->type) {
         case FASTPM_PAINTER_LINEAR:
             painter->kernel = _linear_kernel;
             painter->diff = _linear_diff;
+        break;
+        case FASTPM_PAINTER_QUADRATIC:
+            painter->kernel = _quadratic_kernel;
+            painter->diff = _quadratic_diff;
+        break;
+        case FASTPM_PAINTER_CUBIC:
+            painter->kernel = _cubic_kernel;
+            painter->diff = _cubic_diff;
         break;
         case FASTPM_PAINTER_LANCZOS:
             painter->kernel = _lanczos_kernel;

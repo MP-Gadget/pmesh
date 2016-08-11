@@ -11,7 +11,9 @@ cdef extern from "_window_imp.h":
 
     ctypedef enum FastPMPainterType:
         FASTPM_PAINTER_LINEAR
+        FASTPM_PAINTER_CUBIC
         FASTPM_PAINTER_LANCZOS
+        FASTPM_PAINTER_QUADRATIC
 
     ctypedef struct FastPMPainter:
         FastPMPainterType type
@@ -36,7 +38,9 @@ cdef class ResampleWindow(object):
     cdef FastPMPainter painter[1]
 
     PAINTER_LINEAR = FASTPM_PAINTER_LINEAR
+    PAINTER_CUBIC = FASTPM_PAINTER_CUBIC
     PAINTER_LANCZOS = FASTPM_PAINTER_LANCZOS
+    PAINTER_QUADRATIC = FASTPM_PAINTER_QUADRATIC
 
     def __init__(self, FastPMPainterType kind, int support):
         self.painter.support = support

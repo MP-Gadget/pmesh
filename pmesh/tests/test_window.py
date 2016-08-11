@@ -1,4 +1,4 @@
-from pmesh.window import ResampleWindow, Affine, CIC, LANCZOS2
+from pmesh.window import ResampleWindow, Affine, CIC, LANCZOS2, TSC, CUBIC
 
 import numpy
 from numpy.testing import assert_array_equal, assert_allclose, assert_almost_equal
@@ -152,3 +152,19 @@ def test_lanczos2():
      [-0.035156,  0.316406,  0.316406, -0.035156],
      [-0.035156,  0.316406,  0.316406, -0.035156],
      [ 0.003906, -0.035156, -0.035156,  0.003906]], atol=1e-5)
+
+def test_tsc():
+    real = numpy.zeros((2))
+    pos = [
+        [0.5],
+    ]
+    TSC.paint(real, pos)
+    assert_array_equal(real, [0.5, 0.5])
+
+def test_cubic():
+    real = numpy.zeros((4))
+    pos = [
+        [1.5],
+    ]
+    CUBIC.paint(real, pos)
+    assert_array_equal(real, [-0.0625, 0.5625, 0.5625, -0.0625])

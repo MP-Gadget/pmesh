@@ -123,9 +123,9 @@ class ParticleMesh(object):
         w = []
         r = []
 
-        for d in range(self.partition.Ndim):
-            t = numpy.ones(self.partition.Ndim, dtype='intp')
-            s = numpy.ones(self.partition.Ndim, dtype='intp')
+        for d in range(self.partition.ndim):
+            t = numpy.ones(self.partition.ndim, dtype='intp')
+            s = numpy.ones(self.partition.ndim, dtype='intp')
             t[d] = self.partition.local_ni[d]
             s[d] = self.partition.local_no[d]
             wi = numpy.arange(s[d], dtype='f4') + self.partition.local_o_start[d] 
@@ -163,12 +163,12 @@ class ParticleMesh(object):
 
         Parameters
         ----------
-        x     : array_like (, Ndim)
+        x     : array_like (, ndim)
             coordinates in simulation unit
 
         Returns
         -------
-        ret   : array_like (, Ndim)
+        ret   : array_like (, ndim)
             coordinates in local grid unit
  
         """
@@ -181,12 +181,12 @@ class ParticleMesh(object):
 
         Parameters
         ----------
-        x     : array_like (, Ndim)
+        x     : array_like (, ndim)
             coordinates in simulation unit
 
         Returns
         -------
-        ret   : array_like (, Ndim)
+        ret   : array_like (, ndim)
             coordinates in global grid unit
  
         """
@@ -200,7 +200,7 @@ class ParticleMesh(object):
 
         Parameters
         ----------
-        pos    : array_like (, Ndim)
+        pos    : array_like (, ndim)
             position of particles in simulation  unit
 
         Returns
@@ -243,7 +243,7 @@ class ParticleMesh(object):
 
         Parameters
         ----------
-        pos    : array_like (, Ndim)
+        pos    : array_like (, ndim)
             position of particles in simulation  unit
 
         mass   : scalar or array_like (,)
@@ -332,7 +332,7 @@ class ParticleMesh(object):
             
         Parameters
         ----------
-        pos    : array_like (, Ndim)
+        pos    : array_like (, ndim)
             position of particles in simulation  unit
         
         Returns

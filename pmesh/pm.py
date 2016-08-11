@@ -38,11 +38,10 @@ class Field(numpy.ndarray):
 
     def sort(self, out=None):
         """ Sort the field to a C_CONTIGUOUS array, partitioned by MPI ranks. """
-        ind = numpy.ravel_multi_index(numpy.mgrid[self.slices],
-                self.global_shape)
+        ind = numpy.ravel_multi_index(numpy.mgrid[self.slices], self.global_shape)
         if out is None:
-            out = self.flat
-        return mpsort.sort(self.flat, orderby=ind.flat, comm=self.pm.comm, out=out)
+            out = self
+        return mpsort.sort(self.flat, orderby=ind.flat, comm=self.pm.comm, out=out.flat)
 
     def slabiter(self, index_type="coordinate"):
         """ returns a iterator of (x, y, z, ...), slab """
@@ -176,10 +175,81 @@ class ComplexField(Field):
     def resample(self, out):
         assert isinstance(out, ComplexField)
 
-        raise NotImplementedError
+        tmp = numpy.empty_like(self)
+        self.sort(out=tmp)
 
-    def downsample(self, out):
-        assert isinstance(out, ComplexField)
+        # indtable stores the index in pmsrc for the mode in pmdest
+        # since pmdest < pmsrc, all items are alright.
+        indtable = [reindex(self.Nmesh[d], out.Nmesh[d]) for d in range(self.ndim)]
+
+        ind = build_index(
+                [t[numpy.r_[s]]
+                for t, s in zip(indtable, out.slices) ],
+                self.global_shape)
+
+        # fill the points that has values in pmsrc
+        mask = ind >= 0
+        # their indices
+        argind = ind[mask]
+        # take the data
+        data = mpsort.take(tmp.flat, argind, self.pm.comm)
+        # fill in the value
+        out[mask] = data
+
+def build_index(indices, fullshape):
+    """
+        Build a linear index array based on indices on an array of fullshape.
+        This is similar to numpy.ravel_multi_index.
+
+        index value of -1 will on any axes will be translated to -1 in the final.
+
+        Parameters:
+            indices : a tuple of index per dimension.
+
+            fullshape : a tuple of the shape of the full array
+
+        Returns:
+            ind : a 3-d array of the indices of the coordinates in indices in
+                an array of size fullshape. -1 if any indices is -1.
+
+    """
+    localshape = [ len(i) for i in indices]
+    ndim = len(localshape)
+    ind = numpy.zeros(localshape, dtype='i8')
+    for d in range(len(indices)):
+        i = indices[d]
+        i = i.reshape([-1 if dd == d else 1 for dd in range(ndim)])
+        ind[...] *= fullshape[d]
+        ind[...] += i
+
+    mask = numpy.zeros(localshape, dtype='?')
+
+    # now mask out bad points by -1
+    for d in range(len(indices)):
+        i = indices[d]
+        i = i.reshape([-1 if dd == d else 1 for dd in range(ndim)])
+        mask |= i == -1
+
+    ind[mask] = -1
+    return ind
+
+def reindex(Nsrc, Ndest):
+    """ returns the index in the frequency array for corresponding
+        k in Nsrc and composes Ndest
+
+        For those Ndest that doesn't exist in Nsrc, return -1
+
+        Example:
+        >>> reindex(8, 4)
+        >>> array([0, 1, 2, 7])
+        >>> reindex(4, 8)
+        >>> array([ 0,  1,  2, -1, -1, -1,  -1,  3])
+
+    """
+    reindex = numpy.arange(Ndest)
+    reindex[Ndest // 2 + 1:] = numpy.arange(Nsrc - Ndest // 2 + 1, Nsrc, 1)
+    reindex[Nsrc // 2 + 1: Ndest -Nsrc //2 + 1] = -1
+    return reindex
 
 class ParticleMesh(object):
     """

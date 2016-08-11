@@ -50,7 +50,7 @@ def test_real_iter(comm):
         assert slab.base is real
         assert_array_equal(slab.shape, sum(x[d] ** 2 for d in range(len(pm.Nmesh))).shape)
 
-@MPIWorld(NTask=(1, 2), required=(1))
+@MPIWorld(NTask=(1, 2, 3, 4), required=(1))
 def test_sort(comm):
     pm = ParticleMesh(BoxSize=8.0, Nmesh=[8, 6], comm=comm, dtype='f8')
     real = RealField(pm)
@@ -66,6 +66,36 @@ def test_sort(comm):
     complex.sort()
     conjecture = numpy.concatenate(comm.allgather(complex.ravel()))
     assert_array_equal(conjecture, truth)
+
+@MPIWorld(NTask=(1, 2, 3, 4), required=(1))
+def test_downsample(comm):
+    pm1 = ParticleMesh(BoxSize=8.0, Nmesh=[8, 8], comm=comm, dtype='f8')
+    pm2 = ParticleMesh(BoxSize=8.0, Nmesh=[4, 4], comm=comm, dtype='f8')
+
+    complex1 = ComplexField(pm1)
+    complex2 = ComplexField(pm2)
+    for kk, slab in complex1.slabiter():
+        slab[...] = sum([k**2 for k in kk]) **0.5
+
+    complex1.resample(complex2)
+
+    assert_array_equal(complex2, sum([k**2 for k in complex2.x]) **0.5)
+
+@MPIWorld(NTask=(1, 2, 3, 4), required=(1))
+def test_upsample(comm):
+    pm1 = ParticleMesh(BoxSize=8.0, Nmesh=[8, 8, 8], comm=comm, dtype='f8')
+    pm2 = ParticleMesh(BoxSize=8.0, Nmesh=[4, 4, 4], comm=comm, dtype='f8')
+
+    complex1 = ComplexField(pm1)
+    complex2 = ComplexField(pm2)
+    for kk, slab in complex1.slabiter():
+        slab[...] = sum([k**2 for k in kk]) **0.5
+
+    complex1.resample(complex2)
+    complex2.resample(complex1)
+    complex1.resample(complex2)
+
+    assert_array_equal(complex2, sum([k**2 for k in complex2.x]) **0.5)
 
 @MPIWorld(NTask=(1, 4), required=1)
 def test_complex_iter(comm):

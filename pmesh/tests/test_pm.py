@@ -11,10 +11,9 @@ import numpy
 def test_fft(comm):
     pm = ParticleMesh(BoxSize=8.0, Nmesh=[8, 8], comm=comm, dtype='f8')
     real = RealField(pm)
-    complex = ComplexField(pm)
     numpy.random.seed(1234)
     if comm.rank == 0:
-        Npar = 10
+        Npar = 100
     else:
         Npar = 0
 
@@ -25,13 +24,11 @@ def test_fft(comm):
     npos = layout.exchange(pos)
     real[:] = 0
     real.paint(npos)
-    real2 = real.copy()
-    real.r2c(complex)
+    complex = real.r2c()
 
-    real[...] = 0
-    complex.c2r(real)
+    real2 = complex.c2r()
     real.readout(npos)
-    assert_almost_equal(real, real2)
+    assert_almost_equal(real, real2, decimal=7)
 
 @MPIWorld(NTask=(1), required=(1))
 def test_indices(comm):

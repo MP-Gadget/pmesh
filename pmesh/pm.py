@@ -71,7 +71,7 @@ class RealField(Field):
         Field.add_attrs(self, buffer, pm)
         return self
 
-    def r2c(self, out):
+    def r2c(self, out=None):
         """ 
         Perform real to complex FFT on the internal canvas.
 
@@ -83,6 +83,8 @@ class RealField(Field):
         Therefore, the zeroth component of the complex field is :math:`\\bar\\rho`.
 
         """
+        if out is None:
+            out = ComplexField(self.pm)
 
         assert isinstance(out, ComplexField)
 
@@ -90,6 +92,7 @@ class RealField(Field):
 
         # PFFT normalization, same as FastPM
         out[...] *= numpy.prod(self.pm.Nmesh ** -1.0)
+        return out
 
     def paint(self, pos, mass=1.0, method="cic", hold=False):
         """ 
@@ -167,11 +170,22 @@ class ComplexField(Field):
         Field.add_attrs(self, buffer, pm)
         return self
 
-    def c2r(self, out):
+    def c2r(self, out=None):
+        if out is None:
+            out = RealField(self.pm)
         assert isinstance(out, RealField)
         self.pm.backward.execute(self.base, out.base)
+        return out
 
     def resample(self, out):
+        """ Resample the Complex by filling 0 or truncating modes.
+
+            Parameters
+            ----------
+            out : ComplexField
+                must be provided because it is a different PM.
+
+        """
         assert isinstance(out, ComplexField)
 
         tmp = numpy.empty_like(self)
@@ -194,6 +208,7 @@ class ComplexField(Field):
         data = mpsort.take(tmp.flat, argind, self.pm.comm)
         # fill in the value
         out[mask] = data
+        return out
 
 def build_index(indices, fullshape):
     """

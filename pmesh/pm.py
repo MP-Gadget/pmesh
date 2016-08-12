@@ -3,6 +3,7 @@ import pfft
 import mpsort
 from . import domain
 from . import window
+from mpi4py import MPI
 
 class slabiter(object):
     def __init__(self, field):
@@ -404,15 +405,10 @@ class ParticleMesh(object):
 
     def __init__(self, Nmesh, BoxSize=1.0, comm=None, np=None, dtype='f8', plan_method='estimate'):
         """ create a PM object.  """
-        # this weird sequence to intialize comm is because
-        # we want to be compatible with None comm == MPI.COMM_WORLD
-        # while not relying on pfft's full mpi4py compatibility
-        # (passing None through to pfft)
         if comm is None:
-            from mpi4py import MPI
-            self.comm = MPI.COMM_WORLD
-        else:
-            self.comm = comm
+            comm = MPI.COMM_WORLD
+
+        self.comm = comm
 
         if np is None:
             if len(Nmesh) >= 3:

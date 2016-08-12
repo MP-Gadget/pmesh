@@ -14,12 +14,11 @@ def find_version(path):
         return version_match.group(1)
     raise RuntimeError("Version not found")
 
-def myext(*args):
-    return Extension(*args, include_dirs=["./", numpy.get_include()])
 
 extensions = [
-        myext("pmesh._domain", ["pmesh/_domain.pyx"]),
-        myext("pmesh._window", ["pmesh/_window.pyx", "pmesh/_window_imp.cxx"]),
+        Extension("pmesh._domain", ["pmesh/_domain.pyx"], include_dirs=["./", numpy.get_include()]),
+        Extension("pmesh._window", ["pmesh/_window.pyx", "pmesh/_window_imp.cxx"],
+                headers=["pmesh/_window_imp.h"], include_dirs=["./", numpy.get_include()])
         ]
 
 setup(

@@ -1,2 +1,4 @@
 include pmesh/*.pyx
+include pmesh/*.h
+include pmesh/*.c
 include README.*

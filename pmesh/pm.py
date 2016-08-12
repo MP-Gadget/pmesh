@@ -95,6 +95,18 @@ class Field(numpy.ndarray):
         """
         assert isinstance(out, Field)
 
+        if all(out.Nmesh == self.Nmesh):
+            # no resampling needed. Just do Fourier transforms.
+            if isinstance(self, RealField) and isinstance(out, ComplexField):
+                self.r2c(out)
+            if isinstance(self, RealField) and isinstance(out, RealField):
+                out[...] = self
+            if isinstance(self, ComplexField) and isinstance(out, RealField):
+                self.c2r(out)
+            if isinstance(self, ComplexField) and isinstance(out, ComplexField):
+                out[...] = self
+            return
+
         if isinstance(self, RealField):
             self = self.r2c()
 

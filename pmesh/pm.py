@@ -4,6 +4,36 @@ import mpsort
 from . import domain
 from . import window
 
+class slabiter(object):
+    def __init__(self, field):
+        # we iterate over the slowest axis to gain locality.
+        axissort = numpy.argsort(field.strides)[::-1]
+        axis = axissort[0]
+
+        self.optimized_view = field.transpose(axissort)
+        self.nslabs = field.shape[axis]
+
+        optx = [xx.transpose(axissort) for xx in field.x]
+        opti = [ii.transpose(axissort) for ii in field.i]
+        self.x = xslabiter(axis, self.nslabs, optx)
+        self.i = xslabiter(axis, self.nslabs, opti)
+
+    def __iter__(self):
+        for irow in range(self.nslabs):
+            yield self.optimized_view[irow]
+
+class xslabiter(slabiter):
+    def __init__(self, axis, nslabs, optx):
+        self.axis = axis
+        self.nslabs = nslabs
+        self.optx = optx
+
+    def __iter__(self):
+        for irow in range(self.nslabs):
+            kk = [x[0] if d != self.axis else x[irow] for d, x in enumerate(self.optx)]
+            yield kk
+
+
 class Field(numpy.ndarray):
     """ Base class for RealField and ComplexField.
 
@@ -24,16 +54,20 @@ class Field(numpy.ndarray):
             self.start = self.partition.local_i_start
             self.global_shape = pm.Nmesh
             self.x = pm.x
+            self.i = pm.i_ind
         else:
             self.start = self.partition.local_o_start
             self.global_shape = pm.Nmesh.copy()
             self.global_shape[-1] = self.global_shape[-1] // 2 + 1
             self.x = pm.k
+            self.i = pm.o_ind
 
         self.slices = tuple([
                 slice(s, s + n)
                 for s, n in zip(self.start, self.shape)
                 ])
+
+        self.slabs = slabiter(self)
 
     def sort(self, out=None):
         """ Sort the field to a C_CONTIGUOUS array, partitioned by MPI ranks. """
@@ -42,19 +76,6 @@ class Field(numpy.ndarray):
             out = self
         return mpsort.sort(self.flat, orderby=ind.flat, comm=self.pm.comm, out=out.flat)
 
-    def slabiter(self, index_type="coordinate"):
-        """ returns a iterator of (x, y, z, ...), slab """
-
-        # we iterate over the slowest axis to gain locality.
-        axissort = numpy.argsort(self.strides)[::-1]
-        optimized = self.transpose(axissort)
-        if index_type == "coordinate":
-            x = [self.x[d].transpose(axissort) for d in range(len(self.shape))]
-        else:
-            raise
-        for irow in range(self.shape[axissort[0]]): # iterator the slowest axis in memory
-            kk = [x[d][0] if d != axissort[0] else x[d][irow] for d in range(len(self.shape))]
-            yield kk, optimized[irow]
 
 class RealField(Field):
     methods = {
@@ -367,12 +388,18 @@ class ParticleMesh(object):
         x = []
         w = []
         r = []
+        o_ind = []
+        i_ind = []
 
         for d in range(self.partition.ndim):
             t = numpy.ones(self.partition.ndim, dtype='intp')
             s = numpy.ones(self.partition.ndim, dtype='intp')
             t[d] = self.partition.local_i_shape[d]
             s[d] = self.partition.local_o_shape[d]
+
+            i_indi = numpy.arange(t[d], dtype='intp') + self.partition.local_i_start[d]
+            o_indi = numpy.arange(s[d], dtype='intp') + self.partition.local_o_start[d]
+
             wi = numpy.arange(s[d], dtype='f4') + self.partition.local_o_start[d] 
             ri = numpy.arange(t[d], dtype='f4') + self.partition.local_i_start[d] 
 
@@ -383,11 +410,15 @@ class ParticleMesh(object):
             ki = wi * self.Nmesh[d] / self.BoxSize[d]
             xi = ri * self.BoxSize[d] / self.Nmesh[d]
 
+            o_ind.append(o_indi.reshape(s))
+            i_ind.append(i_indi.reshape(t))
             w.append(wi.reshape(s))
             r.append(ri.reshape(t))
             k.append(ki.reshape(s))
             x.append(xi.reshape(t))
 
+        self.i_ind = i_ind
+        self.o_ind = o_ind
         self.w = w
         self.r = r
         self.k = k

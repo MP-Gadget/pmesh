@@ -43,9 +43,10 @@ def test_real_iter(comm):
     pm = ParticleMesh(BoxSize=8.0, Nmesh=[8, 8], comm=comm, dtype='f8')
     real = RealField(pm)
 
-    for x, slab in real.slabiter():
+    for i, x, slab in zip(real.slabs.i, real.slabs.x, real.slabs):
         assert slab.base is real
         assert_array_equal(slab.shape, sum(x[d] ** 2 for d in range(len(pm.Nmesh))).shape)
+        # FIXME: test i!!
 
 @MPIWorld(NTask=(1, 2, 3, 4), required=(1))
 def test_sort(comm):
@@ -71,7 +72,7 @@ def test_downsample(comm):
 
     complex1 = ComplexField(pm1)
     complex2 = ComplexField(pm2)
-    for kk, slab in complex1.slabiter():
+    for i, kk, slab in zip(complex1.slabs.i, complex1.slabs.x, complex1.slabs):
         slab[...] = sum([k**2 for k in kk]) **0.5
 
     complex1.resample(complex2)
@@ -85,7 +86,7 @@ def test_upsample(comm):
 
     complex1 = ComplexField(pm1)
     complex2 = ComplexField(pm2)
-    for kk, slab in complex1.slabiter():
+    for kk, slab in zip(complex1.slabs.x, complex1.slabs):
         slab[...] = sum([k**2 for k in kk]) **0.5
 
     complex1.resample(complex2)
@@ -99,5 +100,5 @@ def test_complex_iter(comm):
     pm = ParticleMesh(BoxSize=8.0, Nmesh=[8, 8], comm=comm, dtype='f8')
     complex = ComplexField(pm)
 
-    for x, slab in complex.slabiter():
+    for x, slab in zip(complex.slabs.x, complex.slabs):
         assert_array_equal(slab.shape, sum(x[d] ** 2 for d in range(len(pm.Nmesh))).shape)

@@ -154,12 +154,27 @@ def test_lanczos2():
      [ 0.003906, -0.035156, -0.035156,  0.003906]], atol=1e-5)
 
 def test_tsc():
-    real = numpy.zeros((2))
+    real = numpy.zeros((4))
     pos = [
-        [0.5],
+        [1.5],
     ]
     TSC.paint(real, pos)
-    assert_array_equal(real, [0.5, 0.5])
+    assert_array_equal(real, [0, 0.5, 0.5, 0])
+
+    real = numpy.zeros((5))
+    pos = [
+        [2],
+    ]
+    TSC.paint(real, pos)
+    assert_array_equal(real, [0, 0.125, 0.75, 0.125, 0])
+
+    real = numpy.zeros((5))
+    pos = [
+        [0],
+    ]
+    affine = Affine(ndim=1, period=5)
+    TSC.paint(real, pos, transform=affine)
+    assert_array_equal(real, [0.75, 0.125, 0, 0, 0.125])
 
 def test_cubic():
     real = numpy.zeros((4))

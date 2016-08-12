@@ -69,17 +69,56 @@ class Field(numpy.ndarray):
 
         self.slabs = slabiter(self)
 
-    def sort(self, out):
-        """ Sort the field to a C_CONTIGUOUS array, partitioned by MPI ranks. """
-        ind = numpy.ravel_multi_index(numpy.mgrid[self.slices], self.global_shape)
-        if out is None:
-            out = self
-        mpsort.sort(self.flat, orderby=ind.flat, comm=self.pm.comm, out=out.flat)
+    def sort(self, out=None):
+        """ Sort the field to 'C'-order, partitioned by MPI ranks. Save the
+            result to flatiter.
 
-    def unsort(self, array):
-        """ Unsort the field from a C_CONTIGUOUS array, partitioned by MPI ranks. """
+            Parameters
+            ----------
+            out : numpy.flatiter
+                A flatiter to store the 'C' order. If not a flatiter, the .flat
+                attribute is used.
+
+            Returns
+            -------
+            numpy.flatiter : the flatiter provided or created.
+
+            Notes
+            -----
+            Set `flatiter` to self for an 'inplace' sort.
+        """
         ind = numpy.ravel_multi_index(numpy.mgrid[self.slices], self.global_shape)
-        mpsort.permute(array.flat, orderby=ind.flat, comm=self.pm.comm, out=self.flat)
+
+        if out is None:
+            out = numpy.empty_like(self)
+
+        if not isinstance(out, numpy.flatiter):
+            out = out.flat
+
+        assert isinstance(out, numpy.flatiter)
+        assert len(out) == self.size
+
+        return mpsort.sort(self.flat, orderby=ind.flat, comm=self.pm.comm, out=out)
+
+    def unsort(self, flatiter):
+        """ Unsort c-ordered field values to the field.
+
+            Parameters
+            ----------
+            flatiter : numpy.flatiter
+
+            Notes
+            -----
+            self is updated. `array` does not have to be C_CONTIGUOUS flat iterator of array is used.
+        """
+        if not isinstance(flatiter, numpy.flatiter):
+            flatiter = flatiter.flat
+
+        assert isinstance(flatiter, numpy.flatiter)
+        assert len(flatiter) == self.size
+
+        ind = numpy.ravel_multi_index(numpy.mgrid[self.slices], self.global_shape)
+        mpsort.permute(flatiter, argindex=ind.flat, comm=self.pm.comm, out=self.flat)
 
     def resample(self, out):
         """ Resample the Field by filling 0 or truncating modes.
@@ -103,7 +142,7 @@ class Field(numpy.ndarray):
                 self.c2r(out)
             if isinstance(self, ComplexField) and isinstance(out, ComplexField):
                 out[...] = self
-            return
+            return out
 
         if isinstance(self, RealField):
             self = self.r2c()

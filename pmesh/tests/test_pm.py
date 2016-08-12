@@ -54,14 +54,14 @@ def test_sort(comm):
     real = RealField(pm)
     truth = numpy.arange(8 * 6)
     real[...] = truth.reshape(8, 6)[real.slices]
-    real.sort()
+    real.sort(out=real)
     conjecture = numpy.concatenate(comm.allgather(real.ravel()))
     assert_array_equal(conjecture, truth)
 
     complex = ComplexField(pm)
     truth = numpy.arange(8 * 4)
     complex[...] = truth.reshape(8, 4)[complex.slices]
-    complex.sort()
+    complex.sort(out=complex)
     conjecture = numpy.concatenate(comm.allgather(complex.ravel()))
     assert_array_equal(conjecture, truth)
 

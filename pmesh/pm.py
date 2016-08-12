@@ -69,19 +69,17 @@ class Field(numpy.ndarray):
 
         self.slabs = slabiter(self)
 
-    def sort(self, out=None):
+    def sort(self, out):
         """ Sort the field to a C_CONTIGUOUS array, partitioned by MPI ranks. """
         ind = numpy.ravel_multi_index(numpy.mgrid[self.slices], self.global_shape)
         if out is None:
             out = self
-        return mpsort.sort(self.flat, orderby=ind.flat, comm=self.pm.comm, out=out.flat)
+        mpsort.sort(self.flat, orderby=ind.flat, comm=self.pm.comm, out=out.flat)
 
-    def unsort(self, array=None):
+    def unsort(self, array):
         """ Unsort the field from a C_CONTIGUOUS array, partitioned by MPI ranks. """
         ind = numpy.ravel_multi_index(numpy.mgrid[self.slices], self.global_shape)
-        if out is None:
-            out = self
-        return mpsort.permute(array.flat, orderby=ind.flat, comm=self.pm.comm, out=self.flat)
+        mpsort.permute(array.flat, orderby=ind.flat, comm=self.pm.comm, out=self.flat)
 
     def resample(self, out):
         """ Resample the Field by filling 0 or truncating modes.

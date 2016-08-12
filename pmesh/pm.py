@@ -409,6 +409,7 @@ class ParticleMesh(object):
         # while not relying on pfft's full mpi4py compatibility
         # (passing None through to pfft)
         if comm is None:
+            from mpi4py import MPI
             self.comm = MPI.COMM_WORLD
         else:
             self.comm = comm

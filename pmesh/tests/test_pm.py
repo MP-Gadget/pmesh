@@ -72,12 +72,25 @@ def test_downsample(comm):
 
     complex1 = ComplexField(pm1)
     complex2 = ComplexField(pm2)
+    real2 = RealField(pm2)
     for i, kk, slab in zip(complex1.slabs.i, complex1.slabs.x, complex1.slabs):
         slab[...] = sum([k**2 for k in kk]) **0.5
 
     complex1.resample(complex2)
 
     assert_array_equal(complex2, sum([k**2 for k in complex2.x]) **0.5)
+
+    complex1.c2r().resample(complex2)
+
+    assert_almost_equal(complex2, sum([k**2 for k in complex2.x]) **0.5, decimal=5)
+
+    complex1.resample(real2)
+
+    assert_almost_equal(real2.r2c(), sum([k**2 for k in complex2.x]) **0.5)
+
+    complex1.c2r().resample(real2)
+
+    assert_almost_equal(real2.r2c(), sum([k**2 for k in complex2.x]) **0.5)
 
 @MPIWorld(NTask=(1, 2, 3, 4), required=(1))
 def test_upsample(comm):

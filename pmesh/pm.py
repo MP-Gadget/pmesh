@@ -76,6 +76,62 @@ class Field(numpy.ndarray):
             out = self
         return mpsort.sort(self.flat, orderby=ind.flat, comm=self.pm.comm, out=out.flat)
 
+    def unsort(self, array=None):
+        """ Unsort the field from a C_CONTIGUOUS array, partitioned by MPI ranks. """
+        ind = numpy.ravel_multi_index(numpy.mgrid[self.slices], self.global_shape)
+        if out is None:
+            out = self
+        return mpsort.permute(array.flat, orderby=ind.flat, comm=self.pm.comm, out=self.flat)
+
+    def resample(self, out):
+        """ Resample the Field by filling 0 or truncating modes.
+            Convert from and between Real/Complex automatically.
+
+            Parameters
+            ----------
+            out : Field
+                must be provided because it is a different PM. Can be RealField or ComplexField
+
+        """
+        assert isinstance(out, Field)
+
+        if isinstance(self, RealField):
+            self = self.r2c()
+
+        if isinstance(out, RealField):
+            complex = ComplexField(out.pm)
+        else:
+            complex = out
+
+        tmp = numpy.empty_like(self)
+
+        self.sort(out=tmp)
+
+        # indtable stores the index in pmsrc for the mode in pmdest
+        # since pmdest < pmsrc, all items are alright.
+        indtable = [reindex(self.Nmesh[d], out.Nmesh[d]) for d in range(self.ndim)]
+
+        ind = build_index(
+                [t[numpy.r_[s]]
+                for t, s in zip(indtable, complex.slices) ],
+                self.global_shape)
+
+        # fill the points that has values in pmsrc
+        mask = ind >= 0
+        # their indices
+        argind = ind[mask]
+        # take the data
+
+        data = mpsort.take(tmp.flat, argind, self.pm.comm)
+
+        # fill in the value
+        complex[mask] = data
+
+        if isinstance(out, RealField):
+            complex.c2r(out)
+
+        return out
+
 
 class RealField(Field):
     methods = {
@@ -196,39 +252,6 @@ class ComplexField(Field):
             out = RealField(self.pm)
         assert isinstance(out, RealField)
         self.pm.backward.execute(self.base, out.base)
-        return out
-
-    def resample(self, out):
-        """ Resample the Complex by filling 0 or truncating modes.
-
-            Parameters
-            ----------
-            out : ComplexField
-                must be provided because it is a different PM.
-
-        """
-        assert isinstance(out, ComplexField)
-
-        tmp = numpy.empty_like(self)
-        self.sort(out=tmp)
-
-        # indtable stores the index in pmsrc for the mode in pmdest
-        # since pmdest < pmsrc, all items are alright.
-        indtable = [reindex(self.Nmesh[d], out.Nmesh[d]) for d in range(self.ndim)]
-
-        ind = build_index(
-                [t[numpy.r_[s]]
-                for t, s in zip(indtable, out.slices) ],
-                self.global_shape)
-
-        # fill the points that has values in pmsrc
-        mask = ind >= 0
-        # their indices
-        argind = ind[mask]
-        # take the data
-        data = mpsort.take(tmp.flat, argind, self.pm.comm)
-        # fill in the value
-        out[mask] = data
         return out
 
 def build_index(indices, fullshape):

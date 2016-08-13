@@ -1,12 +1,11 @@
 import pywt
 import numpy
 
-def genfunc(name, support):
+def genwavelet(name, support):
     D = pywt.Wavelet(name)
     phi, psi, x = D.wavefun(level=8)
-    m = x < support
-    x = x[m]
-    phi = phi[m]
+
+    phi = phi[:len(phi) //4 * 4]
 
     numbers = ["%.8f, %.8f, %.8f, %.8f" % tuple(a) for a in phi.reshape(-1, 4)]
     step = numpy.diff(x).mean()
@@ -45,5 +44,5 @@ def genfunc(name, support):
     }
 
 with open('pmesh/_window_wavelets.h', 'wt') as f:
-    f.write(genfunc('db12', 6))
-    f.write(genfunc('db20', 8))
+    f.write(genwavelet('db12', 24))
+    f.write(genwavelet('db20', 16))

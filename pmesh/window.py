@@ -36,15 +36,6 @@ class Affine(object):
 
 class ResampleWindow(_ResampleWindow):
     def __init__(self, kind, support):
-        kind = {
-                'linear' : _ResampleWindow.PAINTER_LINEAR,
-                'cubic' : _ResampleWindow.PAINTER_CUBIC,
-                'quadratic' : _ResampleWindow.PAINTER_QUADRATIC,
-                'lanczos' : _ResampleWindow.PAINTER_LANCZOS,
-                'db12' : _ResampleWindow.PAINTER_DB12,
-                'db20' : _ResampleWindow.PAINTER_DB20,
-               }[kind]
-
         _ResampleWindow.__init__(self, kind, support)
 
     def paint(self, real, pos, mass=None, diffdir=None, transform=None):
@@ -87,8 +78,8 @@ class ResampleWindow(_ResampleWindow):
 CIC = ResampleWindow(kind="linear", support=2)
 TSC = ResampleWindow(kind="quadratic", support=3)
 CUBIC = ResampleWindow(kind="cubic", support=4)
-LANCZOS2 = ResampleWindow(kind="lanczos", support=4)
-LANCZOS3 = ResampleWindow(kind="lanczos", support=6)
-DB12 = ResampleWindow(kind="db12", support=6)
-DB20 = ResampleWindow(kind="db20", support=8)
+LANCZOS2 = ResampleWindow(kind="lanczos2", support=4)
+LANCZOS3 = ResampleWindow(kind="lanczos3", support=6)
+DB12 = ResampleWindow(kind="db12", support=24)
+DB20 = ResampleWindow(kind="db20", support=16)
 

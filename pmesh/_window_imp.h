@@ -4,7 +4,8 @@ extern "C" {
 typedef enum { FASTPM_PAINTER_LINEAR,
                FASTPM_PAINTER_CUBIC,
                FASTPM_PAINTER_QUADRATIC,
-               FASTPM_PAINTER_LANCZOS,
+               FASTPM_PAINTER_LANCZOS2,
+               FASTPM_PAINTER_LANCZOS3,
                FASTPM_PAINTER_DB12,
                FASTPM_PAINTER_DB20,
 

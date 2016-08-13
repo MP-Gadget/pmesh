@@ -147,23 +147,47 @@ static double __dsinc__(double x) {
 }
 
 static double
-_lanczos_kernel(double x, double invh) {
+_lanczos2_kernel(double x, double invh) {
     static int status = 0;
     static double table[16384];
+    x *= 2 * invh;
     double s1 = __cached__(&status, table, x, __sinc__);
-    double s2 = __cached__(&status, table, x * invh, __sinc__);
+    double s2 = __cached__(&status, table, x * 2, __sinc__);
     return s1 * s2;
 }
 
 static double
-_lanczos_diff(double x, double invh) {
+_lanczos2_diff(double x, double invh) {
     static int status = 0;
     static double table[16384];
+    x *= 2 * invh;
     double u1 = __cached__(&status, table, x, __sinc__);
     double u2 = __cached__(&status, table, x, __dsinc__);
-    double v1 = __cached__(&status, table, x * invh, __sinc__);
-    double v2 = __cached__(&status, table, x * invh, __dsinc__) * invh;
-    return u1 * v2 + u2 * v1;
+    double v1 = __cached__(&status, table, x * 2, __sinc__);
+    double v2 = __cached__(&status, table, x * 2, __dsinc__) * 2;
+    return 2 * invh * (u1 * v2 + u2 * v1);
+}
+
+static double
+_lanczos3_kernel(double x, double invh) {
+    static int status = 0;
+    static double table[16384];
+    x *= 3 * invh;
+    double s1 = __cached__(&status, table, x, __sinc__);
+    double s2 = __cached__(&status, table, x * 3, __sinc__);
+    return s1 * s2;
+}
+
+static double
+_lanczos3_diff(double x, double invh) {
+    static int status = 0;
+    static double table[16384];
+    x *= 3 * invh;
+    double u1 = __cached__(&status, table, x, __sinc__);
+    double u2 = __cached__(&status, table, x, __dsinc__);
+    double v1 = __cached__(&status, table, x * 3, __sinc__);
+    double v2 = __cached__(&status, table, x * 3, __dsinc__) * 3;
+    return 3 * invh * (u1 * v2 + u2 * v1);
 }
 
 void
@@ -198,9 +222,13 @@ fastpm_painter_init(FastPMPainter * painter)
             painter->kernel = _cubic_kernel;
             painter->diff = _cubic_diff;
         break;
-        case FASTPM_PAINTER_LANCZOS:
-            painter->kernel = _lanczos_kernel;
-            painter->diff = _lanczos_diff;
+        case FASTPM_PAINTER_LANCZOS2:
+            painter->kernel = _lanczos2_kernel;
+            painter->diff = _lanczos2_diff;
+        break;
+        case FASTPM_PAINTER_LANCZOS3:
+            painter->kernel = _lanczos3_kernel;
+            painter->diff = _lanczos3_diff;
         break;
         case FASTPM_PAINTER_DB12:
             painter->kernel = _db12_kernel;

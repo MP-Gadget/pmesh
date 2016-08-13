@@ -256,7 +256,7 @@ _fill_k(FastPMPainter * painter, double pos[], int ipos[], double k[][64])
         }
         /* normalize the kernel to conserve mass */
         for(i = 0; i < painter->support; i ++) {
-            k[d][i] /= sum;
+            // k[d][i] /= sum;
         }
         ipos[d] += painter->translate[d];
     }

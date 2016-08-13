@@ -191,7 +191,7 @@ class RealField(Field):
         'lanczos2' : window.LANCZOS2,
         'lanczos3' : window.LANCZOS3,
         'db12' : window.DB12,
-        'db13' : window.DB13,
+        'db20' : window.DB20,
     }
 
     def __new__(kls, pm):

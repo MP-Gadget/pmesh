@@ -177,10 +177,11 @@ fastpm_painter_init(FastPMPainter * painter)
 
     painter->hsupport = 0.5 * painter->support;
     painter->invh= 1 / (0.5 * painter->support);
+    painter->left = (painter->support - 1) / 2;
     if (painter->support % 2 == 0){
-        painter->left = (painter->support - 1) / 2;
+        painter->shift = 0;
     } else {
-        painter->left = (painter->support - 1) / 2;
+        painter->shift = 0.5;
     }
     switch(painter->type) {
         case FASTPM_PAINTER_LINEAR:
@@ -227,7 +228,7 @@ _fill_k(FastPMPainter * painter, double pos[], int ipos[], double k[][64])
     int d;
     for(d = 0; d < painter->ndim; d++) {
         gpos[d] = pos[d] * painter->scale[d];
-        ipos[d] = floor(gpos[d]) - painter->left;
+        ipos[d] = floor(gpos[d] + painter->shift) - painter->left;
         double dx = gpos[d] - ipos[d];
         int i;
         double sum = 0;

@@ -161,6 +161,14 @@ def test_tsc():
     TSC.paint(real, pos)
     assert_array_equal(real, [0, 0.5, 0.5, 0])
 
+    real = numpy.zeros((4))
+    pos = [
+        [1.8],
+    ]
+    TSC.paint(real, pos)
+    # this is special for odd support kernels. #10
+    assert_almost_equal(real, [ 0.   ,  0.245,  0.71 ,  0.045])
+
     real = numpy.zeros((5))
     pos = [
         [2],

@@ -30,6 +30,7 @@ struct FastPMPainter {
 
     double hsupport;
     double invh;
+    double shift;
     int left; /* offset to start the kernel, (support - 1) / 2*/
     int Npoints; /* (support) ** ndim */
 };

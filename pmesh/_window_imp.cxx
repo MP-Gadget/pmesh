@@ -17,6 +17,7 @@ _generic_readout(FastPMPainter * painter, double pos[]);
 extern "C" {
 
 #include "_window_wavelets.h"
+#include "_window_lanczos.h"
 
 static double
 _linear_kernel(double x) {
@@ -102,93 +103,6 @@ _cubic_diff(double x) {
     }
 }
 
-static inline double __cached__(int *status, double * table, double x, double (*func)(double)){
-    const double dx = 1e-3;
-    const double tablemax = dx * 16384;
-    const double tablemin = dx * 1;
-    if(!*status) {
-        int i;
-        for(i = 0; i < 16384; i ++) {
-            double x = dx * i;
-            table[i] = func(x);
-        }
-        *status = 1;
-    }
-    if(x > tablemin && x < tablemax) {
-        int i = fabs(x) / dx;
-        return table[i];
-    }
-    return func(x);
-}
-
-
-static double __sinc__(double x) {
-    x *= 3.1415927;
-    if(x < 1e-5 && x > -1e-5) {
-        double x2 = x * x;
-        return 1.0 - x2 / 6. + x2  * x2 / 120.;
-    } else {
-        return sin(x) / x;
-    }
-}
-
-static double __dsinc__(double x) {
-    x *= 3.1415927;
-    double r = 3.1415927;
-    if(x < 1e-5 && x > -1e-5) {
-        double xx = x * x;
-        double xxxx = xx * xx;
-        r *= - x / 3 + x*xx / 30 - xxxx*x/ 840 + xxxx * xx * x / 45360;
-    } else {
-        r *= 1 / x * cos(x) - 1 / (x *x) * sin(x);
-    }
-    return r;
-}
-
-/*
- * watch out these factors are incorrect -- probably due to caching.
- *
- * */
-static double
-_lanczos2_kernel(double x) {
-    static int status = 0;
-    static double table[16384];
-    double s1 = __cached__(&status, table, x, __sinc__);
-    double s2 = __cached__(&status, table, x * 0.5, __sinc__);
-    return s1 * s2 / 1.00878984;
-}
-
-static double
-_lanczos2_diff(double x) {
-    static int status = 0;
-    static double table[16384];
-
-    double u1 = __cached__(&status, table, x, __sinc__);
-    double u2 = __cached__(&status, table, x, __dsinc__);
-    double v1 = __cached__(&status, table, x * 0.5, __sinc__);
-    double v2 = __cached__(&status, table, x * 0.5, __dsinc__) * 0.5;
-    return (u1 * v2 + u2 * v1) / 1.00878984;
-}
-
-static double
-_lanczos3_kernel(double x) {
-    static int status = 0;
-    static double table[16384];
-    double s1 = __cached__(&status, table, x, __sinc__);
-    double s2 = __cached__(&status, table, x * 0.333333333333, __sinc__);
-    return s1 * s2 / 0.997055;
-}
-
-static double
-_lanczos3_diff(double x) {
-    static int status = 0;
-    static double table[16384];
-    double u1 = __cached__(&status, table, x, __sinc__);
-    double u2 = __cached__(&status, table, x, __dsinc__);
-    double v1 = __cached__(&status, table, x * 0.333333333333, __sinc__);
-    double v2 = __cached__(&status, table, x * 0.333333333333, __dsinc__) * 0.333333333333;
-    return (u1 * v2 + u2 * v1) / 0.997055;
-}
 
 void
 fastpm_painter_init(FastPMPainter * painter)
@@ -226,12 +140,12 @@ fastpm_painter_init(FastPMPainter * painter)
         case FASTPM_PAINTER_LANCZOS2:
             painter->kernel = _lanczos2_kernel;
             painter->diff = _lanczos2_diff;
-            painter->nativesupport = 4;
+            painter->nativesupport = _lanczos2_nativesupport;
         break;
         case FASTPM_PAINTER_LANCZOS3:
             painter->kernel = _lanczos3_kernel;
             painter->diff = _lanczos3_diff;
-            painter->nativesupport = 6;
+            painter->nativesupport = _lanczos3_nativesupport;
         break;
         case FASTPM_PAINTER_DB12:
             painter->kernel = _db12_kernel;

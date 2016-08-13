@@ -12,7 +12,8 @@ cdef extern from "_window_imp.h":
     ctypedef enum FastPMPainterType:
         FASTPM_PAINTER_LINEAR
         FASTPM_PAINTER_CUBIC
-        FASTPM_PAINTER_LANCZOS
+        FASTPM_PAINTER_LANCZOS2
+        FASTPM_PAINTER_LANCZOS3
         FASTPM_PAINTER_QUADRATIC
         FASTPM_PAINTER_DB12
         FASTPM_PAINTER_DB20
@@ -39,16 +40,27 @@ cdef extern from "_window_imp.h":
 cdef class ResampleWindow(object):
     cdef FastPMPainter painter[1]
 
-    PAINTER_LINEAR = FASTPM_PAINTER_LINEAR
-    PAINTER_CUBIC = FASTPM_PAINTER_CUBIC
-    PAINTER_LANCZOS = FASTPM_PAINTER_LANCZOS
-    PAINTER_QUADRATIC = FASTPM_PAINTER_QUADRATIC
-    PAINTER_DB12 = FASTPM_PAINTER_DB12
-    PAINTER_DB20 = FASTPM_PAINTER_DB20
+    def __init__(self, kind, int support):
+        kinds = {
+                'linear' : FASTPM_PAINTER_LINEAR,
+                'cubic' : FASTPM_PAINTER_CUBIC,
+                'quadratic' : FASTPM_PAINTER_QUADRATIC,
+                'lanczos2' : FASTPM_PAINTER_LANCZOS2,
+                'lanczos3' : FASTPM_PAINTER_LANCZOS3,
+                'db12' : FASTPM_PAINTER_DB12,
+                'db20' : FASTPM_PAINTER_DB20,
+               }
 
-    def __init__(self, FastPMPainterType kind, int support):
+
+        cdef FastPMPainterType type
+
+        if kind in kinds:
+            type = <FastPMPainterType> <int> kinds[kind]
+        else:
+            type = <FastPMPainterType> <int> kind
+
         self.painter.support = support
-        self.painter.type = kind
+        self.painter.type = type
 
     def paint(self, numpy.ndarray real, postype [:, :] pos, masstype [:] mass, int diffdir,
         double [:] scale, ptrdiff_t [:] translate, ptrdiff_t [:] period):

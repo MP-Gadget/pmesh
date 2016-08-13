@@ -4,7 +4,8 @@ extern "C" {
 typedef enum { FASTPM_PAINTER_LINEAR,
                FASTPM_PAINTER_CUBIC,
                FASTPM_PAINTER_QUADRATIC,
-               FASTPM_PAINTER_LANCZOS,
+               FASTPM_PAINTER_LANCZOS2,
+               FASTPM_PAINTER_LANCZOS3,
                FASTPM_PAINTER_DB12,
                FASTPM_PAINTER_DB20,
 
@@ -12,7 +13,7 @@ typedef enum { FASTPM_PAINTER_LINEAR,
 
 typedef struct FastPMPainter FastPMPainter;
 
-typedef double (*fastpm_kernelfunc)(double x, double invh);
+typedef double (*fastpm_kernelfunc)(double x);
 
 struct FastPMPainter {
     FastPMPainterType type;
@@ -35,8 +36,8 @@ struct FastPMPainter {
     fastpm_kernelfunc kernel;
     fastpm_kernelfunc diff;
 
-    double hsupport;
-    double invh;
+    double nativesupport; /* unscaled support */
+    double vfactor; /* nativesupport / support */
     double shift;
     int left; /* offset to start the kernel, (support - 1) / 2*/
     int Npoints; /* (support) ** ndim */

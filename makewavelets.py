@@ -4,11 +4,14 @@ import numpy
 def genwavelet(name):
     D = pywt.Wavelet(name)
     phi, psi, x = D.wavefun(level=8)
+    phi = (phi[1:] + phi[:-1]) * 0.5
     i = len(phi)
     while abs(phi[i - 1]) < 1e-2:
         i = i - 1
-    phi = phi[:i //4 * 4 + 4]
     support = int(numpy.ceil(x[i]))
+
+    i = (x < support).sum()
+    phi = phi[:i //4 * 4 + 4]
     print(name, support)
     numbers = ["%.8f, %.8f, %.8f, %.8f" % tuple(a) for a in phi.reshape(-1, 4)]
     step = numpy.diff(x).mean()

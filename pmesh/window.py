@@ -80,6 +80,6 @@ TSC = ResampleWindow(kind="quadratic", support=3)
 CUBIC = ResampleWindow(kind="cubic", support=4)
 LANCZOS2 = ResampleWindow(kind="lanczos2", support=4)
 LANCZOS3 = ResampleWindow(kind="lanczos3", support=6)
-DB12 = ResampleWindow(kind="db12", support=24)
-DB20 = ResampleWindow(kind="db20", support=16)
+DB12 = ResampleWindow(kind="db12", support=10)
+DB20 = ResampleWindow(kind="db20", support=13)
 

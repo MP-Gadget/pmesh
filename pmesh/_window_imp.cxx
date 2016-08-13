@@ -239,7 +239,7 @@ _fill_k(FastPMPainter * painter, double pos[], int ipos[], double k[][64])
     for(d = 0; d < painter->ndim; d++) {
         gpos[d] = pos[d] * painter->scale[d];
         ipos[d] = floor(gpos[d] + painter->shift) - painter->left;
-        double dx = gpos[d] - ipos[d];
+        double dx = gpos[d] - ipos[d]; /* relative to the left most nonzero.*/
         int i;
         double sum = 0;
         for(i = 0; i < painter->support; i ++) {

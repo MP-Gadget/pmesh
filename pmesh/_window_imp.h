@@ -1,7 +1,14 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-typedef enum { FASTPM_PAINTER_LINEAR, FASTPM_PAINTER_CUBIC, FASTPM_PAINTER_QUADRATIC, FASTPM_PAINTER_LANCZOS} FastPMPainterType;
+typedef enum { FASTPM_PAINTER_LINEAR,
+               FASTPM_PAINTER_CUBIC,
+               FASTPM_PAINTER_QUADRATIC,
+               FASTPM_PAINTER_LANCZOS,
+               FASTPM_PAINTER_DB12,
+               FASTPM_PAINTER_DB20,
+
+} FastPMPainterType;
 
 typedef struct FastPMPainter FastPMPainter;
 

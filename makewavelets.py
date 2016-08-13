@@ -18,7 +18,7 @@ def genfunc(name, support):
         x *= %(hsupport)g * hinv;
         x += %(hsupport)g;
 
-        int i = x * %(step)e;
+        int i = x / %(step)e;
         if (i < 0) return 0;
         if (i >= %(tablesize)d) return 0;
         return _%(funcname)s_table[i];
@@ -28,7 +28,7 @@ def genfunc(name, support):
         x *= %(hsupport)g * hinv;
         x += %(hsupport)g;
 
-        int i = x * %(step)e;
+        int i = x / %(step)e;
         if (i < 0) return 0;
         if (i >= %(tablesize)d - 1) return 0;
         double f0 = _%(funcname)s_table[i];
@@ -41,7 +41,7 @@ def genfunc(name, support):
             'hsupport' : support * 0.5,
             'funcname' : name,
             'step' : step,
-            'tablesize' : len(numbers),
+            'tablesize' : len(phi),
     }
 
 with open('pmesh/_window_wavelets.h', 'wt') as f:

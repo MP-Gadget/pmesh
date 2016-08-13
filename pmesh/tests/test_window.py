@@ -1,4 +1,4 @@
-from pmesh.window import ResampleWindow, Affine, CIC, LANCZOS2, TSC, CUBIC
+from pmesh.window import ResampleWindow, Affine, CIC, LANCZOS2, TSC, CUBIC, DB12, DB20
 
 import numpy
 from numpy.testing import assert_array_equal, assert_allclose, assert_almost_equal
@@ -191,3 +191,20 @@ def test_cubic():
     ]
     CUBIC.paint(real, pos)
     assert_array_equal(real, [-0.0625, 0.5625, 0.5625, -0.0625])
+
+def test_db12():
+    real = numpy.zeros((8))
+    pos = [
+        [3.0],
+    ]
+    DB12.paint(real, pos)
+    assert_almost_equal(real, [0., 0.1552735, -0.3257409, 0.8702795 , 0.2936153, 0.0065725, 0., 0. ] )
+
+def test_db20():
+    real = numpy.zeros((8))
+    pos = [
+        [3.0],
+    ]
+    DB20.paint(real, pos)
+    assert_almost_equal(real, [  2.896390e-01,  -4.214947e-01,   4.631021e-01,   5.777651e-01,
+         8.876256e-02,   2.223313e-03,   2.640220e-06,   0.000000e+00]);

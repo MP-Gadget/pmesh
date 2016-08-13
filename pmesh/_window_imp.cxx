@@ -16,6 +16,8 @@ _generic_readout(FastPMPainter * painter, double pos[]);
 
 extern "C" {
 
+#include "_window_wavelets.h"
+
 static double
 _linear_kernel(double x, double invh) {
     return 1.0 - fabs(x * invh);
@@ -199,6 +201,14 @@ fastpm_painter_init(FastPMPainter * painter)
         case FASTPM_PAINTER_LANCZOS:
             painter->kernel = _lanczos_kernel;
             painter->diff = _lanczos_diff;
+        break;
+        case FASTPM_PAINTER_DB12:
+            painter->kernel = _db12_kernel;
+            painter->diff = _db12_diff;
+        break;
+        case FASTPM_PAINTER_DB20:
+            painter->kernel = _db20_kernel;
+            painter->diff = _db20_diff;
         break;
     }
     int nmax = 1;

@@ -37,16 +37,20 @@ def test_weighted():
 
 def test_wide():
     wcic = ResampleWindow("linear", 4)
-    real = numpy.zeros((4, 4))
+    real = numpy.zeros((4))
     pos = [
-        [1.5, 1.5],
+        [1.5],
     ]
     wcic.paint(real, pos)
-    assert_array_equal(real,
-    [[ 0.015625, 0.046875, 0.046875, 0.015625],
-     [ 0.046875, 0.140625, 0.140625, 0.046875],
-     [ 0.046875, 0.140625, 0.140625, 0.046875],
-     [ 0.015625, 0.046875, 0.046875, 0.015625]])
+    assert_almost_equal(real, [ 0.125,  0.375,  0.375,  0.125])
+
+    real = numpy.zeros((4))
+    wcic.paint(real, [[1.51]])
+    assert_almost_equal(real, [ 0.1225,  0.3725,  0.3775,  0.1275 ])
+
+    real = numpy.zeros((4))
+    wcic.paint(real, pos, diffdir=0)
+    assert_almost_equal(real, [-0.25, -0.25, 0.25, 0.25])
 
 
 def test_wrap():
@@ -148,10 +152,11 @@ def test_lanczos2():
     ]
     LANCZOS2.paint(real, pos)
     assert_allclose(real,
-    [[ 0.003906, -0.035156, -0.035156,  0.003906],
-     [-0.035156,  0.316406,  0.316406, -0.035156],
-     [-0.035156,  0.316406,  0.316406, -0.035156],
-     [ 0.003906, -0.035156, -0.035156,  0.003906]], atol=1e-5)
+      [[ 0.003985, -0.035868, -0.035868,  0.003985],
+       [-0.035868,  0.322812,  0.322812, -0.035868],
+       [-0.035868,  0.322812,  0.322812, -0.035868],
+       [ 0.003985, -0.035868, -0.035868,  0.003985]],
+ atol=1e-5)
 
 def test_tsc():
     real = numpy.zeros((4))
@@ -193,11 +198,12 @@ def test_cubic():
     assert_array_equal(real, [-0.0625, 0.5625, 0.5625, -0.0625])
 
 def test_db12():
-    real = numpy.zeros((8))
+    real = numpy.zeros((24))
     pos = [
-        [3.0],
+        [12.0],
     ]
     DB12.paint(real, pos)
+    print real
     assert_almost_equal(real, [0., 0.1552735, -0.3257409, 0.8702795 , 0.2936153, 0.0065725, 0., 0. ] )
 
 def test_db20():

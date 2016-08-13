@@ -19,25 +19,25 @@ extern "C" {
 #include "_window_wavelets.h"
 
 static double
-_linear_kernel(double x, double invh) {
-    return 1.0 - fabs(x * invh);
+_linear_kernel(double x) {
+    return 1.0 - fabs(x);
 }
 
 static double
-_linear_diff(double x, double invh) {
+_linear_diff(double x) {
     if( x < 0) {
-        return 1 * invh;
+        return 1;
     } else {
-        return - 1 * invh;
+        return - 1;
     }
 }
 
 static double
-_quadratic_kernel(double x, double invh) {
+_quadratic_kernel(double x) {
     /*
      * Take from https://arxiv.org/abs/0804.0070
      * */
-    x = fabs(x * invh * 1.5);
+    x = fabs(x);
     if(x <= 0.5) {
         return 0.75 - x * x;
     } else {
@@ -47,13 +47,13 @@ _quadratic_kernel(double x, double invh) {
 }
 
 static double
-_quadratic_diff(double x, double invh) {
+_quadratic_diff(double x) {
     double factor;
     if ( x < 0) {
         x = -x;
-        factor = -1 * invh * 1.5;
+        factor = -1;
     } else {
-        factor = +1 * invh * 1.5;
+        factor = +1;
     }
 
     if(x < 0.5) {
@@ -64,13 +64,13 @@ _quadratic_diff(double x, double invh) {
 }
 
 static double
-_cubic_kernel(double x, double invh) {
+_cubic_kernel(double x) {
     const double alpha = -0.5;
     /*
      * alpha = -0.5 is good. taken from
      * http://www.ipol.im/pub/art/2011/g_lmii/revisions/2011-09-27/g_lmii.html
      * */
-    x = fabs(x * invh * 2);
+    x = fabs(x);
     double xx = x * x;
     if(x < 1.0) {
         return (alpha + 2) * xx * x - (alpha + 3) * xx + 1;
@@ -80,19 +80,18 @@ _cubic_kernel(double x, double invh) {
 }
 
 static double
-_cubic_diff(double x, double invh) {
+_cubic_diff(double x) {
     const double alpha = -0.5;
     /*
      * alpha = -0.5 is good. taken from
      * http://www.ipol.im/pub/art/2011/g_lmii/revisions/2011-09-27/g_lmii.html
      * */
     double factor;
-    x = x * invh * 2;
     if (x < 0) {
-        factor = -1 * (invh * 2);
+        factor = -1;
         x = -x;
     } else {
-        factor = +1 * (invh * 2);
+        factor = +1;
     }
 
     double xx = x * x;
@@ -146,48 +145,49 @@ static double __dsinc__(double x) {
     return r;
 }
 
+/*
+ * watch out these factors are incorrect -- probably due to caching.
+ *
+ * */
 static double
-_lanczos2_kernel(double x, double invh) {
+_lanczos2_kernel(double x) {
     static int status = 0;
     static double table[16384];
-    x *= 2 * invh;
     double s1 = __cached__(&status, table, x, __sinc__);
-    double s2 = __cached__(&status, table, x * 2, __sinc__);
-    return s1 * s2;
+    double s2 = __cached__(&status, table, x * 0.5, __sinc__);
+    return s1 * s2 / 1.00878984;
 }
 
 static double
-_lanczos2_diff(double x, double invh) {
+_lanczos2_diff(double x) {
     static int status = 0;
     static double table[16384];
-    x *= 2 * invh;
+
     double u1 = __cached__(&status, table, x, __sinc__);
     double u2 = __cached__(&status, table, x, __dsinc__);
-    double v1 = __cached__(&status, table, x * 2, __sinc__);
-    double v2 = __cached__(&status, table, x * 2, __dsinc__) * 2;
-    return 2 * invh * (u1 * v2 + u2 * v1);
+    double v1 = __cached__(&status, table, x * 0.5, __sinc__);
+    double v2 = __cached__(&status, table, x * 0.5, __dsinc__) * 0.5;
+    return (u1 * v2 + u2 * v1) / 1.00878984;
 }
 
 static double
-_lanczos3_kernel(double x, double invh) {
+_lanczos3_kernel(double x) {
     static int status = 0;
     static double table[16384];
-    x *= 3 * invh;
     double s1 = __cached__(&status, table, x, __sinc__);
-    double s2 = __cached__(&status, table, x * 3, __sinc__);
-    return s1 * s2;
+    double s2 = __cached__(&status, table, x * 0.333333333333, __sinc__);
+    return s1 * s2 / 0.997055;
 }
 
 static double
-_lanczos3_diff(double x, double invh) {
+_lanczos3_diff(double x) {
     static int status = 0;
     static double table[16384];
-    x *= 3 * invh;
     double u1 = __cached__(&status, table, x, __sinc__);
     double u2 = __cached__(&status, table, x, __dsinc__);
-    double v1 = __cached__(&status, table, x * 3, __sinc__);
-    double v2 = __cached__(&status, table, x * 3, __dsinc__) * 3;
-    return 3 * invh * (u1 * v2 + u2 * v1);
+    double v1 = __cached__(&status, table, x * 0.333333333333, __sinc__);
+    double v2 = __cached__(&status, table, x * 0.333333333333, __dsinc__) * 0.333333333333;
+    return (u1 * v2 + u2 * v1) / 0.997055;
 }
 
 void
@@ -201,7 +201,6 @@ fastpm_painter_init(FastPMPainter * painter)
         painter->readout = _generic_readout<float>;
     }
 
-    painter->hsupport = 0.5 * painter->support;
     painter->invh= 1 / (0.5 * painter->support);
     painter->left = (painter->support - 1) / 2;
     if (painter->support % 2 == 0){
@@ -213,30 +212,37 @@ fastpm_painter_init(FastPMPainter * painter)
         case FASTPM_PAINTER_LINEAR:
             painter->kernel = _linear_kernel;
             painter->diff = _linear_diff;
+            painter->native_h = 1;
         break;
         case FASTPM_PAINTER_QUADRATIC:
             painter->kernel = _quadratic_kernel;
             painter->diff = _quadratic_diff;
+            painter->native_h = 1.5;
         break;
         case FASTPM_PAINTER_CUBIC:
             painter->kernel = _cubic_kernel;
             painter->diff = _cubic_diff;
+            painter->native_h = 2;
         break;
         case FASTPM_PAINTER_LANCZOS2:
             painter->kernel = _lanczos2_kernel;
             painter->diff = _lanczos2_diff;
+            painter->native_h = 2;
         break;
         case FASTPM_PAINTER_LANCZOS3:
             painter->kernel = _lanczos3_kernel;
             painter->diff = _lanczos3_diff;
+            painter->native_h = 3;
         break;
         case FASTPM_PAINTER_DB12:
             painter->kernel = _db12_kernel;
             painter->diff = _db12_diff;
+            painter->native_h = _db12_native_h;
         break;
         case FASTPM_PAINTER_DB20:
             painter->kernel = _db20_kernel;
             painter->diff = _db20_diff;
+            painter->native_h = _db20_native_h;
         break;
     }
     int nmax = 1;
@@ -264,6 +270,7 @@ _fill_k(FastPMPainter * painter, double pos[], int ipos[], double k[][64])
 {
     double gpos[painter->ndim];
     int d;
+
     for(d = 0; d < painter->ndim; d++) {
         gpos[d] = pos[d] * painter->scale[d];
         ipos[d] = floor(gpos[d] + painter->shift) - painter->left;
@@ -271,7 +278,9 @@ _fill_k(FastPMPainter * painter, double pos[], int ipos[], double k[][64])
         int i;
         double sum = 0;
         for(i = 0; i < painter->support; i ++) {
-            k[d][i] = painter->kernel(dx - i, painter->invh);
+            double vfactor = (painter->native_h * painter->invh);
+            double x = (dx - i) * vfactor;
+            k[d][i] = painter->kernel(x) * vfactor;
             sum += k[d][i];
 
             /*
@@ -279,7 +288,7 @@ _fill_k(FastPMPainter * painter, double pos[], int ipos[], double k[][64])
              * but we replace the value with the derivative
              * */
             if(d == painter->diffdir) {
-                k[d][i] = painter->diff(dx - i, painter->invh) * painter->scale[d];
+                k[d][i] = painter->diff(x) * painter->scale[d] * vfactor * vfactor;
             }
         }
         /* normalize the kernel to conserve mass */

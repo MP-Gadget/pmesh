@@ -13,7 +13,7 @@ typedef enum { FASTPM_PAINTER_LINEAR,
 
 typedef struct FastPMPainter FastPMPainter;
 
-typedef double (*fastpm_kernelfunc)(double x, double invh);
+typedef double (*fastpm_kernelfunc)(double x);
 
 struct FastPMPainter {
     FastPMPainterType type;
@@ -36,7 +36,7 @@ struct FastPMPainter {
     fastpm_kernelfunc kernel;
     fastpm_kernelfunc diff;
 
-    double hsupport;
+    double native_h; /* unscaled half support */
     double invh;
     double shift;
     int left; /* offset to start the kernel, (support - 1) / 2*/

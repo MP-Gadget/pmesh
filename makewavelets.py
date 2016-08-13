@@ -1,20 +1,23 @@
 import pywt
 import numpy
 
-def genwavelet(name, support):
+def genwavelet(name):
     D = pywt.Wavelet(name)
     phi, psi, x = D.wavefun(level=8)
-
-    phi = phi[:len(phi) //4 * 4]
-
+    i = len(phi)
+    while abs(phi[i - 1]) < 1e-2:
+        i = i - 1
+    phi = phi[:i //4 * 4 + 4]
+    support = int(numpy.ceil(x[i]))
+    print(name, support)
     numbers = ["%.8f, %.8f, %.8f, %.8f" % tuple(a) for a in phi.reshape(-1, 4)]
     step = numpy.diff(x).mean()
 
     template = """
     static double _%(funcname)s_table[] = %(table)s;
-    static double _%(funcname)s_kernel(double x, double hinv)
+    static double _%(funcname)s_native_h = %(hsupport)g;
+    static double _%(funcname)s_kernel(double x)
     {
-        x *= %(hsupport)g * hinv;
         x += %(hsupport)g;
 
         int i = x / %(step)e;
@@ -22,9 +25,8 @@ def genwavelet(name, support):
         if (i >= %(tablesize)d) return 0;
         return _%(funcname)s_table[i];
     }
-    static double _%(funcname)s_diff(double x, double hinv)
+    static double _%(funcname)s_diff(double x)
     {
-        x *= %(hsupport)g * hinv;
         x += %(hsupport)g;
 
         int i = x / %(step)e;
@@ -32,7 +34,7 @@ def genwavelet(name, support):
         if (i >= %(tablesize)d - 1) return 0;
         double f0 = _%(funcname)s_table[i];
         double f1 = _%(funcname)s_table[i + 1];
-        return (f1 - f0) / %(step)e * %(hsupport)g * hinv;
+        return (f1 - f0) / %(step)e;
     }
     """
     return template % {
@@ -44,5 +46,5 @@ def genwavelet(name, support):
     }
 
 with open('pmesh/_window_wavelets.h', 'wt') as f:
-    f.write(genwavelet('db12', 24))
-    f.write(genwavelet('db20', 16))
+    f.write(genwavelet('db12'))
+    f.write(genwavelet('db20'))

@@ -9,6 +9,9 @@ typedef enum { FASTPM_PAINTER_LINEAR,
                FASTPM_PAINTER_DB6,
                FASTPM_PAINTER_DB12,
                FASTPM_PAINTER_DB20,
+               FASTPM_PAINTER_SYM6,
+               FASTPM_PAINTER_SYM12,
+               FASTPM_PAINTER_SYM20,
 
 } FastPMPainterType;
 

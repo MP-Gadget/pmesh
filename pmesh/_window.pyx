@@ -18,6 +18,9 @@ cdef extern from "_window_imp.h":
         FASTPM_PAINTER_DB6
         FASTPM_PAINTER_DB12
         FASTPM_PAINTER_DB20
+        FASTPM_PAINTER_SYM6
+        FASTPM_PAINTER_SYM12
+        FASTPM_PAINTER_SYM20
 
     ctypedef struct FastPMPainter:
         FastPMPainterType type
@@ -40,7 +43,7 @@ cdef extern from "_window_imp.h":
 
 cdef class ResampleWindow(object):
     cdef FastPMPainter painter[1]
-
+    cdef readonly int support
     def __init__(self, kind, int support=-1):
         kinds = {
                 'linear' : FASTPM_PAINTER_LINEAR,
@@ -51,6 +54,9 @@ cdef class ResampleWindow(object):
                 'db6' : FASTPM_PAINTER_DB6,
                 'db12' : FASTPM_PAINTER_DB12,
                 'db20' : FASTPM_PAINTER_DB20,
+                'sym6' : FASTPM_PAINTER_SYM6,
+                'sym12' : FASTPM_PAINTER_SYM12,
+                'sym20' : FASTPM_PAINTER_SYM20,
                }
 
         cdef FastPMPainterType type
@@ -63,6 +69,11 @@ cdef class ResampleWindow(object):
         # FIXME: change this to scaling the size of the kernel
         self.painter.support = support
         self.painter.type = type
+        self.painter.ndim = 0
+        self.painter.canvas_dtype_elsize = 0
+
+        fastpm_painter_init(self.painter)
+        self.support = self.painter.support
 
     def paint(self, numpy.ndarray real, postype [:, :] pos, masstype [:] mass, int diffdir,
         double [:] scale, ptrdiff_t [:] translate, ptrdiff_t [:] period):

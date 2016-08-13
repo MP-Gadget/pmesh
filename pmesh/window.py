@@ -75,12 +75,21 @@ class ResampleWindow(_ResampleWindow):
 
         return out
 
-CIC = ResampleWindow(kind="linear")
-TSC = ResampleWindow(kind="quadratic")
-CUBIC = ResampleWindow(kind="cubic")
-LANCZOS2 = ResampleWindow(kind="lanczos2")
-LANCZOS3 = ResampleWindow(kind="lanczos3")
-DB6 = ResampleWindow(kind="db6")
-DB12 = ResampleWindow(kind="db12")
-DB20 = ResampleWindow(kind="db20")
+methods = dict(
+    CIC = ResampleWindow(kind="linear"),
+    TSC = ResampleWindow(kind="quadratic"),
+    CUBIC = ResampleWindow(kind="cubic"),
+    LANCZOS2 = ResampleWindow(kind="lanczos2"),
+    LANCZOS3 = ResampleWindow(kind="lanczos3"),
+    DB6 = ResampleWindow(kind="db6"),
+    DB12 = ResampleWindow(kind="db12"),
+    DB20 = ResampleWindow(kind="db20"),
+    SYM6 = ResampleWindow(kind="sym6"),
+    SYM12 = ResampleWindow(kind="sym12"),
+    SYM20 = ResampleWindow(kind="sym20"),
+)
+for m, p in list(methods.items()):
+    methods[m.lower()] = p
+    globals()[m] = p
 
+del m, p

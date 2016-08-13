@@ -156,6 +156,21 @@ fastpm_painter_init(FastPMPainter * painter)
             painter->diff = _db20_diff;
             painter->nativesupport = _db20_nativesupport;
         break;
+        case FASTPM_PAINTER_SYM6:
+            painter->kernel = _sym6_kernel;
+            painter->diff = _sym6_diff;
+            painter->nativesupport = _sym6_nativesupport;
+        break;
+        case FASTPM_PAINTER_SYM12:
+            painter->kernel = _sym12_kernel;
+            painter->diff = _sym12_diff;
+            painter->nativesupport = _sym12_nativesupport;
+        break;
+        case FASTPM_PAINTER_SYM20:
+            painter->kernel = _sym20_kernel;
+            painter->diff = _sym20_diff;
+            painter->nativesupport = _sym20_nativesupport;
+        break;
     }
     if(painter->support <= 0) {
         painter->support = painter->nativesupport;

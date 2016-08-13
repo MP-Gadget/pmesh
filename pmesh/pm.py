@@ -182,19 +182,7 @@ class Field(numpy.ndarray):
 
         return out
 
-
 class RealField(Field):
-    methods = {
-        'cic' : window.CIC,
-        'tsc' : window.TSC,
-        'cubic' : window.CUBIC,
-        'lanczos2' : window.LANCZOS2,
-        'lanczos3' : window.LANCZOS3,
-        'db6' : window.DB6,
-        'db12' : window.DB12,
-        'db20' : window.DB20,
-    }
-
     def __new__(kls, pm):
         buffer = pfft.LocalBuffer(pm.partition)
         self = buffer.view_input(type=kls)
@@ -260,8 +248,8 @@ class RealField(Field):
                     scale=1.0 * self.Nmesh / self.BoxSize,
                     period = self.Nmesh)
 
-        if method in self.methods:
-            method = self.methods[method]
+        if method in window.methods:
+            method = window.methods[method]
 
         if not hold:
             self[...] = 0
@@ -289,7 +277,7 @@ class RealField(Field):
                     scale=1.0 * self.Nmesh / self.BoxSize,
                     period = self.Nmesh)
 
-        method = self.methods[method]
+        method = window.methods[method]
 
         return method.readout(self, pos, out=out, transform=affine)
 

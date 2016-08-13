@@ -5,8 +5,13 @@ def genwavelet(name):
     D = pywt.Wavelet(name)
     phi, psi, x = D.wavefun(level=8)
     phi = (phi[1:] + phi[:-1]) * 0.5
+    i = 0
+    while abs(phi[i]) < 2e-3:
+        i += 1
+    phi = phi[i:]
+
     i = len(phi)
-    while abs(phi[i - 1]) < 1e-2:
+    while abs(phi[i - 1]) < 2e-3:
         i = i - 1
     support = int(numpy.ceil(x[i]))
 
@@ -50,6 +55,9 @@ def genwavelet(name):
     }
 
 with open('pmesh/_window_wavelets.h', 'wt') as f:
+    f.write(genwavelet('sym6'))
+    f.write(genwavelet('sym12'))
+    f.write(genwavelet('sym20'))
     f.write(genwavelet('db6'))
     f.write(genwavelet('db12'))
     f.write(genwavelet('db20'))

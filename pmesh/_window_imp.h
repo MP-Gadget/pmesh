@@ -36,8 +36,8 @@ struct FastPMPainter {
     fastpm_kernelfunc kernel;
     fastpm_kernelfunc diff;
 
-    double native_h; /* unscaled half support */
-    double invh;
+    double nativesupport; /* unscaled support */
+    double vfactor; /* nativesupport / support */
     double shift;
     int left; /* offset to start the kernel, (support - 1) / 2*/
     int Npoints; /* (support) ** ndim */

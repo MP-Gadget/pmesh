@@ -15,7 +15,7 @@ def genwavelet(name):
 
     template = """
     static double _%(funcname)s_table[] = %(table)s;
-    static double _%(funcname)s_native_h = %(hsupport)g;
+    static double _%(funcname)s_nativesupport = %(support)g;
     static double _%(funcname)s_kernel(double x)
     {
         x += %(hsupport)g;
@@ -40,6 +40,7 @@ def genwavelet(name):
     return template % {
             'table' : "{" + ",\n".join(numbers) + "}",
             'hsupport' : support * 0.5,
+            'support' : support,
             'funcname' : name,
             'step' : step,
             'tablesize' : len(phi),

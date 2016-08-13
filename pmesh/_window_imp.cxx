@@ -201,7 +201,6 @@ fastpm_painter_init(FastPMPainter * painter)
         painter->readout = _generic_readout<float>;
     }
 
-    painter->invh= 1 / (0.5 * painter->support);
     painter->left = (painter->support - 1) / 2;
     if (painter->support % 2 == 0){
         painter->shift = 0;
@@ -212,37 +211,37 @@ fastpm_painter_init(FastPMPainter * painter)
         case FASTPM_PAINTER_LINEAR:
             painter->kernel = _linear_kernel;
             painter->diff = _linear_diff;
-            painter->native_h = 1;
+            painter->nativesupport = 2;
         break;
         case FASTPM_PAINTER_QUADRATIC:
             painter->kernel = _quadratic_kernel;
             painter->diff = _quadratic_diff;
-            painter->native_h = 1.5;
+            painter->nativesupport = 3;
         break;
         case FASTPM_PAINTER_CUBIC:
             painter->kernel = _cubic_kernel;
             painter->diff = _cubic_diff;
-            painter->native_h = 2;
+            painter->nativesupport = 4;
         break;
         case FASTPM_PAINTER_LANCZOS2:
             painter->kernel = _lanczos2_kernel;
             painter->diff = _lanczos2_diff;
-            painter->native_h = 2;
+            painter->nativesupport = 4;
         break;
         case FASTPM_PAINTER_LANCZOS3:
             painter->kernel = _lanczos3_kernel;
             painter->diff = _lanczos3_diff;
-            painter->native_h = 3;
+            painter->nativesupport = 6;
         break;
         case FASTPM_PAINTER_DB12:
             painter->kernel = _db12_kernel;
             painter->diff = _db12_diff;
-            painter->native_h = _db12_native_h;
+            painter->nativesupport = _db12_nativesupport;
         break;
         case FASTPM_PAINTER_DB20:
             painter->kernel = _db20_kernel;
             painter->diff = _db20_diff;
-            painter->native_h = _db20_native_h;
+            painter->nativesupport = _db20_nativesupport;
         break;
     }
     int nmax = 1;
@@ -251,6 +250,7 @@ fastpm_painter_init(FastPMPainter * painter)
         nmax *= (painter->support);
     }
     painter->Npoints = nmax;
+    painter->vfactor = painter->nativesupport / (1. * painter->support);
 }
 
 void
@@ -278,9 +278,8 @@ _fill_k(FastPMPainter * painter, double pos[], int ipos[], double k[][64])
         int i;
         double sum = 0;
         for(i = 0; i < painter->support; i ++) {
-            double vfactor = (painter->native_h * painter->invh);
-            double x = (dx - i) * vfactor;
-            k[d][i] = painter->kernel(x) * vfactor;
+            double x = (dx - i) * painter->vfactor;
+            k[d][i] = painter->kernel(x) * painter->vfactor;
             sum += k[d][i];
 
             /*
@@ -288,7 +287,7 @@ _fill_k(FastPMPainter * painter, double pos[], int ipos[], double k[][64])
              * but we replace the value with the derivative
              * */
             if(d == painter->diffdir) {
-                k[d][i] = painter->diff(x) * painter->scale[d] * vfactor * vfactor;
+                k[d][i] = painter->diff(x) * painter->scale[d] * painter->vfactor * painter->vfactor;
             }
         }
         /* normalize the kernel to conserve mass */

@@ -190,6 +190,7 @@ class RealField(Field):
         'cubic' : window.CUBIC,
         'lanczos2' : window.LANCZOS2,
         'lanczos3' : window.LANCZOS3,
+        'db6' : window.DB6,
         'db12' : window.DB12,
         'db20' : window.DB20,
     }

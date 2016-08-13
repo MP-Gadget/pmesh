@@ -15,6 +15,7 @@ cdef extern from "_window_imp.h":
         FASTPM_PAINTER_LANCZOS2
         FASTPM_PAINTER_LANCZOS3
         FASTPM_PAINTER_QUADRATIC
+        FASTPM_PAINTER_DB6
         FASTPM_PAINTER_DB12
         FASTPM_PAINTER_DB20
 
@@ -40,17 +41,17 @@ cdef extern from "_window_imp.h":
 cdef class ResampleWindow(object):
     cdef FastPMPainter painter[1]
 
-    def __init__(self, kind, int support):
+    def __init__(self, kind, int support=-1):
         kinds = {
                 'linear' : FASTPM_PAINTER_LINEAR,
                 'cubic' : FASTPM_PAINTER_CUBIC,
                 'quadratic' : FASTPM_PAINTER_QUADRATIC,
                 'lanczos2' : FASTPM_PAINTER_LANCZOS2,
                 'lanczos3' : FASTPM_PAINTER_LANCZOS3,
+                'db6' : FASTPM_PAINTER_DB6,
                 'db12' : FASTPM_PAINTER_DB12,
                 'db20' : FASTPM_PAINTER_DB20,
                }
-
 
         cdef FastPMPainterType type
 
@@ -59,6 +60,7 @@ cdef class ResampleWindow(object):
         else:
             type = <FastPMPainterType> <int> kind
 
+        # FIXME: change this to scaling the size of the kernel
         self.painter.support = support
         self.painter.type = type
 

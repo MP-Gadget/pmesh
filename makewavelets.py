@@ -50,5 +50,6 @@ def genwavelet(name):
     }
 
 with open('pmesh/_window_wavelets.h', 'wt') as f:
+    f.write(genwavelet('db6'))
     f.write(genwavelet('db12'))
     f.write(genwavelet('db20'))

@@ -115,12 +115,6 @@ fastpm_painter_init(FastPMPainter * painter)
         painter->readout = _generic_readout<float>;
     }
 
-    painter->left = (painter->support - 1) / 2;
-    if (painter->support % 2 == 0){
-        painter->shift = 0;
-    } else {
-        painter->shift = 0.5;
-    }
     switch(painter->type) {
         case FASTPM_PAINTER_LINEAR:
             painter->kernel = _linear_kernel;
@@ -147,6 +141,11 @@ fastpm_painter_init(FastPMPainter * painter)
             painter->diff = _lanczos3_diff;
             painter->nativesupport = _lanczos3_nativesupport;
         break;
+        case FASTPM_PAINTER_DB6:
+            painter->kernel = _db6_kernel;
+            painter->diff = _db6_diff;
+            painter->nativesupport = _db6_nativesupport;
+        break;
         case FASTPM_PAINTER_DB12:
             painter->kernel = _db12_kernel;
             painter->diff = _db12_diff;
@@ -157,6 +156,15 @@ fastpm_painter_init(FastPMPainter * painter)
             painter->diff = _db20_diff;
             painter->nativesupport = _db20_nativesupport;
         break;
+    }
+    if(painter->support <= 0) {
+        painter->support = painter->nativesupport;
+    }
+    painter->left = (painter->support - 1) / 2;
+    if (painter->support % 2 == 0){
+        painter->shift = 0;
+    } else {
+        painter->shift = 0.5;
     }
     int nmax = 1;
     int d;

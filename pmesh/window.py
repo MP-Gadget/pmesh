@@ -35,7 +35,7 @@ class Affine(object):
         self.period = period
 
 class ResampleWindow(_ResampleWindow):
-    def __init__(self, kind, support):
+    def __init__(self, kind, support=-1):
         _ResampleWindow.__init__(self, kind, support)
 
     def paint(self, real, pos, mass=None, diffdir=None, transform=None):
@@ -75,11 +75,12 @@ class ResampleWindow(_ResampleWindow):
 
         return out
 
-CIC = ResampleWindow(kind="linear", support=2)
-TSC = ResampleWindow(kind="quadratic", support=3)
-CUBIC = ResampleWindow(kind="cubic", support=4)
-LANCZOS2 = ResampleWindow(kind="lanczos2", support=4)
-LANCZOS3 = ResampleWindow(kind="lanczos3", support=6)
-DB12 = ResampleWindow(kind="db12", support=10)
-DB20 = ResampleWindow(kind="db20", support=13)
+CIC = ResampleWindow(kind="linear")
+TSC = ResampleWindow(kind="quadratic")
+CUBIC = ResampleWindow(kind="cubic")
+LANCZOS2 = ResampleWindow(kind="lanczos2")
+LANCZOS3 = ResampleWindow(kind="lanczos3")
+DB6 = ResampleWindow(kind="db6")
+DB12 = ResampleWindow(kind="db12")
+DB20 = ResampleWindow(kind="db20")
 

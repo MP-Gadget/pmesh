@@ -190,6 +190,8 @@ class RealField(Field):
         'cubic' : window.CUBIC,
         'lanczos2' : window.LANCZOS2,
         'lanczos3' : window.LANCZOS3,
+        'db12' : window.DB12,
+        'db13' : window.DB13,
     }
 
     def __new__(kls, pm):
@@ -257,7 +259,8 @@ class RealField(Field):
                     scale=1.0 * self.Nmesh / self.BoxSize,
                     period = self.Nmesh)
 
-        method = self.methods[method]
+        if method in self.methods:
+            method = self.methods[method]
 
         if not hold:
             self[...] = 0

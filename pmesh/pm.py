@@ -212,7 +212,8 @@ class RealField(Field):
         out[...] *= numpy.prod(self.pm.Nmesh ** -1.0)
         return out
 
-    def paint(self, pos, mass=1.0, method="cic", hold=False):
+
+    def paint(self, pos, mass=1.0, method="cic", transform=None, hold=False):
         """ 
         Paint particles into the internal real canvas. 
 
@@ -243,10 +244,8 @@ class RealField(Field):
 
         """
         # Transform from simulation unit to local grid unit.
-        affine = window.Affine(self.ndim,
-                    translate=-self.start,
-                    scale=1.0 * self.Nmesh / self.BoxSize,
-                    period = self.Nmesh)
+        if not transform:
+            transform = self.pm.affine
 
         if method in window.methods:
             method = window.methods[method]
@@ -254,9 +253,9 @@ class RealField(Field):
         if not hold:
             self[...] = 0
 
-        method.paint(self, pos, mass, transform=affine)
+        method.paint(self, pos, mass, transform=transform)
 
-    def readout(self, pos, out=None, method="cic"):
+    def readout(self, pos, out=None, method="cic", transform=None):
         """ 
         Read out from real field at positions
 
@@ -271,15 +270,12 @@ class RealField(Field):
             read out values from the real field.
 
         """
-        # Transform from simulation unit to local grid unit.
-        affine = window.Affine(self.ndim,
-                    translate=-self.start,
-                    scale=1.0 * self.Nmesh / self.BoxSize,
-                    period = self.Nmesh)
+        if not transform:
+            transform = self.pm.affine
 
         method = window.methods[method]
 
-        return method.readout(self, pos, out=out, transform=affine)
+        return method.readout(self, pos, out=out, transform=transform)
 
 
 class ComplexField(Field):
@@ -485,7 +481,13 @@ class ParticleMesh(object):
         self.k = k
         self.x = x
 
-    def decompose(self, pos):
+        # Transform from simulation unit to local grid unit.
+        self.affine = window.Affine(self.partition.ndim,
+                    translate=-self.partition.local_i_start,
+                    scale=1.0 * self.Nmesh / self.BoxSize,
+                    period = self.Nmesh)
+
+    def decompose(self, pos, method="cic", transform=None):
         """ 
         Create a domain decompose layout for particles at given
         coordinates.
@@ -501,12 +503,15 @@ class ParticleMesh(object):
             layout that can be used to migrate particles and images
         to the correct MPI ranks that hosts the PM local mesh
         """
+        if method in window.methods:
+            method = window.methods[method]
+
+        if not transform:
+            transform = self.affine
 
         # Transform from simulation unit to global grid unit.
         def transform0(x):
-            ret = (1.0 * self.Nmesh / self.BoxSize) * x
-            return ret
+            return transform.scale * x
 
-        return self.domain.decompose(pos, smoothing=1.0,
+        return self.domain.decompose(pos, smoothing=method.support * 0.5,
                 transform=transform0)
-

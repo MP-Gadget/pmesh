@@ -32,19 +32,19 @@ def test_fft(comm):
 
 @MPIWorld(NTask=(1, 4), required=(1))
 def test_decompose(comm):
-    pm = ParticleMesh(BoxSize=8.0, Nmesh=[8, 8], comm=comm, dtype='f8')
+    pm = ParticleMesh(BoxSize=8.0, Nmesh=[8, 8, 8], comm=comm, dtype='f8')
     numpy.random.seed(1234)
     if comm.rank == 0:
         Npar = 1000
     else:
         Npar = 0
 
-    pos = 8.0 * (numpy.random.uniform(size=(Npar, 2)))
+    pos = 8.0 * (numpy.random.uniform(size=(Npar, 3)))
 
     for method in ['cic', 'tsc', 'db12']:
         def test(method):
             truth = numpy.zeros(pm.Nmesh, dtype='f8')
-            affine = window.Affine(ndim=2, period=8)
+            affine = window.Affine(ndim=3, period=8)
             window.methods[method].paint(truth, pos, transform=affine)
             truth = comm.bcast(truth)
             layout = pm.decompose(pos, smoothing=method)

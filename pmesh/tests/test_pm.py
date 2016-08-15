@@ -4,7 +4,7 @@ from numpy.testing import assert_allclose
 from numpy.testing import assert_almost_equal
 
 from pmesh.pm import ParticleMesh, RealField, ComplexField
-
+from pmesh import window
 import numpy
 
 @MPIWorld(NTask=(1, 4), required=(1))
@@ -30,6 +30,35 @@ def test_fft(comm):
     real.readout(npos)
     assert_almost_equal(real, real2, decimal=7)
 
+@MPIWorld(NTask=(1, 4), required=(1))
+def test_decompose(comm):
+    pm = ParticleMesh(BoxSize=8.0, Nmesh=[8, 8], comm=comm, dtype='f8')
+    numpy.random.seed(1234)
+    if comm.rank == 0:
+        Npar = 1000
+    else:
+        Npar = 0
+
+    pos = 8.0 * (numpy.random.uniform(size=(Npar, 2)))
+
+    for method in ['cic', 'tsc', 'db12']:
+        def test(method):
+            truth = numpy.zeros(pm.Nmesh, dtype='f8')
+            affine = window.Affine(ndim=2, period=8)
+            window.methods[method].paint(truth, pos, transform=affine)
+            truth = comm.bcast(truth)
+            layout = pm.decompose(pos, method=method)
+            npos = layout.exchange(pos)
+            real = RealField(pm)
+            real[...] = 0
+            real.paint(npos, method=method)
+
+            full = numpy.zeros(pm.Nmesh, dtype='f8')
+            full[real.slices] = real
+            full = comm.allreduce(full)
+            assert_almost_equal(full, truth)
+        # can't yield!
+        test(method)
 @MPIWorld(NTask=(1), required=(1))
 def test_indices(comm):
     pm = ParticleMesh(BoxSize=8.0, Nmesh=[2, 2], comm=comm, dtype='f8')

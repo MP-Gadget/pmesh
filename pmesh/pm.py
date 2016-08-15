@@ -511,7 +511,7 @@ class ParticleMesh(object):
 
         # Transform from simulation unit to global grid unit.
         def transform0(x):
-            return transform.scale * x
+            return transform.scale * x + transform.translate
 
         return self.domain.decompose(pos, smoothing=method.support * 0.5,
                 transform=transform0)

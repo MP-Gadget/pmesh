@@ -52,7 +52,6 @@ def test_wide():
     wcic.paint(real, pos, diffdir=0)
     assert_almost_equal(real, [-0.25, -0.25, 0.25, 0.25])
 
-
 def test_wrap():
     affine = Affine(ndim=2, period=2)
     real = numpy.zeros((2, 2))
@@ -92,6 +91,24 @@ def test_translate():
     assert_array_equal(real,
         [[1., 0.],
          [0., 0.]])
+
+def test_affine():
+    affine = Affine(ndim=2)
+    real = numpy.zeros((4, 4))
+    pos = [
+        [.5, .5],
+    ]
+    CIC.paint(real, pos, transform=affine)
+
+    translate = numpy.zeros((4, 4))
+    pos = [
+        [0., 0.],
+    ]
+    shift = affine.shift
+
+    CIC.paint(translate, pos, transform=affine.shift(0.5))
+    assert_array_equal(translate, real)
+
 
 def test_scale():
     affine = Affine(ndim=2, translate=[-1, 0], scale=0.1)

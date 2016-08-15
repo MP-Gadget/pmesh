@@ -25,7 +25,7 @@ struct FastPMPainter {
     int support;
     int ndim;
     double scale[32]; /* scale from position to grid units */
-    ptrdiff_t translate[32]; /* translate in grid units */
+    double translate[32]; /* translate in grid units */
     ptrdiff_t Nmesh[32]; /* periodicity */
 
     void * canvas;

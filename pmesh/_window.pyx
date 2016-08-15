@@ -27,7 +27,7 @@ cdef extern from "_window_imp.h":
         int support
         int ndim
         double scale[32]
-        ptrdiff_t translate[32]
+        double translate[32]
         ptrdiff_t Nmesh[32]
 
         # determined during paint / readout
@@ -76,7 +76,7 @@ cdef class ResampleWindow(object):
         self.support = self.painter.support
 
     def paint(self, numpy.ndarray real, postype [:, :] pos, masstype [:] mass, int diffdir,
-        double [:] scale, ptrdiff_t [:] translate, ptrdiff_t [:] period):
+        double [:] scale, double [:] translate, ptrdiff_t [:] period):
         cdef double x[32]
         cdef double m
         cdef int d
@@ -111,7 +111,7 @@ cdef class ResampleWindow(object):
             fastpm_painter_paint(painter, x, m)
 
     def readout(self, numpy.ndarray real, postype [:, :] pos, masstype [:] out, int diffdir,
-        double [:] scale, ptrdiff_t [:] translate, ptrdiff_t [:] period):
+        double [:] scale, double [:] translate, ptrdiff_t [:] period):
 
         cdef double x[32]
         cdef ptrdiff_t strides[32]

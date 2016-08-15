@@ -17,6 +17,13 @@ def _mkarr(var, shape, dtype):
 
 class Affine(object):
     """ Defines an affine Transformation, used by ResampleWindow.
+
+        Parameters
+        ----------
+            translate : array_like, in integer mesh units.
+            period : array_like in integer mesh units.
+            scale : factor that multiples on position to obtain mesh units.
+
     """
     def __init__(self, ndim, scale=None, translate=None, period=None):
         if scale is None:
@@ -28,11 +35,18 @@ class Affine(object):
 
         scale = _mkarr(scale, ndim, 'f8' )
         period = _mkarr(period, ndim, 'intp')
-        translate = _mkarr(translate, ndim, 'intp')
+        translate = _mkarr(translate, ndim, 'f8')
 
         self.scale = scale
         self.translate = translate
         self.period = period
+        self.ndim = ndim
+
+    def shift(self, amount):
+        """ Returns a new Affine where the translate is shifted by amount.
+            Amount is in integer mesh units, as translate. """
+
+        return Affine(self.ndim, self.scale, self.translate + amount, self.period)
 
 class ResampleWindow(_ResampleWindow):
     def __init__(self, kind, support=-1):

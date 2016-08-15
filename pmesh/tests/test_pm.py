@@ -47,7 +47,7 @@ def test_decompose(comm):
             affine = window.Affine(ndim=2, period=8)
             window.methods[method].paint(truth, pos, transform=affine)
             truth = comm.bcast(truth)
-            layout = pm.decompose(pos, method=method)
+            layout = pm.decompose(pos, smoothing=method)
             npos = layout.exchange(pos)
             real = RealField(pm)
             real[...] = 0

@@ -487,7 +487,7 @@ class ParticleMesh(object):
                     scale=1.0 * self.Nmesh / self.BoxSize,
                     period = self.Nmesh)
 
-    def decompose(self, pos, method="cic", transform=None):
+    def decompose(self, pos, smoothing="cic", transform=None):
         """ 
         Create a domain decompose layout for particles at given
         coordinates.
@@ -497,14 +497,20 @@ class ParticleMesh(object):
         pos    : array_like (, ndim)
             position of particles in simulation  unit
 
+        smoothing : float, string, or ResampleWindow
+            if given as a string or ResampleWindow, use 0.5 * support.
+            This is the size of the buffer region around a domain.
+
         Returns
         -------
         layout  : :py:class:domain.Layout
             layout that can be used to migrate particles and images
         to the correct MPI ranks that hosts the PM local mesh
         """
-        if method in window.methods:
-            method = window.methods[method]
+        if smoothing in window.methods:
+            smoothing = window.methods[smoothing]
+        if isinstance(smoothing, window.ResampleWindow):
+            smoothing = smoothing.support * 0.5
 
         if not transform:
             transform = self.affine
@@ -513,5 +519,5 @@ class ParticleMesh(object):
         def transform0(x):
             return transform.scale * x + transform.translate
 
-        return self.domain.decompose(pos, smoothing=method.support * 0.5,
+        return self.domain.decompose(pos, smoothing=smoothing,
                 transform=transform0)

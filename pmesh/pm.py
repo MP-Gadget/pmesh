@@ -487,7 +487,7 @@ class ParticleMesh(object):
                     scale=1.0 * self.Nmesh / self.BoxSize,
                     period = self.Nmesh)
 
-    def decompose(self, pos, smoothing="cic", transform=None):
+    def decompose(self, pos, smoothing="cic"):
         """ 
         Create a domain decompose layout for particles at given
         coordinates.
@@ -512,12 +512,9 @@ class ParticleMesh(object):
         if isinstance(smoothing, window.ResampleWindow):
             smoothing = smoothing.support * 0.5
 
-        if not transform:
-            transform = self.affine
-
         # Transform from simulation unit to global grid unit.
         def transform0(x):
-            return transform.scale * x + transform.translate
+            return self.affine.scale * x
 
         return self.domain.decompose(pos, smoothing=smoothing,
                 transform=transform0)

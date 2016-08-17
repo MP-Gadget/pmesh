@@ -153,6 +153,8 @@ class Field(numpy.ndarray):
         else:
             complex = out
 
+        complex[...] = 0.0
+
         tmp = numpy.empty_like(self)
 
         self.sort(out=tmp)

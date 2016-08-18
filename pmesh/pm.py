@@ -5,6 +5,8 @@ from . import domain
 from . import window
 from mpi4py import MPI
 
+import numbers # for testing Numbers
+
 class slabiter(object):
     def __init__(self, field):
         # we iterate over the slowest axis to gain locality.
@@ -513,6 +515,8 @@ class ParticleMesh(object):
             smoothing = window.methods[smoothing]
         if isinstance(smoothing, window.ResampleWindow):
             smoothing = smoothing.support * 0.5
+
+        assert isinstance(smoothing, numbers.Number)
 
         # Transform from simulation unit to global grid unit.
         def transform0(x):

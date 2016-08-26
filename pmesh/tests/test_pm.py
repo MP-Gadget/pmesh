@@ -126,6 +126,24 @@ def test_downsample(comm):
     assert_almost_equal(real2.r2c(), sum([k**2 for k in complex2.x]) **0.5)
 
 @MPIWorld(NTask=(1, 2, 3, 4), required=(1))
+def test_cmean(comm):
+    # this tests cmean (collective mean) along with resampling preseves it.
+
+    pm1 = ParticleMesh(BoxSize=8.0, Nmesh=[8, 8], comm=comm, dtype='f8')
+    pm2 = ParticleMesh(BoxSize=8.0, Nmesh=[4, 4], comm=comm, dtype='f8')
+
+    complex1 = ComplexField(pm1)
+    complex2 = ComplexField(pm2)
+    real2 = RealField(pm2)
+    real1 = RealField(pm1)
+    for i, kk, slab in zip(complex1.slabs.i, complex1.slabs.x, complex1.slabs):
+        slab[...] = sum([k**2 for k in kk]) **0.5
+
+    complex1.c2r(real1)
+    real1.resample(real2)
+    assert_almost_equal(real1.cmean(), real2.cmean())
+
+@MPIWorld(NTask=(1, 2, 3, 4), required=(1))
 def test_upsample(comm):
     pm1 = ParticleMesh(BoxSize=8.0, Nmesh=[8, 8, 8], comm=comm, dtype='f8')
     pm2 = ParticleMesh(BoxSize=8.0, Nmesh=[4, 4, 4], comm=comm, dtype='f8')

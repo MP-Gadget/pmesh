@@ -71,6 +71,7 @@ class Field(numpy.ndarray):
                 ])
 
         self.slabs = slabiter(self)
+        self.csize = pm.comm.allreduce(self.size)
 
     def sort(self, out=None):
         """ Sort the field to 'C'-order, partitioned by MPI ranks. Save the
@@ -216,6 +217,13 @@ class RealField(Field):
         out[...] *= numpy.prod(self.pm.Nmesh ** -1.0)
         return out
 
+    def csum(self):
+        """ Collective mean. Sum of the entire mesh. (Must be called collectively)"""
+        return self.pm.comm.allreduce(self.sum(dtype='f8'))
+
+    def cmean(self):
+        """ Collective mean. Mean of the entire mesh. (Must be called collectively)"""
+        return self.csum() / self.csize
 
     def paint(self, pos, mass=1.0, method="cic", transform=None, hold=False):
         """ 

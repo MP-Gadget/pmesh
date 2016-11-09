@@ -70,8 +70,11 @@ class Field(numpy.ndarray):
                 for s, n in zip(self.start, self.shape)
                 ])
 
-        self.slabs = slabiter(self)
         self.csize = pm.comm.allreduce(self.size)
+
+    @property
+    def slabs(self):
+        return slabiter(self)
 
     def sort(self, out=None):
         """ Sort the field to 'C'-order, partitioned by MPI ranks. Save the

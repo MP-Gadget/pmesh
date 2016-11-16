@@ -7,6 +7,22 @@ from pmesh.pm import ParticleMesh, RealField, ComplexField
 from pmesh import window
 import numpy
 
+@MPIWorld(NTask=(1,), required=(1))
+def test_asarray(comm):
+    pm = ParticleMesh(BoxSize=8.0, Nmesh=[8, 8], comm=comm, dtype='f8')
+    real = RealField(pm)
+    a = numpy.asarray(real)
+    assert a is real.value
+
+    pm = ParticleMesh(BoxSize=8.0, Nmesh=[8, 8], comm=comm, dtype='f4')
+    real = RealField(pm)
+    a = numpy.asarray(real)
+    assert a is real.value
+
+    real = RealField(pm)
+    a = numpy.array(real)
+    assert a is real.value
+
 @MPIWorld(NTask=(1, 4), required=(1))
 def test_fft(comm):
     pm = ParticleMesh(BoxSize=8.0, Nmesh=[8, 8], comm=comm, dtype='f8')
@@ -28,7 +44,7 @@ def test_fft(comm):
 
     real2 = complex.c2r()
     real.readout(npos)
-    assert_almost_equal(real, real2, decimal=7)
+    assert_almost_equal(numpy.asarray(real), numpy.asarray(real2), decimal=7)
 
 @MPIWorld(NTask=(1, 4), required=(1))
 def test_decompose(comm):
@@ -73,7 +89,7 @@ def test_real_iter(comm):
     real = RealField(pm)
 
     for i, x, slab in zip(real.slabs.i, real.slabs.x, real.slabs):
-        assert slab.base is real
+        assert slab.base is real.value
         assert_array_equal(slab.shape, sum(x[d] ** 2 for d in range(len(pm.Nmesh))).shape)
         # FIXME: test i!!
 
@@ -85,7 +101,7 @@ def test_sort(comm):
     real[...] = truth.reshape(8, 6)[real.slices]
     unsorted = real.copy()
     real.sort(out=real)
-    conjecture = numpy.concatenate(comm.allgather(real.ravel()))
+    conjecture = numpy.concatenate(comm.allgather(real.value.ravel()))
     assert_array_equal(conjecture, truth)
 
     real.unsort(real)
@@ -95,7 +111,7 @@ def test_sort(comm):
     truth = numpy.arange(8 * 4)
     complex[...] = truth.reshape(8, 4)[complex.slices]
     complex.sort(out=complex)
-    conjecture = numpy.concatenate(comm.allgather(complex.ravel()))
+    conjecture = numpy.concatenate(comm.allgather(complex.value.ravel()))
     assert_array_equal(conjecture, truth)
 
 @MPIWorld(NTask=(1, 2, 3, 4), required=(1))

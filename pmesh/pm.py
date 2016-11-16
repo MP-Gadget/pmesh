@@ -10,10 +10,10 @@ import numbers # for testing Numbers
 class slabiter(object):
     def __init__(self, field):
         # we iterate over the slowest axis to gain locality.
-        axissort = numpy.argsort(field.strides)[::-1]
+        axissort = numpy.argsort(field.value.strides)[::-1]
         axis = axissort[0]
 
-        self.optimized_view = field.transpose(axissort)
+        self.optimized_view = field.value.transpose(axissort)
         self.nslabs = field.shape[axis]
 
         optx = [xx.transpose(axissort) for xx in field.x]
@@ -37,40 +37,61 @@ class xslabiter(slabiter):
             yield kk
 
 
-class Field(numpy.ndarray):
+class Field(object):
     """ Base class for RealField and ComplexField.
 
         It only supports those two subclasses.
     """
     def copy(self):
         other = self.__class__(self.pm)
-        other[...] = self
+        other.value[...] = self.value
         return other
 
-    def add_attrs(self, buffer, pm):
+    def __init__(self, pm):
         """ Used internally to add shortcuts of attributes from pm """
+        self.base = pfft.LocalBuffer(pm.partition)
         self.pm = pm
         self.partition = pm.partition
         self.BoxSize = pm.BoxSize
         self.Nmesh = pm.Nmesh
         if isinstance(self, RealField):
+            self.value = self.base.view_input()
             self.start = self.partition.local_i_start
             self.global_shape = pm.Nmesh
             self.x = pm.x
             self.i = pm.i_ind
-        else:
+        elif isinstance(self, ComplexField):
+            self.value = self.base.view_output()
             self.start = self.partition.local_o_start
             self.global_shape = pm.Nmesh.copy()
             self.global_shape[-1] = self.global_shape[-1] // 2 + 1
             self.x = pm.k
             self.i = pm.o_ind
+        else:
+            raise TypeError("Olny RealField and ComplexField. No more subclassing");
 
+        # copy over a few ndarray attributes
+        self.flat = self.value.flat
+
+        self.shape = self.value.shape
+        self.size = self.value.size
+
+        # the slices in the full array 
         self.slices = tuple([
                 slice(s, s + n)
                 for s, n in zip(self.start, self.shape)
                 ])
 
         self.csize = pm.comm.allreduce(self.size)
+
+    def __getitem__(self, index):
+        return self.value.__getitem__(index)
+
+    def __setitem__(self, index, value):
+        return self.value.__setitem__(index, value)
+
+    def __array__(self, dtype=None):
+        return self.value
 
     @property
     def slabs(self):
@@ -92,12 +113,12 @@ class Field(numpy.ndarray):
 
             Notes
             -----
-            Set `flatiter` to self for an 'inplace' sort.
+            Set `out` to self.value for an 'inplace' sort.
         """
         ind = numpy.ravel_multi_index(numpy.mgrid[self.slices], self.global_shape)
 
         if out is None:
-            out = numpy.empty_like(self)
+            out = numpy.empty_like(self.value)
 
         if not isinstance(out, numpy.flatiter):
             out = out.flat
@@ -144,11 +165,11 @@ class Field(numpy.ndarray):
             if isinstance(self, RealField) and isinstance(out, ComplexField):
                 self.r2c(out)
             if isinstance(self, RealField) and isinstance(out, RealField):
-                out[...] = self
+                out.value[...] = self.value
             if isinstance(self, ComplexField) and isinstance(out, RealField):
                 self.c2r(out)
             if isinstance(self, ComplexField) and isinstance(out, ComplexField):
-                out[...] = self
+                out.value[...] = self.value
             return out
 
         if isinstance(self, RealField):
@@ -159,15 +180,15 @@ class Field(numpy.ndarray):
         else:
             complex = out
 
-        complex[...] = 0.0
+        complex.value[...] = 0.0
 
-        tmp = numpy.empty_like(self)
+        tmp = numpy.empty_like(self.value)
 
         self.sort(out=tmp)
 
         # indtable stores the index in pmsrc for the mode in pmdest
         # since pmdest < pmsrc, all items are alright.
-        indtable = [reindex(self.Nmesh[d], out.Nmesh[d]) for d in range(self.ndim)]
+        indtable = [reindex(self.Nmesh[d], out.Nmesh[d]) for d in range(self.value.ndim)]
 
         ind = build_index(
                 [t[numpy.r_[s]]
@@ -191,11 +212,8 @@ class Field(numpy.ndarray):
         return out
 
 class RealField(Field):
-    def __new__(kls, pm):
-        buffer = pfft.LocalBuffer(pm.partition)
-        self = buffer.view_input(type=kls)
-        Field.add_attrs(self, buffer, pm)
-        return self
+    def __init__(self, pm):
+        Field.__init__(self, pm)
 
     def r2c(self, out=None):
         """ 
@@ -217,12 +235,12 @@ class RealField(Field):
         self.pm.forward.execute(self.base, out.base)
 
         # PFFT normalization, same as FastPM
-        out[...] *= numpy.prod(self.pm.Nmesh ** -1.0)
+        out.value[...] *= numpy.prod(self.pm.Nmesh ** -1.0)
         return out
 
     def csum(self):
         """ Collective mean. Sum of the entire mesh. (Must be called collectively)"""
-        return self.pm.comm.allreduce(self.sum(dtype='f8'))
+        return self.pm.comm.allreduce(self.value.sum(dtype='f8'))
 
     def cmean(self):
         """ Collective mean. Mean of the entire mesh. (Must be called collectively)"""
@@ -266,9 +284,9 @@ class RealField(Field):
             method = window.methods[method]
 
         if not hold:
-            self[...] = 0
+            self.value[...] = 0
 
-        method.paint(self, pos, mass, transform=transform)
+        method.paint(self.value, pos, mass, transform=transform)
 
     def readout(self, pos, out=None, method="cic", transform=None):
         """ 
@@ -290,15 +308,12 @@ class RealField(Field):
 
         method = window.methods[method]
 
-        return method.readout(self, pos, out=out, transform=transform)
+        return method.readout(self.value, pos, out=out, transform=transform)
 
 
 class ComplexField(Field):
-    def __new__(kls, pm):
-        buffer = pfft.LocalBuffer(pm.partition)
-        self = buffer.view_output(type=kls)
-        Field.add_attrs(self, buffer, pm)
-        return self
+    def __init__(self, pm):
+        Field.__init__(self, pm)
 
     def c2r(self, out=None):
         if out is None:

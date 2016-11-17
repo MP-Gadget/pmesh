@@ -20,8 +20,9 @@ def test_asarray(comm):
     assert a is real.value
 
     real = RealField(pm)
-    a = numpy.array(real)
+    a = numpy.array(real, copy=False)
     assert a is real.value
+
 
 @MPIWorld(NTask=(1, 4), required=(1))
 def test_fft(comm):

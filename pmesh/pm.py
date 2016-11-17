@@ -75,6 +75,7 @@ class Field(object):
 
         self.shape = self.value.shape
         self.size = self.value.size
+        self.dtype = self.value.dtype
 
         # the slices in the full array 
         self.slices = tuple([

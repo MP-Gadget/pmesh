@@ -75,9 +75,11 @@ _cubic_kernel(double x) {
     double xx = x * x;
     if(x < 1.0) {
         return (alpha + 2) * xx * x - (alpha + 3) * xx + 1;
-    } else {
+    }
+    if (x < 2) {
         return (alpha * xx * x) - 5 * alpha * xx + 8 * alpha * x - 4 * alpha;
     }
+    return 0;
 }
 
 static double
@@ -97,10 +99,12 @@ _cubic_diff(double x) {
 
     double xx = x * x;
     if(x < 1.0) {
-        return factor * (3 * (alpha + 2) * xx - (alpha + 3));
-    } else {
+        return factor * (3 * (alpha + 2) * xx - 2 * (alpha + 3) * x);
+    }
+    if(x < 2.0) {
         return factor * (3 * (alpha * xx) - 10 * alpha * x + 8 * alpha);
     }
+    return 0;
 }
 
 

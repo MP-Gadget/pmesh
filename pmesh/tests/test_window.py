@@ -207,12 +207,12 @@ def test_tsc():
     assert_array_equal(real, [0.75, 0.125, 0, 0, 0.125])
 
 def test_cubic():
-    real = numpy.zeros((4))
+    real = numpy.zeros((6))
     pos = [
-        [1.5],
+        [2.5],
     ]
     CUBIC.paint(real, pos)
-    assert_array_equal(real, [-0.0625, 0.5625, 0.5625, -0.0625])
+    assert_array_equal(real, [0, -0.0625, 0.5625, 0.5625, -0.0625, 0])
 
 
 @skipif(True, "numerical details of wavelets undecided")

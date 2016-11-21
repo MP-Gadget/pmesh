@@ -21,16 +21,23 @@ extern "C" {
 
 static double
 _linear_kernel(double x) {
-    return 1.0 - fabs(x);
+    x = fabs(x);
+    if(x < 1.0)
+        return 1.0 - x;
+    return 0;
 }
 
 static double
 _linear_diff(double x) {
-    if( x < 0) {
-        return 1;
+    double factor;
+    if(x < 0) {
+        factor = 1;
     } else {
-        return - 1;
+        factor = - 1;
+        x = - x;
     }
+    if(x < 1.0) return factor;
+    return 0;
 }
 
 static double
@@ -41,10 +48,12 @@ _quadratic_kernel(double x) {
     x = fabs(x);
     if(x <= 0.5) {
         return 0.75 - x * x;
-    } else {
+    }
+    if(x < 1.5) {
         x = 1.5 - x;
         return (x * x) * 0.5;
     }
+    return 0;
 }
 
 static double
@@ -57,11 +66,13 @@ _quadratic_diff(double x) {
         factor = +1;
     }
 
-    if(x < 0.5) {
+    if(x <= 0.5) {
         return factor * (- 2 * x);
-    } else {
+    }
+    if(x < 1.5) {
         return factor * (- (1.5 - x));
     }
+    return 0;
 }
 
 static double

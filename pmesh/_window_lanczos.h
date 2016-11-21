@@ -1,5 +1,5 @@
 
-    static double _lanczos2_table[] = {0.99030507, 0.99030495, 0.99030459, 0.99030398,
+    static double _lanczos2_vtable[] = {0.99030507, 0.99030495, 0.99030459, 0.99030398,
 0.99030313, 0.99030204, 0.99030070, 0.99029912,
 0.99029730, 0.99029524, 0.99029293, 0.99029039,
 0.99028759, 0.99028456, 0.99028128, 0.99027776,
@@ -2050,10 +2050,14 @@
     static double _lanczos2_nativesupport = 4;
     static double _lanczos2_kernel(double x)
     {
-        int i = fabs(x) / 2.441406e-04;
+        x = fabs(x);
+        double f = x / 2.441406e-04;
+        int i = f;
         if (i < 0) return 0;
-        if (i >= 8192) return 0;
-        return _lanczos2_table[i];
+        if (i >= 8192 - 1) return 0;
+        f -= i;
+        return _lanczos2_vtable[i] * (1 - f)
+             + _lanczos2_vtable[i+1] * f;
     }
     static double _lanczos2_diff(double x)
     {
@@ -2064,16 +2068,15 @@
             factor = -1;
             x = -x;
         }
-        
+
         int i = x / 2.441406e-04;
         if (i < 0) return 0;
         if (i >= 8192 - 1) return 0;
-        double f0 = _lanczos2_table[i];
-        double f1 = _lanczos2_table[i + 1];
-        return factor * (f1 - f0) / 2.441406e-04;
+        double f = _lanczos2_vtable[i+1] - _lanczos2_vtable[i];
+        return factor * f / 2.441406e-04;
     }
     
-    static double _lanczos3_table[] = {1.00295335, 1.00295310, 1.00295237, 1.00295114,
+    static double _lanczos3_vtable[] = {1.00295335, 1.00295310, 1.00295237, 1.00295114,
 1.00294942, 1.00294720, 1.00294450, 1.00294130,
 1.00293762, 1.00293344, 1.00292877, 1.00292360,
 1.00291795, 1.00291180, 1.00290517, 1.00289804,
@@ -4124,10 +4127,14 @@
     static double _lanczos3_nativesupport = 6;
     static double _lanczos3_kernel(double x)
     {
-        int i = fabs(x) / 3.662109e-04;
+        x = fabs(x);
+        double f = x / 3.662109e-04;
+        int i = f;
         if (i < 0) return 0;
-        if (i >= 8192) return 0;
-        return _lanczos3_table[i];
+        if (i >= 8192 - 1) return 0;
+        f -= i;
+        return _lanczos3_vtable[i] * (1 - f)
+             + _lanczos3_vtable[i+1] * f;
     }
     static double _lanczos3_diff(double x)
     {
@@ -4138,12 +4145,11 @@
             factor = -1;
             x = -x;
         }
-        
+
         int i = x / 3.662109e-04;
         if (i < 0) return 0;
         if (i >= 8192 - 1) return 0;
-        double f0 = _lanczos3_table[i];
-        double f1 = _lanczos3_table[i + 1];
-        return factor * (f1 - f0) / 3.662109e-04;
+        double f = _lanczos3_vtable[i+1] - _lanczos3_vtable[i];
+        return factor * f / 3.662109e-04;
     }
     

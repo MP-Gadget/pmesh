@@ -452,11 +452,13 @@
     static double _sym6_kernel(double x)
     {
         x += 3.5;
-
-        int i = x / 3.906250e-03;
-        if (i < 0) return 0;
-        if (i >= 1796) return 0;
-        return _sym6_table[i];
+        double f = x / 3.906250e-03;
+        if (f < 0) return 0;
+        int i = f;
+        f -= i;
+        if (i >= 1796 - 1) return 0;
+        return _sym6_table[i] * (1 - f)
+             + _sym6_table[i + 1] * f;
     }
     static double _sym6_diff(double x)
     {
@@ -1115,11 +1117,13 @@
     static double _sym12_kernel(double x)
     {
         x += 5;
-
-        int i = x / 3.906250e-03;
-        if (i < 0) return 0;
-        if (i >= 2564) return 0;
-        return _sym12_table[i];
+        double f = x / 3.906250e-03;
+        if (f < 0) return 0;
+        int i = f;
+        f -= i;
+        if (i >= 2564 - 1) return 0;
+        return _sym12_table[i] * (1 - f)
+             + _sym12_table[i + 1] * f;
     }
     static double _sym12_diff(double x)
     {
@@ -1906,11 +1910,13 @@
     static double _sym20_kernel(double x)
     {
         x += 6;
-
-        int i = x / 3.906250e-03;
-        if (i < 0) return 0;
-        if (i >= 3076) return 0;
-        return _sym20_table[i];
+        double f = x / 3.906250e-03;
+        if (f < 0) return 0;
+        int i = f;
+        f -= i;
+        if (i >= 3076 - 1) return 0;
+        return _sym20_table[i] * (1 - f)
+             + _sym20_table[i + 1] * f;
     }
     static double _sym20_diff(double x)
     {
@@ -2377,11 +2383,13 @@
     static double _db6_kernel(double x)
     {
         x += 3.5;
-
-        int i = x / 3.906250e-03;
-        if (i < 0) return 0;
-        if (i >= 1796) return 0;
-        return _db6_table[i];
+        double f = x / 3.906250e-03;
+        if (f < 0) return 0;
+        int i = f;
+        f -= i;
+        if (i >= 1796 - 1) return 0;
+        return _db6_table[i] * (1 - f)
+             + _db6_table[i + 1] * f;
     }
     static double _db6_diff(double x)
     {
@@ -3040,11 +3048,13 @@
     static double _db12_kernel(double x)
     {
         x += 5;
-
-        int i = x / 3.906250e-03;
-        if (i < 0) return 0;
-        if (i >= 2564) return 0;
-        return _db12_table[i];
+        double f = x / 3.906250e-03;
+        if (f < 0) return 0;
+        int i = f;
+        f -= i;
+        if (i >= 2564 - 1) return 0;
+        return _db12_table[i] * (1 - f)
+             + _db12_table[i + 1] * f;
     }
     static double _db12_diff(double x)
     {
@@ -3895,11 +3905,13 @@
     static double _db20_kernel(double x)
     {
         x += 6.5;
-
-        int i = x / 3.906250e-03;
-        if (i < 0) return 0;
-        if (i >= 3332) return 0;
-        return _db20_table[i];
+        double f = x / 3.906250e-03;
+        if (f < 0) return 0;
+        int i = f;
+        f -= i;
+        if (i >= 3332 - 1) return 0;
+        return _db20_table[i] * (1 - f)
+             + _db20_table[i + 1] * f;
     }
     static double _db20_diff(double x)
     {

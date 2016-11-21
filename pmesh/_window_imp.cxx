@@ -242,10 +242,17 @@ _fill_k(FastPMPainter * painter, double pos[], int ipos[], double k[][64])
                 k[d][i] = painter->diff(x) * painter->scale[d] * painter->vfactor * painter->vfactor;
             }
         }
-        /* normalize the kernel to conserve mass */
-        for(i = 0; i < painter->support; i ++) {
-            // k[d][i] /= sum;
-        }
+        /* Watch out: do not renormalize per particle */
+
+        /* We require the kernels to be properly normalized instead,
+         * because the sampling here is too coarse for individual renormalizing to make sense.
+         * -- the normalization is very different for different offsets.
+         */
+
+        /*
+         * the total mass of individual point is not supposed to conserve when we resample an
+         * image. Nevertheless when we add them all up the total is statistically conserved.
+         */
     }
 }
 

@@ -53,6 +53,27 @@ class ResampleWindow(_ResampleWindow):
         _ResampleWindow.__init__(self, kind, support)
 
     def paint(self, real, pos, mass=None, diffdir=None, transform=None):
+        """
+            paint to a field.
+
+            Parameters
+            ----------
+            real : array_like
+                original values are preserved.
+
+            pos : array_like
+
+            mass : array_like or None
+                None for 1
+
+            diffdir: int or None
+                direction for differentiation kernel.
+                0, 1, 2,... or None
+
+            transform: Affine
+                The Affine transformation from position to grid units.
+
+        """
         if transform is None:
             transform = Affine(real.ndim)
 
@@ -69,10 +90,31 @@ class ResampleWindow(_ResampleWindow):
 
         mass = _mkarr(mass, len(pos), mass.dtype)
 
-
         _ResampleWindow.paint(self, real, pos, mass, diffdir, transform.scale, transform.translate, transform.period)
 
     def readout(self, real, pos, out=None, diffdir=None, transform=None):
+        """
+            readout from a field.
+
+            Parameters
+            ----------
+            real : array_like
+
+            pos : array_like
+
+            out : array_like
+
+            mass : array_like or None
+                None for 1
+
+            diffdir: int or None
+                direction for differentiation kernel.
+                0, 1, 2,... or None
+
+            transform: Affine
+                The Affine transformation from position to grid units.
+
+        """
         if transform is None:
             transform = Affine(real.ndim)
 

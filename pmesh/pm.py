@@ -67,6 +67,9 @@ class Field(object):
             self.global_shape[-1] = self.global_shape[-1] // 2 + 1
             self.x = pm.k
             self.i = pm.o_ind
+            self.real = self.value.real
+            self.imag = self.value.imag
+            self.plain = self.value.view(dtype=(self.real.dtype, 2))
         else:
             raise TypeError("Olny RealField and ComplexField. No more subclassing");
 

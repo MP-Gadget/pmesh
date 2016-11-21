@@ -221,14 +221,7 @@ class RealField(Field):
 
     def r2c(self, out=None):
         """ 
-        Perform real to complex FFT on the internal canvas.
-
-        The complex field will be dimensionless; this is to ensure if NormalizeDC
-        is applyed, c2r produces :math:`1 + \delta` as expected.
-
-        (To obtain CFT, multiply by :math:`L^3` from the :math:`dx^3` factor )
-
-        Therefore, the zeroth component of the complex field is :math:`\\bar\\rho`.
+        Perform real to complex transformation.
 
         """
         if out is None:
@@ -333,6 +326,74 @@ class RealField(Field):
 
         return method.readout(self.value, pos, out=out, transform=transform, diffdir=gradient)
 
+    def readout_gradient(self, pos, btgrad, method=None, transform=None, gradient=None, return_pos=False):
+        """ back-propagate the gradient of readout to self.
+
+            Parameters
+            ----------
+            btgrad : array
+                current gradient over a readout.
+
+            return_pos: boolean
+                Returns the gradient over position.
+
+        """
+        if return_pos:
+            if gradient is not None:
+                raise ValueError("gradient of gradient is not yet supported")
+            pos_grad = numpy.zeros_like(pos)
+            for d in range(pos.shape[1]):
+                self.readout(pos, out=pos_grad[:, d], method=method, transform=transform, gradient=d)
+                pos_grad[:, d] *= btgrad
+
+        self_grad = RealField(self.pm)
+        self_grad.paint(pos, mass=btgrad, method=method, transform=transform, gradient=gradient, hold=False)
+
+        if return_pos:
+            return self_grad, pos_grad
+
+        return self_grad
+
+    def paint_gradient(self, pos, weights, method=None, transform=None, gradient=None,
+            return_pos=False, return_weights=True):
+        """ back-propagate the gradient of paint from self. self contains
+            the current gradient.
+
+            Parameters
+            ----------
+            return_pos: boolean
+                Returns the gradient over position.
+
+            return_weights: boolean
+                Returns the gradient over position.
+
+        """
+        if return_pos:
+            if gradient is not None:
+                raise ValueError("gradient of gradient is not yet supported")
+            pos_grad = numpy.zeros_like(pos)
+            for d in range(pos.shape[1]):
+                self.readout(pos, out=pos_grad[:, d], method=method, transform=transform, gradient=d)
+
+        if return_weights:
+            weights_grad = numpy.zeros_like(weights)
+            self.readout(pos, out=weights_grad, method=method, transform=transform, gradient=gradient)
+            weights_grad[...] *= weights
+
+        if return_pos and return_weights:
+            return pos_grad, weights_grad
+
+        if return_pos:
+            return pos_grad
+
+        if return_weights:
+            return weights_grad
+
+    def r2c_gradient(self, btgrad):
+        """ Back-propagate the gradient of r2c to self. """
+        btgrad.c2r(self)
+        # PFFT normalization, same as FastPM
+        self.value[...] *= numpy.prod(self.pm.Nmesh ** -1.0)
 
 class ComplexField(Field):
     def __init__(self, pm):
@@ -344,6 +405,23 @@ class ComplexField(Field):
         assert isinstance(out, RealField)
         self.pm.backward.execute(self.base, out.base)
         return out
+
+    def c2r_gradient(self, btgrad):
+        """ Back-propagate the gradient of c2r to self. """
+        btgrad.r2c(self)
+        # PFFT normalization, same as FastPM
+        self.value[...] *= numpy.prod(self.pm.Nmesh ** 1.0)
+
+    def decompress_gradient(self, btgrad):
+        """ Back-propagate the gradient of decompress to self. """
+        assert isinstance(btgrad, ComplexField)
+        for i, a, b in zip(btgrad.slabs.i, self.slabs, btgrad.slabs):
+            # modes that are self conjugates do not gain a factor
+            mask = True
+            for ii, n in zip(i, btgrad.Nmesh):
+               mask &= (n - ii) % n == ii
+            a[~mask] = 2 * b[~mask]
+            a[mask] = b[mask]
 
 def build_index(indices, fullshape):
     """

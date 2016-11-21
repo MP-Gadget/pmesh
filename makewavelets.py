@@ -27,11 +27,13 @@ def genwavelet(name):
     static double _%(funcname)s_kernel(double x)
     {
         x += %(hsupport)g;
-
-        int i = x / %(step)e;
-        if (i < 0) return 0;
-        if (i >= %(tablesize)d) return 0;
-        return _%(funcname)s_table[i];
+        double f = x / %(step)e;
+        if (f < 0) return 0;
+        int i = f;
+        f -= i;
+        if (i >= %(tablesize)d - 1) return 0;
+        return _%(funcname)s_table[i] * (1 - f)
+             + _%(funcname)s_table[i + 1] * f;
     }
     static double _%(funcname)s_diff(double x)
     {

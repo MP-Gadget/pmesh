@@ -12,18 +12,22 @@ def genlanczos(n):
     name = 'lanczos%d' % n
     support = 2 * n
 
-    numbers = ["%.8f, %.8f, %.8f, %.8f" % tuple(a) for a in phi.reshape(-1, 4)]
+    vnumbers = ["%.8f, %.8f, %.8f, %.8f" % tuple(a) for a in phi.reshape(-1, 4)]
     step = numpy.diff(x).mean()
 
     template = """
-    static double _%(funcname)s_table[] = %(table)s;
+    static double _%(funcname)s_vtable[] = %(vtable)s;
     static double _%(funcname)s_nativesupport = %(support)g;
     static double _%(funcname)s_kernel(double x)
     {
-        int i = fabs(x) / %(step)e;
+        x = fabs(x);
+        double f = x / %(step)e;
+        int i = f;
         if (i < 0) return 0;
-        if (i >= %(tablesize)d) return 0;
-        return _%(funcname)s_table[i];
+        if (i >= %(tablesize)d - 1) return 0;
+        f -= i;
+        return _%(funcname)s_vtable[i] * (1 - f)
+             + _%(funcname)s_vtable[i+1] * f;
     }
     static double _%(funcname)s_diff(double x)
     {
@@ -34,17 +38,16 @@ def genlanczos(n):
             factor = -1;
             x = -x;
         }
-        
+
         int i = x / %(step)e;
         if (i < 0) return 0;
         if (i >= %(tablesize)d - 1) return 0;
-        double f0 = _%(funcname)s_table[i];
-        double f1 = _%(funcname)s_table[i + 1];
-        return factor * (f1 - f0) / %(step)e;
+        double f = _%(funcname)s_vtable[i+1] - _%(funcname)s_vtable[i];
+        return factor * f / %(step)e;
     }
     """
     return template % {
-            'table' : "{" + ",\n".join(numbers) + "}",
+            'vtable' : "{" + ",\n".join(vnumbers) + "}",
             'hsupport' : support * 0.5,
             'support' : support,
             'funcname' : name,

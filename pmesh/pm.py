@@ -250,7 +250,7 @@ class RealField(Field):
         """ Collective mean. Mean of the entire mesh. (Must be called collectively)"""
         return self.csum() / self.csize
 
-    def paint(self, pos, mass=1.0, method="cic", transform=None, hold=False):
+    def paint(self, pos, mass=1.0, method=None, transform=None, hold=False, gradient=None):
         """ 
         Paint particles into the internal real canvas. 
 
@@ -275,6 +275,13 @@ class RealField(Field):
         hold   : bool
             If true, do not clear the current value in the field.
 
+        gradient : None or integer
+            Direction to take the gradient of the window. The affine transformation
+            is properly applied.
+
+        method: None or string
+            type of window. Default : None, use self.pm.method
+
         Notes
         -----
         the painter operation conserves the total mass. It is not the density.
@@ -284,15 +291,18 @@ class RealField(Field):
         if not transform:
             transform = self.pm.affine
 
+        if method is None:
+            method = self.pm.method
+
         if method in window.methods:
             method = window.methods[method]
 
         if not hold:
             self.value[...] = 0
 
-        method.paint(self.value, pos, mass, transform=transform)
+        method.paint(self.value, pos, mass, transform=transform, diffdir=gradient)
 
-    def readout(self, pos, out=None, method="cic", transform=None):
+    def readout(self, pos, out=None, method=None, transform=None, gradient=None):
         """ 
         Read out from real field at positions
 
@@ -300,6 +310,11 @@ class RealField(Field):
         ----------
         pos    : array_like (, ndim)
             position of particles in simulation  unit
+        gradient : None or integer
+            Direction to take the gradient of the window. The affine transformation
+            is properly applied.
+        method : None or string
+            type of window, default to self.pm.method
 
         Returns
         -------
@@ -310,9 +325,13 @@ class RealField(Field):
         if not transform:
             transform = self.pm.affine
 
-        method = window.methods[method]
+        if method is None:
+            method = self.pm.method
 
-        return method.readout(self.value, pos, out=out, transform=transform)
+        if method in window.methods:
+            method = window.methods[method]
+
+        return method.readout(self.value, pos, out=out, transform=transform, diffdir=gradient)
 
 
 class ComplexField(Field):
@@ -403,7 +422,7 @@ class ParticleMesh(object):
         the MPI communicator, (default is MPI.COMM_WORLD)
 
     Nmesh   : array of int
-        number of mesh points per side.
+        number of mesh points per side. The length decides the number of dimensions.
 
     BoxSize : float
         size of box
@@ -425,7 +444,7 @@ class ParticleMesh(object):
 
     """
 
-    def __init__(self, Nmesh, BoxSize=1.0, comm=None, np=None, dtype='f8', plan_method='estimate'):
+    def __init__(self, Nmesh, BoxSize=1.0, comm=None, np=None, dtype='f8', plan_method='estimate', method='cic'):
         """ create a PM object.  """
         if comm is None:
             comm = MPI.COMM_WORLD
@@ -521,7 +540,11 @@ class ParticleMesh(object):
                     scale=1.0 * self.Nmesh / self.BoxSize,
                     period = self.Nmesh)
 
-    def decompose(self, pos, smoothing="cic"):
+        if method in window.methods:
+            method = window.methods[method]
+        self.method = method
+
+    def decompose(self, pos, smoothing=None):
         """ 
         Create a domain decompose layout for particles at given
         coordinates.
@@ -531,9 +554,10 @@ class ParticleMesh(object):
         pos    : array_like (, ndim)
             position of particles in simulation  unit
 
-        smoothing : float, string, or ResampleWindow
+        smoothing : None, float, string, or ResampleWindow
             if given as a string or ResampleWindow, use 0.5 * support.
             This is the size of the buffer region around a domain.
+            Default: None, use self.method
 
         Returns
         -------
@@ -541,8 +565,12 @@ class ParticleMesh(object):
             layout that can be used to migrate particles and images
         to the correct MPI ranks that hosts the PM local mesh
         """
+        if smoothing is None:
+            smoothing = self.method
+
         if smoothing in window.methods:
             smoothing = window.methods[smoothing]
+
         if isinstance(smoothing, window.ResampleWindow):
             smoothing = smoothing.support * 0.5
 

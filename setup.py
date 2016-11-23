@@ -20,15 +20,15 @@ extensions = [
         Extension("pmesh._window", ["pmesh/_window.pyx", "pmesh/_window_imp.cxx"],
                 depends=["pmesh/_window_imp.h", "pmesh/_window_wavelets.h", "pmesh/_window_lanczos.h"], include_dirs=["./", numpy.get_include()])
         ]
+print(find_version("pmesh/version.py"))
 
 setup(
     name="pmesh", version=find_version("pmesh/version.py"),
     author="Yu Feng",
     description="Particle Mesh in Python",
     package_dir = {'pmesh': 'pmesh'},
-    install_requires=['cython', 'numpy'],
     packages= ['pmesh', 'pmesh.tests'],
-    requires=['numpy', 'mpi4py', 'mpsort', 'pfft-python'],
+    install_requires=['cython', 'numpy', 'mpi4py', 'mpsort', 'pfft-python'],
     ext_modules = cythonize(extensions)
 )
 

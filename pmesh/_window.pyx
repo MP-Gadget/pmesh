@@ -31,7 +31,7 @@ cdef extern from "_window_imp.h":
         ptrdiff_t Nmesh[32]
 
         # determined during paint / readout
-        int diffdir
+        int order[32]
         void * canvas
         int canvas_dtype_elsize
         ptrdiff_t size[32]
@@ -75,7 +75,7 @@ cdef class ResampleWindow(object):
         pmesh_painter_init(self.painter)
         self.support = self.painter.support
 
-    def paint(self, numpy.ndarray real, postype [:, :] pos, masstype [:] mass, int diffdir,
+    def paint(self, numpy.ndarray real, postype [:, :] pos, masstype [:] mass, order,
         double [:] scale, double [:] translate, ptrdiff_t [:] period):
         cdef double x[32]
         cdef double m
@@ -91,9 +91,9 @@ cdef class ResampleWindow(object):
         painter.ndim = real.ndim
         painter.canvas = <void*> real.data
         painter.canvas_dtype_elsize = real.dtype.itemsize
-        painter.diffdir = diffdir
 
         for d in range(painter.ndim):
+            painter.order[d] = order[d]
             painter.Nmesh[d] = period[d]
             painter.scale[d] = scale[d]
             painter.translate[d] = translate[d]
@@ -110,7 +110,7 @@ cdef class ResampleWindow(object):
             m = mass[i]
             pmesh_painter_paint(painter, x, m)
 
-    def readout(self, numpy.ndarray real, postype [:, :] pos, masstype [:] out, int diffdir,
+    def readout(self, numpy.ndarray real, postype [:, :] pos, masstype [:] out, order,
         double [:] scale, double [:] translate, ptrdiff_t [:] period):
 
         cdef double x[32]
@@ -128,9 +128,9 @@ cdef class ResampleWindow(object):
         painter.ndim = real.ndim
         painter.canvas = <void*> real.data
         painter.canvas_dtype_elsize = real.dtype.itemsize
-        painter.diffdir = diffdir
 
         for d in range(painter.ndim):
+            painter.order[d] = order[d]
             painter.Nmesh[d] = period[d]
             painter.scale[d] = scale[d]
             painter.translate[d] = translate[d]

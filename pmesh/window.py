@@ -79,8 +79,9 @@ class ResampleWindow(_ResampleWindow):
 
         assert isinstance(transform, Affine)
 
-        if diffdir is None: diffdir = -1
-        else: diffdir %= real.ndim
+        order = numpy.zeros(real.ndim, dtype=int)
+        if diffdir is not None:
+            order[diffdir] = 1
 
         pos = numpy.asfarray(pos)
         if mass is None:
@@ -90,7 +91,7 @@ class ResampleWindow(_ResampleWindow):
 
         mass = _mkarr(mass, len(pos), mass.dtype)
 
-        _ResampleWindow.paint(self, real, pos, mass, diffdir, transform.scale, transform.translate, transform.period)
+        _ResampleWindow.paint(self, real, pos, mass, order, transform.scale, transform.translate, transform.period)
 
     def readout(self, real, pos, out=None, diffdir=None, transform=None):
         """
@@ -120,14 +121,15 @@ class ResampleWindow(_ResampleWindow):
 
         assert isinstance(transform, Affine)
 
-        if diffdir is None: diffdir = -1
-        else: diffdir %= real.ndim
+        order = numpy.zeros(real.ndim, dtype=int)
+        if diffdir is not None:
+            order[diffdir] = 1
 
         pos = numpy.asfarray(pos)
         if out is None:
             out = numpy.zeros(pos.shape[:-1], dtype='f8')
 
-        _ResampleWindow.readout(self, real, pos, out, diffdir, transform.scale, transform.translate, transform.period)
+        _ResampleWindow.readout(self, real, pos, out, order, transform.scale, transform.translate, transform.period)
 
         return out
 

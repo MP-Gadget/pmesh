@@ -6,18 +6,58 @@
 #include <math.h>
 #include "_window_imp.h"
 
-template <typename FLOAT>
-static void
-_generic_paint(FastPMPainter * painter, double pos[], double weight);
-
-template <typename FLOAT>
-static double
-_generic_readout(FastPMPainter * painter, double pos[]);
-
-extern "C" {
-
 #include "_window_wavelets.h"
 #include "_window_lanczos.h"
+
+static void
+_fill_k(FastPMPainter * painter, double pos[], int ipos[], double k[][64])
+{
+    double gpos[painter->ndim];
+    int d;
+
+    for(d = 0; d < painter->ndim; d++) {
+        gpos[d] = pos[d] * painter->scale[d] + painter->translate[d];
+        ipos[d] = floor(gpos[d] + painter->shift) - painter->left;
+        double dx = gpos[d] - ipos[d]; /* relative to the left most nonzero.*/
+        int i;
+        double sum = 0;
+        for(i = 0; i < painter->support; i ++) {
+            double x = (dx - i) * painter->vfactor;
+            k[d][i] = painter->kernel(x) * painter->vfactor;
+            sum += k[d][i];
+
+            /*
+             * norm is still from the true kernel,
+             * but we replace the value with the derivative
+             * */
+            if(d == painter->diffdir) {
+                k[d][i] = painter->diff(x) * painter->scale[d] * painter->vfactor * painter->vfactor;
+            }
+        }
+        /* Watch out: do not renormalize per particle */
+
+        /* We require the kernels to be properly normalized instead,
+         * because the sampling here is too coarse for individual renormalizing to make sense.
+         * -- the normalization is very different for different offsets.
+         */
+
+        /*
+         * the total mass of individual point is not supposed to conserve when we resample an
+         * image. Nevertheless when we add them all up the total is statistically conserved.
+         */
+    }
+}
+
+#define FLOAT float
+#define mkname(a) a ## _ ## float
+#include "_window_generics.h"
+#undef FLOAT
+#undef mkname
+#define mkname(a) a ## _ ## double
+#define FLOAT double
+#include "_window_generics.h"
+#undef FLOAT
+#undef mkname
 
 static double
 _linear_kernel(double x) {
@@ -123,11 +163,11 @@ void
 fastpm_painter_init(FastPMPainter * painter)
 {
     if(painter->canvas_dtype_elsize == 8) {
-        painter->paint = _generic_paint<double>;
-        painter->readout = _generic_readout<double>;
+        painter->paint = _generic_paint_double;
+        painter->readout = _generic_readout_double;
     } else {
-        painter->paint = _generic_paint<float>;
-        painter->readout = _generic_readout<float>;
+        painter->paint = _generic_paint_float;
+        painter->readout = _generic_readout_float;
     }
 
     switch(painter->type) {
@@ -215,154 +255,5 @@ double
 fastpm_painter_readout(FastPMPainter * painter, double pos[])
 {
     return painter->readout(painter, pos);
-}
-
-static void
-_fill_k(FastPMPainter * painter, double pos[], int ipos[], double k[][64])
-{
-    double gpos[painter->ndim];
-    int d;
-
-    for(d = 0; d < painter->ndim; d++) {
-        gpos[d] = pos[d] * painter->scale[d] + painter->translate[d];
-        ipos[d] = floor(gpos[d] + painter->shift) - painter->left;
-        double dx = gpos[d] - ipos[d]; /* relative to the left most nonzero.*/
-        int i;
-        double sum = 0;
-        for(i = 0; i < painter->support; i ++) {
-            double x = (dx - i) * painter->vfactor;
-            k[d][i] = painter->kernel(x) * painter->vfactor;
-            sum += k[d][i];
-
-            /*
-             * norm is still from the true kernel,
-             * but we replace the value with the derivative
-             * */
-            if(d == painter->diffdir) {
-                k[d][i] = painter->diff(x) * painter->scale[d] * painter->vfactor * painter->vfactor;
-            }
-        }
-        /* Watch out: do not renormalize per particle */
-
-        /* We require the kernels to be properly normalized instead,
-         * because the sampling here is too coarse for individual renormalizing to make sense.
-         * -- the normalization is very different for different offsets.
-         */
-
-        /*
-         * the total mass of individual point is not supposed to conserve when we resample an
-         * image. Nevertheless when we add them all up the total is statistically conserved.
-         */
-    }
-}
-
-}
-
-template <typename FLOAT>
-static void
-_generic_paint(FastPMPainter * painter, double pos[], double weight)
-{
-    int ipos[painter->ndim];
-    /* the max support is 32 */
-    double k[painter->ndim][64];
-
-    char * canvas = (char*) painter->canvas;
-
-    _fill_k(painter, pos, ipos, k);
-
-    int rel[painter->ndim];
-    for(int d =0; d < painter->ndim; d ++ ) rel[d] = 0;
-
-    int s2 = painter->support;
-    while(rel[0] != s2) {
-        double kernel = 1.0;
-        ptrdiff_t ind = 0;
-        int d;
-        for(d = 0; d < painter->ndim; d++) {
-            int r = rel[d];
-            int targetpos = ipos[d] + r;
-            kernel *= k[d][r];
-            if(painter->Nmesh[d] > 0) {
-                while(targetpos >= painter->Nmesh[d]) {
-                    targetpos -= painter->Nmesh[d];
-                }
-                while(targetpos < 0) {
-                    targetpos += painter->Nmesh[d];
-                }
-            }
-            if(UNLIKELY(targetpos >= painter->size[d]))
-                goto outside;
-            if(UNLIKELY(targetpos < 0))
-                goto outside;
-            ind += painter->strides[d] * targetpos;
-        }
-#pragma omp atomic
-        * (FLOAT*) (canvas + ind) += weight * kernel;
-
-    outside:
-        rel[painter->ndim - 1] ++;
-        for(d = painter->ndim - 1; d > 0; d --) {
-            if(UNLIKELY(rel[d] == s2)) {
-                rel[d - 1] ++;
-                rel[d] = 0;
-            }
-        }
-    }
-    return;
-}
-
-template <typename FLOAT>
-static double
-_generic_readout(FastPMPainter * painter, double pos[])
-{
-    double value = 0;
-    int ipos[painter->ndim];
-    double k[painter->ndim][64];
-
-    char * canvas = (char*) painter->canvas;
-
-    _fill_k(painter, pos, ipos, k);
-
-    int rel[painter->ndim];
-    for(int d =0; d < painter->ndim; d++) rel[d] = 0;
-
-    int s2 = painter->support;
-    while(rel[0] != s2) {
-        double kernel = 1.0;
-        ptrdiff_t ind = 0;
-        int d;
-        for(d = 0; d < painter->ndim; d++) {
-            int r = rel[d];
-
-            kernel *= k[d][r];
-
-            int targetpos = ipos[d] + r;
-
-            if(painter->Nmesh[d] > 0) {
-                while(targetpos >= painter->Nmesh[d]) {
-                    targetpos -= painter->Nmesh[d];
-                }
-                while(targetpos < 0) {
-                    targetpos += painter->Nmesh[d];
-                }
-            }
-            if(UNLIKELY(targetpos >= painter->size[d])) {
-                goto outside;
-            }
-            if(UNLIKELY(targetpos < 0))
-                goto outside;
-            ind += painter->strides[d] * targetpos;
-        }
-        value += kernel * *(FLOAT* )(canvas + ind);
-outside:
-        rel[painter->ndim - 1] ++;
-        for(d = painter->ndim - 1; d > 0; d --) {
-            if(UNLIKELY(rel[d] == s2)) {
-                rel[d - 1] ++;
-                rel[d] = 0;
-            }
-        }
-    }
-    return value;
 }
 

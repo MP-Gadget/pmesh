@@ -10,17 +10,17 @@ ctypedef cython.floating realtype
 cdef extern from "_window_imp.h":
 
     ctypedef enum PMeshPainterType:
-        FASTPM_PAINTER_LINEAR
-        FASTPM_PAINTER_CUBIC
-        FASTPM_PAINTER_LANCZOS2
-        FASTPM_PAINTER_LANCZOS3
-        FASTPM_PAINTER_QUADRATIC
-        FASTPM_PAINTER_DB6
-        FASTPM_PAINTER_DB12
-        FASTPM_PAINTER_DB20
-        FASTPM_PAINTER_SYM6
-        FASTPM_PAINTER_SYM12
-        FASTPM_PAINTER_SYM20
+        PMESH_PAINTER_LINEAR
+        PMESH_PAINTER_CUBIC
+        PMESH_PAINTER_LANCZOS2
+        PMESH_PAINTER_LANCZOS3
+        PMESH_PAINTER_QUADRATIC
+        PMESH_PAINTER_DB6
+        PMESH_PAINTER_DB12
+        PMESH_PAINTER_DB20
+        PMESH_PAINTER_SYM6
+        PMESH_PAINTER_SYM12
+        PMESH_PAINTER_SYM20
 
     ctypedef struct PMeshPainter:
         PMeshPainterType type
@@ -46,17 +46,17 @@ cdef class ResampleWindow(object):
     cdef readonly int support
     def __init__(self, kind, int support=-1):
         kinds = {
-                'linear' : FASTPM_PAINTER_LINEAR,
-                'cubic' : FASTPM_PAINTER_CUBIC,
-                'quadratic' : FASTPM_PAINTER_QUADRATIC,
-                'lanczos2' : FASTPM_PAINTER_LANCZOS2,
-                'lanczos3' : FASTPM_PAINTER_LANCZOS3,
-                'db6' : FASTPM_PAINTER_DB6,
-                'db12' : FASTPM_PAINTER_DB12,
-                'db20' : FASTPM_PAINTER_DB20,
-                'sym6' : FASTPM_PAINTER_SYM6,
-                'sym12' : FASTPM_PAINTER_SYM12,
-                'sym20' : FASTPM_PAINTER_SYM20,
+                'linear' : PMESH_PAINTER_LINEAR,
+                'cubic' : PMESH_PAINTER_CUBIC,
+                'quadratic' : PMESH_PAINTER_QUADRATIC,
+                'lanczos2' : PMESH_PAINTER_LANCZOS2,
+                'lanczos3' : PMESH_PAINTER_LANCZOS3,
+                'db6' : PMESH_PAINTER_DB6,
+                'db12' : PMESH_PAINTER_DB12,
+                'db20' : PMESH_PAINTER_DB20,
+                'sym6' : PMESH_PAINTER_SYM6,
+                'sym12' : PMESH_PAINTER_SYM12,
+                'sym20' : PMESH_PAINTER_SYM20,
                }
 
         cdef PMeshPainterType type

@@ -1,17 +1,17 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-typedef enum { FASTPM_PAINTER_LINEAR,
-               FASTPM_PAINTER_CUBIC,
-               FASTPM_PAINTER_QUADRATIC,
-               FASTPM_PAINTER_LANCZOS2,
-               FASTPM_PAINTER_LANCZOS3,
-               FASTPM_PAINTER_DB6,
-               FASTPM_PAINTER_DB12,
-               FASTPM_PAINTER_DB20,
-               FASTPM_PAINTER_SYM6,
-               FASTPM_PAINTER_SYM12,
-               FASTPM_PAINTER_SYM20,
+typedef enum { PMESH_PAINTER_LINEAR,
+               PMESH_PAINTER_CUBIC,
+               PMESH_PAINTER_QUADRATIC,
+               PMESH_PAINTER_LANCZOS2,
+               PMESH_PAINTER_LANCZOS3,
+               PMESH_PAINTER_DB6,
+               PMESH_PAINTER_DB12,
+               PMESH_PAINTER_DB20,
+               PMESH_PAINTER_SYM6,
+               PMESH_PAINTER_SYM12,
+               PMESH_PAINTER_SYM20,
 
 } PMeshPainterType;
 

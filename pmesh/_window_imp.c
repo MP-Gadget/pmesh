@@ -171,57 +171,57 @@ pmesh_painter_init(PMeshPainter * painter)
     }
 
     switch(painter->type) {
-        case FASTPM_PAINTER_LINEAR:
+        case PMESH_PAINTER_LINEAR:
             painter->kernel = _linear_kernel;
             painter->diff = _linear_diff;
             painter->nativesupport = 2;
         break;
-        case FASTPM_PAINTER_QUADRATIC:
+        case PMESH_PAINTER_QUADRATIC:
             painter->kernel = _quadratic_kernel;
             painter->diff = _quadratic_diff;
             painter->nativesupport = 3;
         break;
-        case FASTPM_PAINTER_CUBIC:
+        case PMESH_PAINTER_CUBIC:
             painter->kernel = _cubic_kernel;
             painter->diff = _cubic_diff;
             painter->nativesupport = 4;
         break;
-        case FASTPM_PAINTER_LANCZOS2:
+        case PMESH_PAINTER_LANCZOS2:
             painter->kernel = _lanczos2_kernel;
             painter->diff = _lanczos2_diff;
             painter->nativesupport = _lanczos2_nativesupport;
         break;
-        case FASTPM_PAINTER_LANCZOS3:
+        case PMESH_PAINTER_LANCZOS3:
             painter->kernel = _lanczos3_kernel;
             painter->diff = _lanczos3_diff;
             painter->nativesupport = _lanczos3_nativesupport;
         break;
-        case FASTPM_PAINTER_DB6:
+        case PMESH_PAINTER_DB6:
             painter->kernel = _db6_kernel;
             painter->diff = _db6_diff;
             painter->nativesupport = _db6_nativesupport;
         break;
-        case FASTPM_PAINTER_DB12:
+        case PMESH_PAINTER_DB12:
             painter->kernel = _db12_kernel;
             painter->diff = _db12_diff;
             painter->nativesupport = _db12_nativesupport;
         break;
-        case FASTPM_PAINTER_DB20:
+        case PMESH_PAINTER_DB20:
             painter->kernel = _db20_kernel;
             painter->diff = _db20_diff;
             painter->nativesupport = _db20_nativesupport;
         break;
-        case FASTPM_PAINTER_SYM6:
+        case PMESH_PAINTER_SYM6:
             painter->kernel = _sym6_kernel;
             painter->diff = _sym6_diff;
             painter->nativesupport = _sym6_nativesupport;
         break;
-        case FASTPM_PAINTER_SYM12:
+        case PMESH_PAINTER_SYM12:
             painter->kernel = _sym12_kernel;
             painter->diff = _sym12_diff;
             painter->nativesupport = _sym12_nativesupport;
         break;
-        case FASTPM_PAINTER_SYM20:
+        case PMESH_PAINTER_SYM20:
             painter->kernel = _sym20_kernel;
             painter->diff = _sym20_diff;
             painter->nativesupport = _sym20_nativesupport;

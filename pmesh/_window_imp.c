@@ -10,7 +10,7 @@
 #include "_window_lanczos.h"
 
 static void
-_fill_k(FastPMPainter * painter, double pos[], int ipos[], double k[][64])
+_fill_k(PMeshPainter * painter, double pos[], int ipos[], double k[][64])
 {
     double gpos[painter->ndim];
     int d;
@@ -160,7 +160,7 @@ _cubic_diff(double x) {
 
 
 void
-fastpm_painter_init(FastPMPainter * painter)
+pmesh_painter_init(PMeshPainter * painter)
 {
     if(painter->canvas_dtype_elsize == 8) {
         painter->paint = _generic_paint_double;
@@ -246,13 +246,13 @@ fastpm_painter_init(FastPMPainter * painter)
 }
 
 void
-fastpm_painter_paint(FastPMPainter * painter, double pos[], double weight)
+pmesh_painter_paint(PMeshPainter * painter, double pos[], double weight)
 {
     painter->paint(painter, pos, weight);
 }
 
 double
-fastpm_painter_readout(FastPMPainter * painter, double pos[])
+pmesh_painter_readout(PMeshPainter * painter, double pos[])
 {
     return painter->readout(painter, pos);
 }

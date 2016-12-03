@@ -13,14 +13,14 @@ typedef enum { FASTPM_PAINTER_LINEAR,
                FASTPM_PAINTER_SYM12,
                FASTPM_PAINTER_SYM20,
 
-} FastPMPainterType;
+} PMeshPainterType;
 
-typedef struct FastPMPainter FastPMPainter;
+typedef struct PMeshPainter PMeshPainter;
 
-typedef double (*fastpm_kernelfunc)(double x);
+typedef double (*pmesh_kernelfunc)(double x);
 
-struct FastPMPainter {
-    FastPMPainterType type;
+struct PMeshPainter {
+    PMeshPainterType type;
     int diffdir; /* -1 to not taking differences*/
     int support;
     int ndim;
@@ -34,11 +34,11 @@ struct FastPMPainter {
     ptrdiff_t strides[32];
 
     /* Private: */
-    void   (*paint)(FastPMPainter * painter, double pos[], double weight);
-    double (*readout)(FastPMPainter * painter, double pos[]);
+    void   (*paint)(PMeshPainter * painter, double pos[], double weight);
+    double (*readout)(PMeshPainter * painter, double pos[]);
 
-    fastpm_kernelfunc kernel;
-    fastpm_kernelfunc diff;
+    pmesh_kernelfunc kernel;
+    pmesh_kernelfunc diff;
 
     double nativesupport; /* unscaled support */
     double vfactor; /* nativesupport / support */
@@ -48,13 +48,13 @@ struct FastPMPainter {
 };
 
 void
-fastpm_painter_init(FastPMPainter * painter);
+pmesh_painter_init(PMeshPainter * painter);
 
 void
-fastpm_painter_paint(FastPMPainter * painter, double pos[], double weight);
+pmesh_painter_paint(PMeshPainter * painter, double pos[], double weight);
 
 double
-fastpm_painter_readout(FastPMPainter * painter, double pos[]);
+pmesh_painter_readout(PMeshPainter * painter, double pos[]);
 
 #ifdef __cplusplus
 }

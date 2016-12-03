@@ -9,7 +9,7 @@ ctypedef cython.floating realtype
 
 cdef extern from "_window_imp.h":
 
-    ctypedef enum FastPMPainterType:
+    ctypedef enum PMeshPainterType:
         FASTPM_PAINTER_LINEAR
         FASTPM_PAINTER_CUBIC
         FASTPM_PAINTER_LANCZOS2
@@ -22,8 +22,8 @@ cdef extern from "_window_imp.h":
         FASTPM_PAINTER_SYM12
         FASTPM_PAINTER_SYM20
 
-    ctypedef struct FastPMPainter:
-        FastPMPainterType type
+    ctypedef struct PMeshPainter:
+        PMeshPainterType type
         int support
         int ndim
         double scale[32]
@@ -37,12 +37,12 @@ cdef extern from "_window_imp.h":
         ptrdiff_t size[32]
         ptrdiff_t strides[32]
 
-    void fastpm_painter_init(FastPMPainter * painter)
-    void fastpm_painter_paint(FastPMPainter * painter, double pos[], double mass)
-    double fastpm_painter_readout(FastPMPainter * painter, double pos[])
+    void pmesh_painter_init(PMeshPainter * painter)
+    void pmesh_painter_paint(PMeshPainter * painter, double pos[], double mass)
+    double pmesh_painter_readout(PMeshPainter * painter, double pos[])
 
 cdef class ResampleWindow(object):
-    cdef FastPMPainter painter[1]
+    cdef PMeshPainter painter[1]
     cdef readonly int support
     def __init__(self, kind, int support=-1):
         kinds = {
@@ -59,12 +59,12 @@ cdef class ResampleWindow(object):
                 'sym20' : FASTPM_PAINTER_SYM20,
                }
 
-        cdef FastPMPainterType type
+        cdef PMeshPainterType type
 
         if kind in kinds:
-            type = <FastPMPainterType> <int> kinds[kind]
+            type = <PMeshPainterType> <int> kinds[kind]
         else:
-            type = <FastPMPainterType> <int> kind
+            type = <PMeshPainterType> <int> kind
 
         # FIXME: change this to scaling the size of the kernel
         self.painter.support = support
@@ -72,7 +72,7 @@ cdef class ResampleWindow(object):
         self.painter.ndim = 0
         self.painter.canvas_dtype_elsize = 0
 
-        fastpm_painter_init(self.painter)
+        pmesh_painter_init(self.painter)
         self.support = self.painter.support
 
     def paint(self, numpy.ndarray real, postype [:, :] pos, masstype [:] mass, int diffdir,
@@ -84,7 +84,7 @@ cdef class ResampleWindow(object):
 
         assert real.dtype.kind == 'f'
 
-        cdef FastPMPainter painter[1]
+        cdef PMeshPainter painter[1]
 
         painter[0] = self.painter[0]
 
@@ -102,13 +102,13 @@ cdef class ResampleWindow(object):
             painter.size[d] = real.shape[d]
             painter.strides[d] = real.strides[d]
 
-        fastpm_painter_init(painter)
+        pmesh_painter_init(painter)
 
         for i in range(pos.shape[0]):
             for d in range(painter.ndim):
                 x[d] = pos[i, d]
             m = mass[i]
-            fastpm_painter_paint(painter, x, m)
+            pmesh_painter_paint(painter, x, m)
 
     def readout(self, numpy.ndarray real, postype [:, :] pos, masstype [:] out, int diffdir,
         double [:] scale, double [:] translate, ptrdiff_t [:] period):
@@ -121,7 +121,7 @@ cdef class ResampleWindow(object):
 
         assert real.dtype.kind == 'f'
 
-        cdef FastPMPainter painter[1]
+        cdef PMeshPainter painter[1]
 
         painter[0] = self.painter[0]
 
@@ -139,10 +139,10 @@ cdef class ResampleWindow(object):
             painter.size[d] = real.shape[d]
             painter.strides[d] = real.strides[d]
 
-        fastpm_painter_init(painter)
+        pmesh_painter_init(painter)
 
         for i in range(pos.shape[0]):
             for d in range(painter.ndim):
                 x[d] = pos[i, d]
-            out[i] = fastpm_painter_readout(painter, x)
+            out[i] = pmesh_painter_readout(painter, x)
 

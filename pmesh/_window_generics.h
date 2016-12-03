@@ -1,5 +1,5 @@
 static void
-mkname(_generic_paint) (FastPMPainter * painter, double pos[], double weight)
+mkname(_generic_paint) (PMeshPainter * painter, double pos[], double weight)
 {
     int ipos[painter->ndim];
     /* the max support is 32 */
@@ -52,7 +52,7 @@ mkname(_generic_paint) (FastPMPainter * painter, double pos[], double weight)
 }
 
 static double
-mkname(_generic_readout) (FastPMPainter * painter, double pos[])
+mkname(_generic_readout) (PMeshPainter * painter, double pos[])
 {
     double value = 0;
     int ipos[painter->ndim];

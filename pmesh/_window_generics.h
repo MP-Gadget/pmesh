@@ -10,7 +10,8 @@ mkname(_generic_paint) (FastPMPainter * painter, double pos[], double weight)
     _fill_k(painter, pos, ipos, k);
 
     int rel[painter->ndim];
-    for(int d =0; d < painter->ndim; d ++ ) rel[d] = 0;
+    int d;
+    for(d =0; d < painter->ndim; d ++ ) rel[d] = 0;
 
     int s2 = painter->support;
     while(rel[0] != s2) {
@@ -62,7 +63,8 @@ mkname(_generic_readout) (FastPMPainter * painter, double pos[])
     _fill_k(painter, pos, ipos, k);
 
     int rel[painter->ndim];
-    for(int d =0; d < painter->ndim; d++) rel[d] = 0;
+    int d;
+    for(d =0; d < painter->ndim; d++) rel[d] = 0;
 
     int s2 = painter->support;
     while(rel[0] != s2) {

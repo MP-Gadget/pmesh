@@ -1,4 +1,4 @@
-from mpi4py_test import MPIWorld, MPITest
+from mpi4py_test import MPITest
 from numpy.testing import assert_array_equal
 from numpy.testing import assert_allclose
 from numpy.testing import assert_almost_equal
@@ -7,7 +7,7 @@ from pmesh.pm import ParticleMesh, RealField, ComplexField
 from pmesh import window
 import numpy
 
-@MPIWorld(NTask=(1,), required=(1))
+@MPITest(commsize=(1,))
 def test_asarray(comm):
     pm = ParticleMesh(BoxSize=8.0, Nmesh=[8, 8], comm=comm, dtype='f8')
     real = RealField(pm)
@@ -24,7 +24,7 @@ def test_asarray(comm):
     assert a is real.value
 
 
-@MPIWorld(NTask=(1, 4), required=(1))
+@MPITest(commsize=(1,4))
 def test_fft(comm):
     pm = ParticleMesh(BoxSize=8.0, Nmesh=[8, 8], comm=comm, dtype='f8')
     real = RealField(pm)
@@ -47,7 +47,7 @@ def test_fft(comm):
     real.readout(npos)
     assert_almost_equal(numpy.asarray(real), numpy.asarray(real2), decimal=7)
 
-@MPIWorld(NTask=(1, 4), required=(1))
+@MPITest(commsize=(1,4))
 def test_decompose(comm):
     pm = ParticleMesh(BoxSize=8.0, Nmesh=[8, 8, 8], comm=comm, dtype='f8')
     numpy.random.seed(1234)
@@ -76,7 +76,8 @@ def test_decompose(comm):
             assert_almost_equal(full, truth)
         # can't yield!
         test(method)
-@MPIWorld(NTask=(1), required=(1))
+
+@MPITest(commsize=(1))
 def test_indices(comm):
     pm = ParticleMesh(BoxSize=8.0, Nmesh=[2, 2], comm=comm, dtype='f8')
     assert_almost_equal(pm.k[0], [[0], [-0.785398]], decimal=3)
@@ -84,7 +85,7 @@ def test_indices(comm):
     assert_almost_equal(pm.x[0], [[0], [-4]], decimal=3)
     assert_almost_equal(pm.x[1], [[0, -4]], decimal=3)
 
-@MPIWorld(NTask=(1, 4), required=(1))
+@MPITest(commsize=(1, 4))
 def test_real_iter(comm):
     pm = ParticleMesh(BoxSize=8.0, Nmesh=[8, 8], comm=comm, dtype='f8')
     real = RealField(pm)
@@ -118,7 +119,7 @@ def test_complex_apply(comm):
     for i, x, slab in zip(complex.slabs.i, complex.slabs.x, complex.slabs):
         assert_array_equal(slab, x[0] + x[1] * 1j)
 
-@MPIWorld(NTask=(1, 2, 3, 4), required=(1))
+@MPITest(commsize=(1, 2, 3, 4))
 def test_sort(comm):
     pm = ParticleMesh(BoxSize=8.0, Nmesh=[8, 6], comm=comm, dtype='f8')
     real = RealField(pm)
@@ -139,7 +140,7 @@ def test_sort(comm):
     conjecture = numpy.concatenate(comm.allgather(complex.value.ravel()))
     assert_array_equal(conjecture, truth)
 
-@MPIWorld(NTask=(1, 2, 3, 4), required=(1))
+@MPITest(commsize=(1, 2, 3, 4))
 def test_downsample(comm):
     pm1 = ParticleMesh(BoxSize=8.0, Nmesh=[8, 8], comm=comm, dtype='f8')
     pm2 = ParticleMesh(BoxSize=8.0, Nmesh=[4, 4], comm=comm, dtype='f8')
@@ -166,7 +167,7 @@ def test_downsample(comm):
 
     assert_almost_equal(real2.r2c(), sum([k**2 for k in complex2.x]) **0.5)
 
-@MPIWorld(NTask=(1, 2, 3, 4), required=(1))
+@MPITest(commsize=(1, 2, 3, 4))
 def test_cmean(comm):
     # this tests cmean (collective mean) along with resampling preseves it.
 
@@ -184,7 +185,7 @@ def test_cmean(comm):
     real1.resample(real2)
     assert_almost_equal(real1.cmean(), real2.cmean())
 
-@MPIWorld(NTask=(1, 2, 3, 4), required=(1))
+@MPITest(commsize=(1, 2, 3, 4))
 def test_upsample(comm):
     pm1 = ParticleMesh(BoxSize=8.0, Nmesh=[8, 8, 8], comm=comm, dtype='f8')
     pm2 = ParticleMesh(BoxSize=8.0, Nmesh=[4, 4, 4], comm=comm, dtype='f8')
@@ -200,7 +201,7 @@ def test_upsample(comm):
 
     assert_array_equal(complex2, sum([k**2 for k in complex2.x]) **0.5)
 
-@MPIWorld(NTask=(1, 4), required=1)
+@MPITest(commsize=(1, 4))
 def test_complex_iter(comm):
     pm = ParticleMesh(BoxSize=8.0, Nmesh=[8, 8], comm=comm, dtype='f8')
     complex = ComplexField(pm)

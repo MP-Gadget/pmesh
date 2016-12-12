@@ -1,4 +1,4 @@
-from mpi4py_test import MPIWorld
+from mpi4py_test import MPIWorld, MPITest
 from numpy.testing import assert_array_equal
 from numpy.testing import assert_allclose
 from numpy.testing import assert_almost_equal
@@ -91,8 +91,32 @@ def test_real_iter(comm):
 
     for i, x, slab in zip(real.slabs.i, real.slabs.x, real.slabs):
         assert slab.base is real.value
-        assert_array_equal(slab.shape, sum(x[d] ** 2 for d in range(len(pm.Nmesh))).shape)
+        assert_almost_equal(slab.shape, sum(x[d] ** 2 for d in range(len(pm.Nmesh))).shape)
         # FIXME: test i!!
+
+@MPITest(commsize=1)
+def test_real_apply(comm):
+    pm = ParticleMesh(BoxSize=8.0, Nmesh=[8, 8], comm=comm, dtype='f8')
+    real = RealField(pm)
+    def filter(x, v):
+        return x[0] * 10 + x[1]
+
+    real.apply(filter)
+
+    for i, x, slab in zip(real.slabs.i, real.slabs.x, real.slabs):
+        assert_array_equal(slab, x[0] * 10 + x[1])
+
+@MPITest(commsize=1)
+def test_complex_apply(comm):
+    pm = ParticleMesh(BoxSize=8.0, Nmesh=[8, 8], comm=comm, dtype='f8')
+    complex = ComplexField(pm)
+    def filter(k, v):
+        return k[0] + k[1] * 1j
+
+    complex.apply(filter)
+
+    for i, x, slab in zip(complex.slabs.i, complex.slabs.x, complex.slabs):
+        assert_array_equal(slab, x[0] + x[1] * 1j)
 
 @MPIWorld(NTask=(1, 2, 3, 4), required=(1))
 def test_sort(comm):

@@ -395,6 +395,27 @@ class RealField(Field):
         # PFFT normalization, same as FastPM
         self.value[...] *= numpy.prod(self.pm.Nmesh ** -1.0)
 
+    def apply(self, func, kind="relative"):
+        """ apply a function to the field, in-place.
+
+            Parameters
+            ----------
+            func : callable
+                func(r, v) where r is a list of r values that broadcasts into a full array.
+                value of r depends on kind. v is the value of the field on the corresponding locations.
+            kind : string
+                The kind of value in r.
+                'relative' means distance from [-0.5 Boxsize, 0.5 BoxSize).
+                'index' means [0, Nmesh )
+        """
+        for x, i, slab in zip(self.slabs.x, self.slabs.i, self.slabs):
+            if kind == 'relative':
+                slab[...] = func(x, slab)
+            elif kind == 'index':
+                slab[...] = func(i, slab)
+            else:
+                raise ValueError("kind is relative, or index")
+
 class ComplexField(Field):
     def __init__(self, pm):
         Field.__init__(self, pm)
@@ -422,6 +443,31 @@ class ComplexField(Field):
                mask &= (n - ii) % n == ii
             a[~mask] = 2 * b[~mask]
             a[mask] = b[mask]
+
+    def apply(self, func, kind="wavenumber"):
+        """ apply a function to the field, in-place.
+
+            Parameters
+            ----------
+            func : callable
+                func(k, v) where k is a list of k values that broadcasts into a full array.
+                value of k depends on kind. v is the corrsponding value of field.
+            kind : string
+                The kind of value in k.
+                'wavenumber' means wavenumber from [- 2 pi / L * N / 2, 2 pi / L * N / 2).
+                'circular' means circular frequency from [- pi, pi).
+                'index' means [0, Nmesh )
+        """
+        for k, i, slab in zip(self.slabs.x, self.slabs.i, self.slabs):
+            if kind == 'wavenumber':
+                slab[...] = func(k, slab)
+            elif kind == 'circular':
+                w = [ ki * L / N for ki, L, N in zip(k, self.BoxSize, self.Nmesh)]
+                slab[...] = func(w, slab)
+            elif kind == 'index':
+                slab[...] = func(i, slab)
+            else:
+                raise ValueError("kind is wavenumber, circular, or index")
 
 def build_index(indices, fullshape):
     """

@@ -47,9 +47,11 @@ class Field(object):
         other.value[...] = self.value
         return other
 
-    def __init__(self, pm):
+    def __init__(self, pm, base=None):
         """ Used internally to add shortcuts of attributes from pm """
-        self.base = pfft.LocalBuffer(pm.partition)
+        if base is None:
+            base = pfft.LocalBuffer(pm.partition)
+        self.base = base
         self.pm = pm
         self.partition = pm.partition
         self.BoxSize = pm.BoxSize
@@ -216,8 +218,8 @@ class Field(object):
         return out
 
 class RealField(Field):
-    def __init__(self, pm):
-        Field.__init__(self, pm)
+    def __init__(self, pm, base=None):
+        Field.__init__(self, pm, base)
 
     def r2c(self, out=None):
         """ 
@@ -227,12 +229,19 @@ class RealField(Field):
         if out is None:
             out = ComplexField(self.pm)
 
+        if out is self:
+            out = ComplexField(self.pm, base=self.base)
+
         assert isinstance(out, ComplexField)
 
-        self.pm.forward.execute(self.base, out.base)
+        if self.base is out.base:
+            self.pm.ipforward.execute(self.base, out.base)
+        else:
+            self.pm.forward.execute(self.base, out.base)
 
         # PFFT normalization, same as FastPM
         out.value[...] *= numpy.prod(self.pm.Nmesh ** -1.0)
+
         return out
 
     def csum(self):
@@ -417,14 +426,21 @@ class RealField(Field):
                 raise ValueError("kind is relative, or index")
 
 class ComplexField(Field):
-    def __init__(self, pm):
-        Field.__init__(self, pm)
+    def __init__(self, pm, base=None):
+        Field.__init__(self, pm, base)
 
     def c2r(self, out=None):
         if out is None:
             out = RealField(self.pm)
+        if out is self:
+            out = RealField(self.pm, self.base)
+
         assert isinstance(out, RealField)
-        self.pm.backward.execute(self.base, out.base)
+        if out.base is not self.base:
+            self.pm.backward.execute(self.base, out.base)
+        else:
+            self.pm.ipbackward.execute(self.base, out.base)
+
         return out
 
     def c2r_gradient(self, btgrad):
@@ -614,6 +630,13 @@ class ParticleMesh(object):
                 plan_method | pfft.Flags.PFFT_TRANSPOSED_OUT | pfft.Flags.PFFT_TUNE | pfft.Flags.PFFT_PADDED_R2C)
         self.backward = pfft.Plan(self.partition, pfft.Direction.PFFT_BACKWARD,
                 bufferout, bufferin, backward, 
+                plan_method | pfft.Flags.PFFT_TRANSPOSED_IN | pfft.Flags.PFFT_TUNE | pfft.Flags.PFFT_PADDED_C2R)
+
+        self.ipforward = pfft.Plan(self.partition, pfft.Direction.PFFT_FORWARD,
+                bufferin, bufferin, forward,
+                plan_method | pfft.Flags.PFFT_TRANSPOSED_OUT | pfft.Flags.PFFT_TUNE | pfft.Flags.PFFT_PADDED_R2C)
+        self.ipbackward = pfft.Plan(self.partition, pfft.Direction.PFFT_BACKWARD,
+                bufferout, bufferout, backward, 
                 plan_method | pfft.Flags.PFFT_TRANSPOSED_IN | pfft.Flags.PFFT_TUNE | pfft.Flags.PFFT_PADDED_C2R)
 
         self.domain = domain.GridND(self.partition.i_edges, comm=self.comm)

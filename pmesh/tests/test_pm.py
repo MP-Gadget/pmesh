@@ -208,3 +208,18 @@ def test_complex_iter(comm):
 
     for x, slab in zip(complex.slabs.x, complex.slabs):
         assert_array_equal(slab.shape, sum(x[d] ** 2 for d in range(len(pm.Nmesh))).shape)
+
+@MPITest(commsize=(1, 4))
+def test_whitenoise(comm):
+    pm1 = ParticleMesh(BoxSize=8.0, Nmesh=[8, 8, 8], comm=comm, dtype='f8')
+    pm2 = ParticleMesh(BoxSize=8.0, Nmesh=[16, 16, 16], comm=comm, dtype='f8')
+    complex1 = ComplexField(pm1)
+    complex2 = ComplexField(pm2)
+
+    complex1.generate_whitenoise(seed=8)
+    complex2.generate_whitenoise(seed=8)
+
+    complex2_down = complex1.copy()
+    complex2.resample(complex2_down)
+    mask = complex1.value != 0
+    assert_array_equal(complex1.value[mask], complex2_down.value[mask])

@@ -459,6 +459,15 @@ class ComplexField(Field):
                mask &= (n - ii) % n == ii
             a[~mask] = 2 * b[~mask]
             a[mask] = b[mask]
+    def generate_whitenoise(self, seed):
+        """ Generate white noise to the field with the given seed.
+
+            The scheme is supposed to be compatible with Gadget. The field must be three-dimensional.
+        """
+        assert len(self.shape) == 3
+
+        from .whitenoise import generate
+        generate(self.value, self.start, self.Nmesh, seed)
 
     def apply(self, func, kind="wavenumber"):
         """ apply a function to the field, in-place.

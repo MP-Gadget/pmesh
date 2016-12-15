@@ -18,7 +18,14 @@ def find_version(path):
 extensions = [
         Extension("pmesh._domain", ["pmesh/_domain.pyx"], include_dirs=["./", numpy.get_include()]),
         Extension("pmesh._window", ["pmesh/_window.pyx", "pmesh/_window_imp.c"],
-                depends=["pmesh/_window_imp.h", "pmesh/_window_generics.h", "pmesh/_window_wavelets.h", "pmesh/_window_lanczos.h"], include_dirs=["./", numpy.get_include()])
+                depends=["pmesh/_window_imp.h", "pmesh/_window_generics.h", "pmesh/_window_wavelets.h", "pmesh/_window_lanczos.h"], include_dirs=["./", numpy.get_include()]),
+        Extension("pmesh._whitenoise", ["pmesh/gsl/ranlxd.c", "pmesh/gsl/missing.c", "pmesh/gsl/rng.c", "pmesh/_whitenoise_imp.c", "pmesh/_whitenoise.pyx"],
+                depends=["pmesh/gsl/config.h", "pmesh/gsl/gsl_errno.h",
+                         "pmesh/gsl/gsl_inline.h", "pmesh/gsl/gsl_rng.h",
+                         "pmesh/gsl/gsl_types.h",
+                         "pmesh/_whitenoise_imp.h", "pmesh/_whitenoise_generics.h"
+                        ],
+                include_dirs=["pmesh/gsl", "pmesh", numpy.get_include()])
         ]
 print(find_version("pmesh/version.py"))
 

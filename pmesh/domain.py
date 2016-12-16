@@ -208,18 +208,18 @@ class GridND(object):
     """
     GridND is domain decomposition on a uniform grid of N dimensions.
 
-    The total number of domains is prod([ len(dir) - 1 for dir in grid]).
+    The total number of domains is prod([ len(dir) - 1 for dir in edges]).
 
     Attributes
     ----------
-    grid   : list  (Ndim)
-        A list of edges of the grid in each dimension.
-        grid[i] is the edges on direction i. grid[i] includes 0 and BoxSize.
+    edges   : list  (Ndim)
+        A list of edges of the edges in each dimension.
+        edges[i] is the edges on direction i. edges[i] includes 0 and BoxSize.
     comm   : :py:class:`MPI.Comm`
         MPI Communicator, default is :code:`MPI.COMM_WORLD` 
  
     periodic : boolean
-        Is the domain decomposition periodic? If so , grid[i][-1] is the period.
+        Is the domain decomposition periodic? If so , edges[i][-1] is the period.
 
 
     """
@@ -233,22 +233,48 @@ class GridND(object):
         else:
             return numpy.digitize(data, bins)
 
+    @classmethod
+    def uniform(cls, BoxSize, comm=MPI.COMM_WORLD, periodic=True):
+        ndim = len(BoxSize)
+
+        # compute a optimal shape where each domain is as cubical as possible
+
+        r = (1.0 * comm.size / numpy.prod(BoxSize) * min(BoxSize)) ** (1.0 / ndim)
+        shape = [ r * (BoxSize[i] / min(BoxSize)) for i in range(ndim)]
+        shape = numpy.array(shape)
+        imax = shape.argmax()
+        shape = numpy.int32(shape)
+        shape[shape < 1] = 1
+        shape[imax] = 1
+        shape[imax] = comm.size // numpy.prod(shape)
+        assert numpy.prod(shape) <= comm.size
+
+        edges = []
+        for i in range(ndim):
+            edges.append(numpy.linspace(0, BoxSize[i], shape[i] + 1, endpoint=True))
+        return cls(edges, comm, periodic)
+
     def __init__(self, 
-            grid,
+            edges,
             comm=MPI.COMM_WORLD,
             periodic=True):
         """ 
         """
-        self.dims = numpy.array([len(g) - 1 for g in grid], dtype='int32')
-        self.grid = numpy.asarray(grid)
+        self.shape = numpy.array([len(g) - 1 for g in edges], dtype='int32')
+        self.ndim = len(self.shape)
+        self.edges = numpy.asarray(edges)
         self.periodic = periodic
         self.comm = comm
-        assert comm.size == numpy.product(self.dims)
-        rank = numpy.unravel_index(self.comm.rank, self.dims)
+        assert comm.size >= numpy.product(self.shape)
 
-        self.myrank = numpy.array(rank)
-        self.mystart = numpy.array([g[r] for g, r in zip(grid, rank)])
-        self.myend = numpy.array([g[r + 1] for g, r in zip(grid, rank)])
+        # the following variables are not always defined if there are
+        # more ranks than domains.
+
+        #rank = numpy.unravel_index(self.comm.rank, self.shape)
+
+        #self.myrank = numpy.array(rank)
+        #self.mystart = numpy.array([g[r] for g, r in zip(edges, rank)])
+        #self.myend = numpy.array([g[r + 1] for g, r in zip(edges, rank)])
 
     def decompose(self, pos, smoothing=0, transform=None):
         """ 
@@ -258,20 +284,20 @@ class GridND(object):
         
         Parameters
         ----------
-        pos       :  array_like (, Ndim)
-            position of particles, Ndim can be more than the dimenions
-            of the domain grid, in which case only the first directions are used.
+        pos       :  array_like (, ndim)
+            position of particles, ndim can be more than the dimenions
+            of the domains, in which case only the first few directions are used.
 
         smoothing : float
             Smoothing of particles. Any particle that intersects a domain will
             be transported to the domain. Smoothing is in the coordinate system
-            of the grid.
+            of the edges.
 
         transform : callable
             Apply the transformation on pos before the decompostion.
             transform(pos[:, 3]) -> domain_pos[:, 3]
-            transform is needed if pos and the domain grid are of different units.
-            For example, pos in physical simulation units and domain grid on a mesh unit.
+            transform is needed if pos and the domain edges are of different units.
+            For example, pos in physical simulation units and domain edges on a mesh unit.
 
         Returns
         -------
@@ -283,39 +309,39 @@ class GridND(object):
         assert len(pos) < 1024 * 1024 * 1024 * 2
         pos = numpy.asarray(pos)
 
+        assert pos.shape[1] >= self.ndim
+
         if transform is None:
             transform = lambda x: x
         Npoint = len(pos)
-        Ndim = len(self.dims)
         counts = numpy.zeros(self.comm.size, dtype='int32')
         periodic = self.periodic
 
         if Npoint != 0:
-            sil = numpy.empty((Ndim, Npoint), dtype='i2', order='C')
-            sir = numpy.empty((Ndim, Npoint), dtype='i2', order='C')
+            sil = numpy.empty((self.ndim, Npoint), dtype='i2', order='C')
+            sir = numpy.empty((self.ndim, Npoint), dtype='i2', order='C')
             chunksize = 1024 * 48 
             for i in range(0, Npoint, chunksize):
                 s = slice(i, i + chunksize)
                 chunk = transform(pos[s])
-                for j in range(Ndim):
-                    dim = self.dims[j]
+                for j in range(self.ndim):
                     if periodic:
-                        tmp = numpy.remainder(chunk[:, j], self.grid[j][-1])
+                        tmp = numpy.remainder(chunk[:, j], self.edges[j][-1])
                     else:
                         tmp = chunk[:, j]
-                    sil[j, s] = self._digitize(tmp - smoothing, self.grid[j]) - 1
-                    sir[j, s] = self._digitize(tmp + smoothing, self.grid[j])
+                    sil[j, s] = self._digitize(tmp - smoothing, self.edges[j]) - 1
+                    sir[j, s] = self._digitize(tmp + smoothing, self.edges[j])
 
-            for j in range(Ndim):
-                dim = self.dims[j]
+            for j in range(self.ndim):
+                dim = self.shape[j]
                 if not periodic:
                     numpy.clip(sil[j], 0, dim, out=sil[j])
                     numpy.clip(sir[j], 0, dim, out=sir[j])
 
-            self._fill(0, counts, self.dims, sil, sir, periodic)
+            self._fill(0, counts, self.shape, sil, sir, periodic)
 
             # now lets build the indices array.
-            indices = self._fill(1, counts, self.dims, sil, sir, periodic)
+            indices = self._fill(1, counts, self.shape, sil, sir, periodic)
             indices = numpy.array(indices, copy=False)
         else:
             indices = numpy.empty(0, dtype='int32')

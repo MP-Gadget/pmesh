@@ -212,6 +212,13 @@ class Field(object):
         # fill in the value
         complex[mask] = data
 
+        # ensure the down sample is real
+        for i, slab in zip(complex.slabs.i, complex.slabs):
+            mask = numpy.ones(slab.shape, '?')
+            for ii, n in zip(i, complex.Nmesh):
+               mask &= (n - ii) % n == ii
+            slab.imag[mask] = 0
+
         if isinstance(out, RealField):
             complex.c2r(out)
 
@@ -454,7 +461,7 @@ class ComplexField(Field):
         assert isinstance(btgrad, ComplexField)
         for i, a, b in zip(btgrad.slabs.i, self.slabs, btgrad.slabs):
             # modes that are self conjugates do not gain a factor
-            mask = True
+            mask = numpy.ones(a.shape, '?')
             for ii, n in zip(i, btgrad.Nmesh):
                mask &= (n - ii) % n == ii
             a[~mask] = 2 * b[~mask]

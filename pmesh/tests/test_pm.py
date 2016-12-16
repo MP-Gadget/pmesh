@@ -239,15 +239,20 @@ def test_complex_iter(comm):
 
 @MPITest(commsize=(1, 4))
 def test_whitenoise(comm):
-    pm1 = ParticleMesh(BoxSize=8.0, Nmesh=[8, 8, 8], comm=comm, dtype='f8')
-    pm2 = ParticleMesh(BoxSize=8.0, Nmesh=[16, 16, 16], comm=comm, dtype='f8')
+    # the whitenoise shall preserve the large scale.
+    pm0 = ParticleMesh(BoxSize=8.0, Nmesh=[8, 8, 8], comm=comm, dtype='f8')
+    pm1 = ParticleMesh(BoxSize=8.0, Nmesh=[16, 16, 16], comm=comm, dtype='f8')
+    pm2 = ParticleMesh(BoxSize=8.0, Nmesh=[32, 32, 32], comm=comm, dtype='f8')
+    complex1_down = ComplexField(pm0)
+    complex2_down = ComplexField(pm0)
     complex1 = ComplexField(pm1)
     complex2 = ComplexField(pm2)
 
     complex1.generate_whitenoise(seed=8)
     complex2.generate_whitenoise(seed=8)
 
-    complex2_down = complex1.copy()
+    complex1.resample(complex1_down)
     complex2.resample(complex2_down)
-    mask = complex1.value != 0
-    assert_array_equal(complex1.value[mask], complex2_down.value[mask])
+
+    mask1 = complex1_down.value != complex2_down.value
+    assert_array_equal(complex1_down.value, complex2_down.value)

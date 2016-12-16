@@ -94,10 +94,8 @@ mkname(_generic_fill)(PMeshWhiteNoiseGenerator * self, void * delta_k, int seed)
                 /* we want two numbers that are of std ~ 1/sqrt(2) */
                 ampl = sqrt(- log(ampl));
 
-                for(d = 0; d < 3; d ++) {
-                    if(iabs[d] == self->Nmesh[d] / 2) ampl = 0;
-                }
                 if(iabs[0] == 0 && iabs[1] == 0 && iabs[2] == 0) {
+                    /* the mean is zero */
                     ampl = 0;
                 }
 
@@ -106,6 +104,13 @@ mkname(_generic_fill)(PMeshWhiteNoiseGenerator * self, void * delta_k, int seed)
 
                 if(hermitian && k == 0) {
                     ((FLOAT*) (delta_k + ip))[1] *= -1;
+                }
+
+                if((self->Nmesh[0] - iabs[0]) % self->Nmesh[0] == iabs[0] &&
+                   (self->Nmesh[1] - iabs[1]) % self->Nmesh[1] == iabs[1] &&
+                   (self->Nmesh[2] - iabs[2]) % self->Nmesh[2] == iabs[2]) {
+                    /* The mode is self conjuguate, thus imaginary mode must be zero */
+                    ((FLOAT*) (delta_k + ip))[1] = 0;
                 }
             }
         }

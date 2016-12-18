@@ -18,6 +18,9 @@ def bincountv(x, weights, minlength=None, dtype=None):
     if dtype is None:
         dtype = weights.dtype
 
+    # protect dtype
+    dtype = numpy.dtype(dtype)
+
     shape = [minlength] + list(weights.shape[1:])
 
     out = numpy.empty(shape, dtype=dtype)
@@ -164,7 +167,7 @@ class Layout(object):
         dt = MPI.BYTE.Create_contiguous(itemsize)
         dt.Commit()
 
-        recvbuffer = numpy.empty(len(self.indices), dtype=(data.dtype, data.shape[1:]), order='C')
+        recvbuffer = numpy.empty(len(self.indices), dtype=numpy.dtype((data.dtype, data.shape[1:])), order='C')
         self.comm.Barrier()
 
 
@@ -175,7 +178,7 @@ class Layout(object):
         self.comm.Barrier()
 
         if self.oldlength == 0:
-            r = numpy.empty(self.oldlength, dtype=(data.dtype, data.shape[1:]))
+            r = numpy.empty(self.oldlength, dtype=numpy.dtype((data.dtype, data.shape[1:])))
             return r
 
         if mode == 'all':
@@ -199,7 +202,7 @@ class Layout(object):
             return \
                     bincountv(self.indices, recvbuffer, minlength=self.oldlength) / N
         if mode == 'any':
-            data = numpy.zeros(self.oldlength, dtype=(data.dtype, data.shape[1:]))
+            data = numpy.zeros(self.oldlength, dtype=numpy.dtype((data.dtype, data.shape[1:])))
             data[self.indices] = recvbuffer
             return data
         raise NotImplementedError

@@ -118,8 +118,8 @@ class Layout(object):
         itemsize = duplicity * data.dtype.itemsize
         dt = MPI.BYTE.Create_contiguous(itemsize)
         dt.Commit()
-
-        recvbuffer = numpy.empty(self.newlength, dtype=(data.dtype, data.shape[1:]), order='C')
+        dtype = numpy.dtype((data.dtype, data.shape[1:]))
+        recvbuffer = numpy.empty(self.newlength, dtype=dtype, order='C')
         self.comm.Barrier()
 
         # now fire
@@ -166,8 +166,9 @@ class Layout(object):
         itemsize = duplicity * data.dtype.itemsize
         dt = MPI.BYTE.Create_contiguous(itemsize)
         dt.Commit()
+        dtype = numpy.dtype((data.dtype, data.shape[1:]))
 
-        recvbuffer = numpy.empty(len(self.indices), dtype=numpy.dtype((data.dtype, data.shape[1:])), order='C')
+        recvbuffer = numpy.empty(len(self.indices), dtype=dtype, order='C')
         self.comm.Barrier()
 
 
@@ -178,7 +179,7 @@ class Layout(object):
         self.comm.Barrier()
 
         if self.oldlength == 0:
-            r = numpy.empty(self.oldlength, dtype=numpy.dtype((data.dtype, data.shape[1:])))
+            r = numpy.empty(self.oldlength, dtype=dtype)
             return r
 
         if mode == 'all':
@@ -202,7 +203,7 @@ class Layout(object):
             return \
                     bincountv(self.indices, recvbuffer, minlength=self.oldlength) / N
         if mode == 'any':
-            data = numpy.zeros(self.oldlength, dtype=numpy.dtype((data.dtype, data.shape[1:])))
+            data = numpy.zeros(self.oldlength, dtype=dtype)
             data[self.indices] = recvbuffer
             return data
         raise NotImplementedError

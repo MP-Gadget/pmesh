@@ -253,7 +253,7 @@ class RealField(Field):
 
     def csum(self):
         """ Collective mean. Sum of the entire mesh. (Must be called collectively)"""
-        return self.pm.comm.allreduce(self.value.sum(dtype='f8'))
+        return self.pm.comm.allreduce(self.value.sum(dtype=self.dtype))
 
     def cmean(self):
         """ Collective mean. Mean of the entire mesh. (Must be called collectively)"""

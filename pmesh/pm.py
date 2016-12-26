@@ -56,6 +56,8 @@ class Field(object):
         self.partition = pm.partition
         self.BoxSize = pm.BoxSize
         self.Nmesh = pm.Nmesh
+        self.ndim = len(pm.Nmesh)
+
         if isinstance(self, RealField):
             self.value = self.base.view_input()
             self.start = self.partition.local_i_start
@@ -712,6 +714,27 @@ class ParticleMesh(object):
         if method in window.methods:
             method = window.methods[method]
         self.method = method
+
+    def create(self, mode, base=None):
+        """
+            Create a field object.
+
+            Parameters
+            ----------
+            mode : string
+                'real' or 'complex'.
+
+            base : object, None
+                Reusing the base attribute (physical memory) of an existing field
+                object. Provide the attribute, not the field object.
+        """
+
+        if mode == 'real':
+            return RealField(self, base=None)
+        elif mode == 'complex':
+            return ComplexField(self, base=None)
+        else:
+            raise ValueError('mode must be real or complex')
 
     def decompose(self, pos, smoothing=None):
         """ 

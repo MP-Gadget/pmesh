@@ -344,68 +344,88 @@ class RealField(Field):
 
         return method.readout(self.value, pos, out=out, transform=transform, diffdir=gradient)
 
-    def readout_gradient(self, pos, btgrad, method=None, transform=None, gradient=None, return_pos=False):
-        """ back-propagate the gradient of readout to self.
+    def readout_gradient(self, pos, btgrad, method=None, transform=None, gradient=None,
+            out_self=None, out_pos=None):
+        """ back-propagate the gradient of readout.
+
+            Returns a tuple of (out_self, out_pos), one of both can be False depending
+            on the value of out_self and out_pos.
 
             Parameters
             ----------
             btgrad : array
                 current gradient over the result of readout.
 
-            return_pos: boolean
-                Returns the gradient over position.
+            out_self: RealField, None, or False
+                stored the backtraced gradient against self
 
+                if False, then the gradient against self is not computed.
+                if None, a new RealField is created and returned
+
+            out_pos : array, None or False
+                store the backtraced graident against pos
+
+                if False, then the gradient against pos is not computed.
+                if None, a new array is created and returned
         """
-        if return_pos:
+        if out_pos is not False:
             if gradient is not None:
                 raise ValueError("gradient of gradient is not yet supported")
-            pos_grad = numpy.zeros_like(pos)
+            if out_pos is None:
+                out_pos = numpy.zeros_like(pos)
+            if out_pos is pos:
+                # need to create a copy of pos because we use it later.
+                pos = pos.copy()
             for d in range(pos.shape[1]):
-                self.readout(pos, out=pos_grad[:, d], method=method, transform=transform, gradient=d)
-                pos_grad[:, d] *= btgrad
+                self.readout(pos, out=out_pos[:, d], method=method, transform=transform, gradient=d)
+                out_pos[:, d] *= btgrad
 
-        self_grad = RealField(self.pm)
-        self_grad.paint(pos, mass=btgrad, method=method, transform=transform, gradient=gradient, hold=False)
+        if out_self is not False:
+            if out_self is None:
+                out_self = RealField(self.pm)
 
-        if return_pos:
-            return self_grad, pos_grad
+            # watch out: do this after using self, because out_self can be self.
+            out_self.paint(pos, mass=btgrad, method=method, transform=transform, gradient=gradient, hold=False)
 
-        return self_grad
+        return out_self, out_pos
 
-    def paint_gradient(btgrad, pos, weights, method=None, transform=None, gradient=None,
-            return_pos=False, return_weights=True):
+    def paint_gradient(btgrad, pos, mass, method=None, transform=None, gradient=None,
+            out_pos=None, out_mass=None):
         """ back-propagate the gradient of paint from self. self contains
             the current gradient.
 
             Parameters
             ----------
-            return_pos: boolean
-                Returns the gradient over position.
+            out_mass: array , None, or False
+                stored the backtraced gradient against mass
 
-            return_weights: boolean
-                Returns the gradient over position.
+                if False, then the gradient against mass is not computed.
+                if None, a new RealField is created and returned
+
+            out_pos : array, None or False
+                store the backtraced graident against pos
+
+                if False, then the gradient against pos is not computed.
+                if None, a new array is created and returned
 
         """
-        if return_pos:
+        if out_pos is not False:
             if gradient is not None:
                 raise ValueError("gradient of gradient is not yet supported")
-            pos_grad = numpy.zeros_like(pos)
+            out_pos = numpy.zeros_like(pos)
+
+            if out_pos is pos:
+                pos = pos.copy()
+
             for d in range(pos.shape[1]):
-                btgrad.readout(pos, out=pos_grad[:, d], method=method, transform=transform, gradient=d)
+                btgrad.readout(pos, out=out_pos[:, d], method=method, transform=transform, gradient=d)
 
-        if return_weights:
-            weights_grad = numpy.zeros_like(weights)
-            btgrad.readout(pos, out=weights_grad, method=method, transform=transform, gradient=gradient)
-            weights_grad[...] *= weights
+        if out_mass is not False:
+            mass_grad = numpy.zeros_like(mass)
+            btgrad.readout(pos, out=mass_grad, method=method, transform=transform, gradient=gradient)
+            mass_grad[...] *= mass
 
-        if return_pos and return_weights:
-            return pos_grad, weights_grad
-
-        if return_pos:
-            return pos_grad
-
-        if return_weights:
-            return weights_grad
+        return out_pos, out_mass
 
     def c2r_gradient(btgrad, out=None):
         """ Back-propagate the gradient of c2r from self to out """

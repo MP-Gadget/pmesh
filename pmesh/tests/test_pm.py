@@ -238,6 +238,13 @@ def test_complex_iter(comm):
         assert_array_equal(slab.shape, sum(x[d] ** 2 for d in range(len(pm.Nmesh))).shape)
 
 @MPITest(commsize=(1, 4))
+def test_ctol(comm):
+    pm = ParticleMesh(BoxSize=8.0, Nmesh=[4, 4], comm=comm, dtype='f8')
+    complex = ComplexField(pm)
+    value, local = complex._ctol((3, 3))
+    assert local is None
+
+@MPITest(commsize=(1, 4))
 def test_cgetitem(comm):
     pm = ParticleMesh(BoxSize=8.0, Nmesh=[4, 4], comm=comm, dtype='f8')
     for i in numpy.ndindex((4, 4)):
@@ -256,14 +263,31 @@ def test_cgetitem(comm):
         v1 = complex.cgetitem(i)
         if i == (0, 0):
             assert v2 == 100.
+            assert comm.allreduce(complex.value.sum()) == 100.
         elif i == (0, 2):
             assert v2 == 100.
+            assert comm.allreduce(complex.value.sum()) == 100.
         elif i == (2, 0):
             assert v2 == 100.
+            assert comm.allreduce(complex.value.sum()) == 100.
+        elif i == (1, 0):
+            assert v2 == 100 + 10j
+            assert comm.allreduce(complex.value.sum()) == 200.
+        elif i == (3, 0):
+            assert v2 == 100 + 10j
+            assert comm.allreduce(complex.value.sum()) == 200.
+        elif i == (3, 2):
+            assert v2 == 100 + 10j
+            assert comm.allreduce(complex.value.sum()) == 200.
+        elif i == (1, 2):
+            assert v2 == 100 + 10j
+            assert comm.allreduce(complex.value.sum()) == 200.
         elif i == (2, 2):
             assert v2 == 100.
+            assert comm.allreduce(complex.value.sum()) == 100.
         else:
             assert v2 == 100. + 10j
+            assert_array_equal(comm.allreduce(complex.value.sum()), 100. + 10j)
         assert_array_equal(v1, v2)
 
     for i in numpy.ndindex((4, 3, 2)):

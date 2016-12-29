@@ -7,7 +7,7 @@
 from mpi4py import MPI
 import numpy
 
-def bincountv(x, weights, minlength=None, dtype=None):
+def bincountv(x, weights, minlength=None, dtype=None, out=None):
     """ bincount with vector weights """
     weights = numpy.array(weights)
     if minlength == None:
@@ -23,7 +23,9 @@ def bincountv(x, weights, minlength=None, dtype=None):
 
     shape = [minlength] + list(weights.shape[1:])
 
-    out = numpy.empty(shape, dtype=dtype)
+    if out is None:
+        out = numpy.empty(shape, dtype=dtype)
+
     for index in numpy.ndindex(*shape[1:]):
         ind = tuple([Ellipsis] + list(index))
         out[ind] = numpy.bincount(x, weights[ind], minlength=minlength)
@@ -129,7 +131,7 @@ class Layout(object):
         self.comm.Barrier()
         return recvbuffer
 
-    def gather(self, data, mode='sum'):
+    def gather(self, data, mode='sum', out=None):
         """ 
         Pull the data from other ranks back to its original hosting rank.
 
@@ -144,6 +146,9 @@ class Layout(object):
             :code:`any` is to pick value of any ghosts
             :code:`min` is to pick value of any ghosts
             :code:`mean` is to use the mean of all ghosts
+
+        out : array_like or None
+            stores the result of the gather operation.
 
         Returns
         -------
@@ -179,14 +184,18 @@ class Layout(object):
         self.comm.Barrier()
 
         if self.oldlength == 0:
-            r = numpy.empty(self.oldlength, dtype=dtype)
-            return r
+            if out is None:
+                out = numpy.empty(self.oldlength, dtype=dtype)
+            return out
 
         if mode == 'all':
-            return recvbuffer
-
+            if out is None:
+                out = recvbuffer
+            else:
+                out[...] = recvbuffer
+            return out
         if mode == 'sum':
-            return bincountv(self.indices, recvbuffer, minlength=self.oldlength)
+            return bincountv(self.indices, recvbuffer, minlength=self.oldlength, out=out)
 
         if isinstance(mode, numpy.ufunc):
             arg = self.indices.argsort()
@@ -194,18 +203,21 @@ class Layout(object):
             N = numpy.bincount(self.indices, minlength=self.oldlength)
             offset = numpy.zeros(self.oldlength, 'intp')
             offset[1:] = numpy.cumsum(N)[:-1]
-            return mode.reduceat(recvbuffer, offset)
+            return mode.reduceat(recvbuffer, offset, out=out)
 
         if mode == 'mean':
             N = numpy.bincount(self.indices, minlength=self.oldlength)
             s = [self.oldlength] + [1] * (len(recvbuffer.shape) - 1)
             N = N.reshape(s)
-            return \
-                    bincountv(self.indices, recvbuffer, minlength=self.oldlength) / N
+            out = bincountv(self.indices, recvbuffer, minlength=self.oldlength, out=out)
+            out[...] /= N
+            return out
+
         if mode == 'any':
-            data = numpy.zeros(self.oldlength, dtype=dtype)
-            data[self.indices] = recvbuffer
-            return data
+            if out is None:
+                out = numpy.zeros(self.oldlength, dtype=dtype)
+            out[self.indices] = recvbuffer
+            return out
         raise NotImplementedError
 
 class GridND(object):

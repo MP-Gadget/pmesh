@@ -311,3 +311,20 @@ def test_whitenoise(comm):
 
     mask1 = complex1_down.value != complex2_down.value
     assert_array_equal(complex1_down.value, complex2_down.value)
+
+@MPITest(commsize=(1, 4))
+def test_readout(comm):
+    pm = ParticleMesh(BoxSize=8.0, Nmesh=[8, 8], comm=comm, dtype='f8')
+    real = RealField(pm)
+    real.value[...] = 1.0
+    pos = numpy.ones ((1, 2))
+    out = numpy.empty((1), dtype='f8')
+    real.readout(pos, out=out)
+
+    pos = numpy.ones ((1, 2), dtype='f4')
+    out = numpy.empty((1), dtype='f8')
+    real.readout(pos, out=out)
+
+    pos = numpy.ones ((1, 2), dtype='f4')
+    out = numpy.empty((1), dtype='f4')
+    real.readout(pos, out=out)

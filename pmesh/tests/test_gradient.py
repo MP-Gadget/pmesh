@@ -84,7 +84,7 @@ def test_readout_gradient(comm):
         obj = (value ** 2).sum()
         return comm.allreduce(obj)
 
-    pos = numpy.array(numpy.indices(real.shape), dtype='f8').reshape(real.value.ndim, -1).T
+    pos = numpy.array(numpy.indices(real.shape), dtype='f4').reshape(real.value.ndim, -1).T
     pos += real.start
     pos *= pm.BoxSize / pm.Nmesh
 

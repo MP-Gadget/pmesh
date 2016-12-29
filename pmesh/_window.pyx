@@ -3,9 +3,13 @@ cimport cython
 import numpy
 cimport numpy
 
-ctypedef cython.floating masstype
-ctypedef cython.floating postype
-ctypedef cython.floating realtype
+ctypedef fused postype:
+    cython.double
+    cython.float
+
+ctypedef fused masstype:
+    cython.double
+    cython.float
 
 cdef extern from "_window_imp.h":
 

@@ -61,14 +61,14 @@ class Field(object):
         if isinstance(self, RealField):
             self.value = self.base.view_input()
             self.start = self.partition.local_i_start
-            self.global_shape = pm.Nmesh
+            self.cshape = pm.Nmesh
             self.x = pm.x
             self.i = pm.i_ind
         elif isinstance(self, ComplexField):
             self.value = self.base.view_output()
             self.start = self.partition.local_o_start
-            self.global_shape = pm.Nmesh.copy()
-            self.global_shape[-1] = self.global_shape[-1] // 2 + 1
+            self.cshape = pm.Nmesh.copy()
+            self.cshape[-1] = self.cshape[-1] // 2 + 1
             self.x = pm.k
             self.i = pm.o_ind
             self.real = self.value.real
@@ -91,6 +91,86 @@ class Field(object):
                 ])
 
         self.csize = pm.comm.allreduce(self.size)
+
+    def _ctol(self, index):
+        oldindex = index
+        index = numpy.array(index, copy=True)
+
+        if len(index) == self.ndim + 1:
+            value = self.plain
+            index1 = index[:-1]
+        elif len(index) == self.ndim:
+            value = self.value
+            index1 = index
+        else:
+            raise IndexError("Only vector index in global indexing is supported. for complex append 0 or 1 for real and imag")
+
+        # negative indexing
+        index1[index1 < 0] += self.Nmesh[index1 < 0]
+        if all(index1 >= self.start) and all(index1 < self.start + self.shape):
+            return value, tuple(list(index1 - self.start) + list(index[self.ndim:]))
+        else:
+            return value, None
+        
+    def cgetitem(self, index):
+        """ get a value from absolute index collectively.
+        """
+        value, localindex = self._ctol(index)
+        if localindex is not None:
+            ret = value[localindex]
+        else:
+            ret = 0
+
+        return self.pm.comm.allreduce(ret)
+
+    def csetitem(self, index, v):
+        """ get a value from absolute index collectively.
+            maintains Hermitian conjugation.
+            Returns the actually value that is set.
+
+        """
+        
+        index = numpy.array(index, copy=True)
+        value, localindex = self._ctol(index)
+        if isinstance(self, ComplexField):
+            dualindex = numpy.negative(index)
+            if len(dualindex) == self.ndim + 1:
+                dualindex[-1] *= -1
+
+            dualindex[:self.ndim] += self.Nmesh
+            dualindex[:self.ndim] %= self.Nmesh
+
+            unused, duallocalindex = self._ctol(dualindex)
+        else:
+            # real field, no dual
+            duallocalindex = None
+
+        dualv = v
+        if localindex is None:
+            v = 0
+        if duallocalindex is None:
+            dualv = 0
+
+        if len(index) == self.ndim + 1 and index[-1] == 1:
+            dualv = -dualv
+            if localindex is not None and duallocalindex is not None:
+                if localindex == duallocalindex:
+                    # self dual and imag
+                    v = 0
+                    dualv = 0
+        elif len(index) == self.ndim:
+            dualv = numpy.conjugate(dualv)
+            if localindex is not None and duallocalindex is not None:
+                if localindex == duallocalindex:
+                    # self conjugate
+                    dualv = dualv.real
+                    v = v.real
+        if localindex is not None:
+            value[localindex] = v
+        if duallocalindex is not None:
+            value[duallocalindex] = dualv
+
+        return self.pm.comm.allreduce(v)
 
     def __getitem__(self, index):
         return self.value.__getitem__(index)
@@ -123,7 +203,7 @@ class Field(object):
             -----
             Set `out` to self.value for an 'inplace' sort.
         """
-        ind = numpy.ravel_multi_index(numpy.mgrid[self.slices], self.global_shape)
+        ind = numpy.ravel_multi_index(numpy.mgrid[self.slices], self.cshape)
 
         if out is None:
             out = numpy.empty_like(self.value)
@@ -153,7 +233,7 @@ class Field(object):
         assert isinstance(flatiter, numpy.flatiter)
         assert len(flatiter) == self.size
 
-        ind = numpy.ravel_multi_index(numpy.mgrid[self.slices], self.global_shape)
+        ind = numpy.ravel_multi_index(numpy.mgrid[self.slices], self.cshape)
         mpsort.permute(flatiter, argindex=ind.flat, comm=self.pm.comm, out=self.flat)
 
     def resample(self, out):
@@ -201,7 +281,7 @@ class Field(object):
         ind = build_index(
                 [t[numpy.r_[s]]
                 for t, s in zip(indtable, complex.slices) ],
-                self.global_shape)
+                self.cshape)
 
         # fill the points that has values in pmsrc
         mask = ind >= 0
@@ -229,6 +309,15 @@ class Field(object):
 class RealField(Field):
     def __init__(self, pm, base=None):
         Field.__init__(self, pm, base)
+
+    def generate_whitenoise(self, seed):
+        """ Generate white noise to the field with the given seed.
+
+            The scheme is supposed to be compatible with Gadget for a 3d field.
+        """
+        complex = ComplexField(self.pm, base=self.base)
+        complex.generate_whitenoise(seed)
+        complex.c2r(self)
 
     def r2c(self, out=None):
         """ 
@@ -261,7 +350,7 @@ class RealField(Field):
         """ Collective mean. Mean of the entire mesh. (Must be called collectively)"""
         return self.csum() / self.csize
 
-    def paint(self, pos, mass=1.0, method=None, transform=None, hold=False, gradient=None):
+    def paint(self, pos, mass=1.0, method=None, transform=None, hold=False, gradient=None, layout=None):
         """ 
         Paint particles into the internal real canvas. 
 
@@ -293,6 +382,10 @@ class RealField(Field):
         method: None or string
             type of window. Default : None, use self.pm.method
 
+        layout : Layout
+            domain decomposition to use for the readout. The position is first
+            routed to the target ranks and the result is reduced
+
         Notes
         -----
         the painter operation conserves the total mass. It is not the density.
@@ -311,9 +404,19 @@ class RealField(Field):
         if not hold:
             self.value[...] = 0
 
-        method.paint(self.value, pos, mass, transform=transform, diffdir=gradient)
+        if layout is None:
+            return method.paint(self.value, pos, mass, transform=transform, diffdir=gradient)
+        else:
+            localpos = layout.exchange(pos)
+            localmass = layout.exchange(mass)
+            return self.paint(localpos, localmass,
+                    method=method,
+                    transform=transform,
+                    hold=hold,
+                    gradient=gradient,
+                    layout=None)
 
-    def readout(self, pos, out=None, method=None, transform=None, gradient=None):
+    def readout(self, pos, out=None, method=None, transform=None, gradient=None, layout=None):
         """ 
         Read out from real field at positions
 
@@ -326,6 +429,9 @@ class RealField(Field):
             is properly applied.
         method : None or string
             type of window, default to self.pm.method
+        layout : Layout
+            domain decomposition to use for the readout. The position is first
+            routed to the target ranks and the result is reduced
 
         Returns
         -------
@@ -342,10 +448,18 @@ class RealField(Field):
         if method in window.methods:
             method = window.methods[method]
 
-        return method.readout(self.value, pos, out=out, transform=transform, diffdir=gradient)
+        if layout is None:
+            return method.readout(self.value, pos, out=out, transform=transform, diffdir=gradient)
+        else:
+            localpos = layout.exchange(pos)
+            localresult = self.readout(localpos, method=method,
+                    transform=transform,
+                    gradient=gradient,
+                    out=None, layout=None)
+            return layout.gather(localresult, out=out)
 
     def readout_gradient(self, pos, btgrad, method=None, transform=None, gradient=None,
-            out_self=None, out_pos=None):
+            out_self=None, out_pos=None, layout=None):
         """ back-propagate the gradient of readout.
 
             Returns a tuple of (out_self, out_pos), one of both can be False depending
@@ -355,6 +469,10 @@ class RealField(Field):
             ----------
             btgrad : array
                 current gradient over the result of readout.
+
+            layout : Layout
+                domain decomposition to use for the readout. The position is first
+                routed to the target ranks and the result is reduced
 
             out_self: RealField, None, or False
                 stored the backtraced gradient against self
@@ -377,7 +495,7 @@ class RealField(Field):
                 # need to create a copy of pos because we use it later.
                 pos = pos.copy()
             for d in range(pos.shape[1]):
-                self.readout(pos, out=out_pos[:, d], method=method, transform=transform, gradient=d)
+                self.readout(pos, out=out_pos[:, d], method=method, transform=transform, gradient=d, layout=layout)
                 out_pos[:, d] *= btgrad
 
         if out_self is not False:
@@ -385,17 +503,21 @@ class RealField(Field):
                 out_self = RealField(self.pm)
 
             # watch out: do this after using self, because out_self can be self.
-            out_self.paint(pos, mass=btgrad, method=method, transform=transform, gradient=gradient, hold=False)
+            out_self.paint(pos, mass=btgrad, method=method, transform=transform, gradient=gradient, hold=False, layout=layout)
 
         return out_self, out_pos
 
     def paint_gradient(btgrad, pos, mass, method=None, transform=None, gradient=None,
-            out_pos=None, out_mass=None):
+            out_pos=None, out_mass=None, layout=None):
         """ back-propagate the gradient of paint from self. self contains
             the current gradient.
 
             Parameters
             ----------
+            layout : Layout
+                domain decomposition to use for the readout. The position is first
+                routed to the target ranks and the result is reduced
+
             out_mass: array , None, or False
                 stored the backtraced gradient against mass
 
@@ -418,11 +540,11 @@ class RealField(Field):
                 pos = pos.copy()
 
             for d in range(pos.shape[1]):
-                btgrad.readout(pos, out=out_pos[:, d], method=method, transform=transform, gradient=d)
+                btgrad.readout(pos, out=out_pos[:, d], method=method, transform=transform, gradient=d, layout=layout)
 
         if out_mass is not False:
             mass_grad = numpy.zeros_like(mass)
-            btgrad.readout(pos, out=mass_grad, method=method, transform=transform, gradient=gradient)
+            btgrad.readout(pos, out=mass_grad, method=method, transform=transform, gradient=gradient, layout=layout)
             mass_grad[...] *= mass
 
         return out_pos, out_mass
@@ -497,10 +619,8 @@ class ComplexField(Field):
     def generate_whitenoise(self, seed):
         """ Generate white noise to the field with the given seed.
 
-            The scheme is supposed to be compatible with Gadget. The field must be three-dimensional.
+            The scheme is supposed to be compatible with Gadget when the field is three-dimensional.
         """
-        assert len(self.shape) == 3
-
         from .whitenoise import generate
         generate(self.value, self.start, self.Nmesh, seed)
 

@@ -238,6 +238,61 @@ def test_complex_iter(comm):
         assert_array_equal(slab.shape, sum(x[d] ** 2 for d in range(len(pm.Nmesh))).shape)
 
 @MPITest(commsize=(1, 4))
+def test_cgetitem(comm):
+    pm = ParticleMesh(BoxSize=8.0, Nmesh=[4, 4], comm=comm, dtype='f8')
+    for i in numpy.ndindex((4, 4)):
+        complex = RealField(pm)
+        complex[...] = 0
+        v2 = complex.csetitem(i, 100.)
+        v1 = complex.cgetitem(i)
+        assert v2 == 100.
+        assert_array_equal(v1, v2)
+
+    for i in numpy.ndindex((4, 3)):
+        complex = ComplexField(pm)
+        complex[...] = 0
+        v2 = complex.csetitem(i, 100. + 10j)
+        complex.c2r().r2c(out=complex)
+        v1 = complex.cgetitem(i)
+        if i == (0, 0):
+            assert v2 == 100.
+        elif i == (0, 2):
+            assert v2 == 100.
+        elif i == (2, 0):
+            assert v2 == 100.
+        elif i == (2, 2):
+            assert v2 == 100.
+        else:
+            assert v2 == 100. + 10j
+        assert_array_equal(v1, v2)
+
+    for i in numpy.ndindex((4, 3, 2)):
+        complex = ComplexField(pm)
+        complex[...] = 0
+        v2 = complex.csetitem(i, 100.)
+        complex.c2r().r2c(out=complex)
+        v1 = complex.cgetitem(i)
+        if i == (0, 0, 0):
+            assert v2 == 100.
+        if i == (0, 0, 1):
+            assert v2 == 0.
+        elif i == (0, 2, 0):
+            assert v2 == 100.
+        elif i == (0, 2, 1):
+            assert v2 == 0.
+        elif i == (2, 0, 0):
+            assert v2 == 100.
+        elif i == (2, 0, 1):
+            assert v2 == 0.
+        elif i == (2, 2, 0):
+            assert v2 == 100.
+        elif i == (2, 2, 1):
+            assert v2 == 0.
+        else:
+            assert v2 == 100.
+        assert_array_equal(v1, v2)
+
+@MPITest(commsize=(1, 4))
 def test_whitenoise(comm):
     # the whitenoise shall preserve the large scale.
     pm0 = ParticleMesh(BoxSize=8.0, Nmesh=[8, 8, 8], comm=comm, dtype='f8')

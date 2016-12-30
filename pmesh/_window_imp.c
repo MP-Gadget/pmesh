@@ -66,9 +66,11 @@ _linear_diff(double x) {
     double factor;
     if(x < 0) {
         factor = 1;
-    } else {
-        factor = - 1;
         x = - x;
+    } else if (x > 0) {
+        factor = - 1;
+    } else {
+        factor = 0;
     }
     if(x < 1.0) return factor;
     return 0;

@@ -86,6 +86,9 @@ def test_readout_gradient(comm):
 
     pos = numpy.array(numpy.indices(real.shape), dtype='f4').reshape(real.value.ndim, -1).T
     pos += real.start
+    # avoid sitting at the pmesh points
+    # cic gradient is zero on them, the numerical gradient fails.
+    pos += 0.5
     pos *= pm.BoxSize / pm.Nmesh
 
     layout = pm.decompose(pos)
@@ -103,7 +106,7 @@ def test_readout_gradient(comm):
         dx1, r1 = perturb(real, ind1, dx)
         ng1 = (objective(r1, pos, layout) - obj)/dx
         ag1 = grad_real.cgetitem(ind1) * dx1 / dx
-    #    print (dx1, dx, ind1, ag1, ng1)
+        # print (dx1, dx, ind1, ag1, ng1)
         ng.append(ng1)
         ag.append(ag1)
         ind.append(ind1)

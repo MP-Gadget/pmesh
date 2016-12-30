@@ -149,13 +149,16 @@ def test_anisotropic():
 def test_diff():
     real = numpy.zeros((2, 2))
     pos = [
-        [0., 0],
+        [0.5, 0],
     ]
     CIC.paint(real, pos, diffdir=0)
     assert_array_equal(real,
         [[-1, 0],
          [1, 0]])
 
+    pos = [
+        [0, 0.5],
+    ]
     real = numpy.zeros((2, 2))
     CIC.paint(real, pos, diffdir=1)
     assert_array_equal(real,

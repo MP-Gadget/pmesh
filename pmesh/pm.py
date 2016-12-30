@@ -408,7 +408,10 @@ class RealField(Field):
             return method.paint(self.value, pos, mass, transform=transform, diffdir=gradient)
         else:
             localpos = layout.exchange(pos)
-            localmass = layout.exchange(mass)
+            if not numpy.isscalar(mass):
+                localmass = layout.exchange(mass)
+            else:
+                localmass = mass
             return self.paint(localpos, localmass,
                     method=method,
                     transform=transform,
@@ -507,7 +510,7 @@ class RealField(Field):
 
         return out_self, out_pos
 
-    def paint_gradient(btgrad, pos, mass, method=None, transform=None, gradient=None,
+    def paint_gradient(btgrad, pos, mass=1.0, method=None, transform=None, gradient=None,
             out_pos=None, out_mass=None, layout=None):
         """ back-propagate the gradient of paint from self. self contains
             the current gradient.

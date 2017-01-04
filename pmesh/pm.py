@@ -7,6 +7,15 @@ from mpi4py import MPI
 
 import numbers # for testing Numbers
 
+def is_inplace(out):
+    def isstring(s):
+        # if we use Python 3
+        try:
+            return isinstance(s, basestring)
+        except:
+            return isinstance(s, str)
+    return isstring(out) and out == 'inplace'
+
 class slabiter(object):
     def __init__(self, field):
         # we iterate over the slowest axis to gain locality.
@@ -327,6 +336,9 @@ class RealField(Field):
         if out is None:
             out = ComplexField(self.pm)
 
+        if is_inplace(out):
+            out = self
+
         if out is self:
             out = ComplexField(self.pm, base=self.base)
 
@@ -494,6 +506,8 @@ class RealField(Field):
                 raise ValueError("gradient of gradient is not yet supported")
             if out_pos is None:
                 out_pos = numpy.zeros_like(pos)
+            if is_inplace(out_pos):
+                out_pos = pos
             if out_pos is pos:
                 # need to create a copy of pos because we use it later.
                 pos = pos.copy()
@@ -504,6 +518,8 @@ class RealField(Field):
         if out_self is not False:
             if out_self is None:
                 out_self = RealField(self.pm)
+            if is_inplace(out_self):
+                out_self = self
 
             # watch out: do this after using self, because out_self can be self.
             out_self.paint(pos, mass=btgrad, method=method, transform=transform, gradient=gradient, hold=False, layout=layout)
@@ -537,7 +553,10 @@ class RealField(Field):
         if out_pos is not False:
             if gradient is not None:
                 raise ValueError("gradient of gradient is not yet supported")
-            out_pos = numpy.zeros_like(pos)
+            if out_pos is None:
+                out_pos = numpy.zeros_like(pos)
+            if is_inplace(out_pos):
+                out_pos = pos
 
             if out_pos is pos:
                 pos = pos.copy()
@@ -546,9 +565,12 @@ class RealField(Field):
                 btgrad.readout(pos, out=out_pos[:, d], method=method, transform=transform, gradient=d, layout=layout)
 
         if out_mass is not False:
-            mass_grad = numpy.zeros_like(mass)
-            btgrad.readout(pos, out=mass_grad, method=method, transform=transform, gradient=gradient, layout=layout)
-            mass_grad[...] *= mass
+            if out_mass is None:
+                out_mass = numpy.zeros_like(mass)
+            if is_inplace(out_mass):
+                out_mass = mass
+            btgrad.readout(pos, out=out_mass, method=method, transform=transform, gradient=gradient, layout=layout)
+            out_mass[...] *= mass
 
         return out_pos, out_mass
 
@@ -587,6 +609,9 @@ class ComplexField(Field):
     def c2r(self, out=None):
         if out is None:
             out = RealField(self.pm)
+        if is_inplace(out):
+            out = self
+
         if out is self:
             out = RealField(self.pm, self.base)
 
@@ -609,6 +634,8 @@ class ComplexField(Field):
         """ Back-propagate the gradient of decompress from self to out. """
         if out is None:
             out = ComplexField(btgrad.pm)
+        if is_inplace(out):
+            out = btgrad
 
         for i, a, b in zip(btgrad.slabs.i, out.slabs, btgrad.slabs):
             # modes that are self conjugates do not gain a factor

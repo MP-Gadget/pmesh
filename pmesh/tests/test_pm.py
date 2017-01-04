@@ -65,7 +65,7 @@ def test_inplace_fft(comm):
     real[:] = 0
     real.paint(npos)
     complex = real.r2c()
-    complex2 = real.r2c(out=real)
+    complex2 = real.r2c(out='inplace')
 
     assert real.base is complex2.base
     assert_almost_equal(numpy.asarray(complex), numpy.asarray(complex2), decimal=7)

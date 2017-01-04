@@ -112,6 +112,13 @@ def test_indices(comm):
     assert_almost_equal(pm.k[1], [[0, -0.785398]], decimal=3)
     assert_almost_equal(pm.x[0], [[0], [-4]], decimal=3)
     assert_almost_equal(pm.x[1], [[0, -4]], decimal=3)
+def assert_same_base(a1, a2):
+    def find_base(a):
+        base = a
+        while getattr(base, 'base', None) is not None:
+            base = base.base
+        return base
+    assert find_base(a1) is find_base(a2)
 
 @MPITest(commsize=(1, 4))
 def test_real_iter(comm):
@@ -119,8 +126,13 @@ def test_real_iter(comm):
     real = RealField(pm)
 
     for i, x, slab in zip(real.slabs.i, real.slabs.x, real.slabs):
-        assert slab.base is real.value
+        assert_same_base(slab, real.value)
+
         assert_almost_equal(slab.shape, sum(x[d] ** 2 for d in range(len(pm.Nmesh))).shape)
+        for a, b in zip(slab.x, x):
+            assert_array_equal(a, b)
+        for a, b in zip(slab.i, i):
+            assert_array_equal(a, b)
         # FIXME: test i!!
 
 @MPITest(commsize=1)
@@ -236,6 +248,8 @@ def test_complex_iter(comm):
 
     for x, slab in zip(complex.slabs.x, complex.slabs):
         assert_array_equal(slab.shape, sum(x[d] ** 2 for d in range(len(pm.Nmesh))).shape)
+        for a, b in zip(slab.x, x):
+            assert_almost_equal(a, b)
 
 @MPITest(commsize=(1, 4))
 def test_ctol(comm):

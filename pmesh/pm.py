@@ -10,6 +10,9 @@ import numbers # for testing Numbers
 def is_inplace(out):
     return out is Ellipsis
 
+class slab(numpy.ndarray):
+    pass
+
 class slabiter(object):
     def __init__(self, field):
         # we iterate over the slowest axis to gain locality.
@@ -19,14 +22,20 @@ class slabiter(object):
         self.optimized_view = field.value.transpose(axissort)
         self.nslabs = field.shape[axis]
 
-        optx = [xx.transpose(axissort) for xx in field.x]
-        opti = [ii.transpose(axissort) for ii in field.i]
-        self.x = xslabiter(axis, self.nslabs, optx)
-        self.i = xslabiter(axis, self.nslabs, opti)
+        self.optx = [xx.transpose(axissort) for xx in field.x]
+        self.opti = [ii.transpose(axissort) for ii in field.i]
+        self.x = xslabiter(axis, self.nslabs, self.optx)
+        self.i = xslabiter(axis, self.nslabs, self.opti)
+        self.axis = axis
 
     def __iter__(self):
         for irow in range(self.nslabs):
-            yield self.optimized_view[irow]
+            s = self.optimized_view[irow].view(type=slab)
+            kk = [x[0] if d != self.axis else x[irow] for d, x in enumerate(self.optx)]
+            ii = [x[0] if d != self.axis else x[irow] for d, x in enumerate(self.opti)]
+            s.x = kk
+            s.i = ii
+            yield s
 
 class xslabiter(slabiter):
     def __init__(self, axis, nslabs, optx):

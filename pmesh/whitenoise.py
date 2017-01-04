@@ -21,7 +21,7 @@ def generate(complex, start, Nmesh, seed, unitary):
         rng = numpy.random.RandomState(seed)
         real = rng.normal(size=_Nmesh)
         full = numpy.fft.rfftn(real)
-        full[...] *= numpy.prod(_Nmesh)
+        full[...] *= numpy.prod(_Nmesh) ** -0.5
         slices = tuple([slice(a, a + b) for a, b in zip(_start, complex.shape)])
         complex[...] = full[slices]
         if unitary:

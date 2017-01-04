@@ -65,13 +65,13 @@ def test_inplace_fft(comm):
     real[:] = 0
     real.paint(npos)
     complex = real.r2c()
-    complex2 = real.r2c(out='inplace')
+    complex2 = real.r2c(out=Ellipsis)
 
     assert real.base is complex2.base
     assert_almost_equal(numpy.asarray(complex), numpy.asarray(complex2), decimal=7)
 
     real = complex2.c2r()
-    real2 = complex2.c2r(out=complex2)
+    real2 = complex2.c2r(out=Ellipsis)
     assert real2.base is complex2.base
     assert_almost_equal(numpy.asarray(real), numpy.asarray(real2), decimal=7)
 
@@ -154,7 +154,7 @@ def test_sort(comm):
     truth = numpy.arange(8 * 6)
     real[...] = truth.reshape(8, 6)[real.slices]
     unsorted = real.copy()
-    real.sort(out=real)
+    real.sort(out=Ellipsis)
     conjecture = numpy.concatenate(comm.allgather(real.value.ravel()))
     assert_array_equal(conjecture, truth)
 
@@ -164,7 +164,7 @@ def test_sort(comm):
     complex = ComplexField(pm)
     truth = numpy.arange(8 * 4)
     complex[...] = truth.reshape(8, 4)[complex.slices]
-    complex.sort(out=complex)
+    complex.sort(out=Ellipsis)
     conjecture = numpy.concatenate(comm.allgather(complex.value.ravel()))
     assert_array_equal(conjecture, truth)
 
@@ -259,7 +259,7 @@ def test_cgetitem(comm):
         complex = ComplexField(pm)
         complex[...] = 0
         v2 = complex.csetitem(i, 100. + 10j)
-        complex.c2r().r2c(out=complex)
+        complex.c2r(out=Ellipsis).r2c(out=Ellipsis)
         v1 = complex.cgetitem(i)
         if i == (0, 0):
             assert v2 == 100.
@@ -294,7 +294,7 @@ def test_cgetitem(comm):
         complex = ComplexField(pm)
         complex[...] = 0
         v2 = complex.csetitem(i, 100.)
-        complex.c2r().r2c(out=complex)
+        complex.c2r(out=Ellipsis).r2c(out=Ellipsis)
         v1 = complex.cgetitem(i)
         if i == (0, 0, 0):
             assert v2 == 100.

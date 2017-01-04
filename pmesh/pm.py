@@ -8,13 +8,7 @@ from mpi4py import MPI
 import numbers # for testing Numbers
 
 def is_inplace(out):
-    def isstring(s):
-        # if we use Python 3
-        try:
-            return isinstance(s, basestring)
-        except:
-            return isinstance(s, str)
-    return isstring(out) and out == 'inplace'
+    return out is Ellipsis
 
 class slabiter(object):
     def __init__(self, field):
@@ -200,7 +194,7 @@ class Field(object):
 
             Parameters
             ----------
-            out : numpy.flatiter
+            out : numpy.flatiter, or Ellipsis for inplace
                 A flatiter to store the 'C' order. If not a flatiter, the .flat
                 attribute is used.
 
@@ -210,12 +204,15 @@ class Field(object):
 
             Notes
             -----
-            Set `out` to self.value for an 'inplace' sort.
+            Set `out` to or Ellisps self.value for an 'inplace' sort.
         """
         ind = numpy.ravel_multi_index(numpy.mgrid[self.slices], self.cshape)
 
         if out is None:
             out = numpy.empty_like(self.value)
+
+        if is_inplace(out):
+            out = self.value
 
         if not isinstance(out, numpy.flatiter):
             out = out.flat

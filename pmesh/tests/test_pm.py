@@ -130,7 +130,7 @@ def test_real_apply(comm):
     def filter(x, v):
         return x[0] * 10 + x[1]
 
-    real.apply(filter)
+    real.apply(filter, out=Ellipsis)
 
     for i, x, slab in zip(real.slabs.i, real.slabs.x, real.slabs):
         assert_array_equal(slab, x[0] * 10 + x[1])
@@ -142,7 +142,7 @@ def test_complex_apply(comm):
     def filter(k, v):
         return k[0] + k[1] * 1j
 
-    complex.apply(filter)
+    complex.apply(filter, out=Ellipsis)
 
     for i, x, slab in zip(complex.slabs.i, complex.slabs.x, complex.slabs):
         assert_array_equal(slab, x[0] + x[1] * 1j)
@@ -324,11 +324,9 @@ def test_whitenoise(comm):
     pm2 = ParticleMesh(BoxSize=8.0, Nmesh=[32, 32, 32], comm=comm, dtype='f8')
     complex1_down = ComplexField(pm0)
     complex2_down = ComplexField(pm0)
-    complex1 = ComplexField(pm1)
-    complex2 = ComplexField(pm2)
 
-    complex1.generate_whitenoise(seed=8)
-    complex2.generate_whitenoise(seed=8)
+    complex1 = pm1.generate_whitenoise(seed=8, unitary=True)
+    complex2 = pm2.generate_whitenoise(seed=8, unitary=True)
 
     complex1.resample(complex1_down)
     complex2.resample(complex2_down)

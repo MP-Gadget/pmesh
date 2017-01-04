@@ -316,15 +316,6 @@ class RealField(Field):
     def __init__(self, pm, base=None):
         Field.__init__(self, pm, base)
 
-    def generate_whitenoise(self, seed):
-        """ Generate white noise to the field with the given seed.
-
-            The scheme is supposed to be compatible with Gadget for a 3d field.
-        """
-        complex = ComplexField(self.pm, base=self.base)
-        complex.generate_whitenoise(seed)
-        complex.c2r(self)
-
     def r2c(self, out=None):
         """ 
         Perform real to complex transformation.
@@ -578,8 +569,8 @@ class RealField(Field):
         out.value[...] *= numpy.prod(out.pm.Nmesh ** 1.0)
         return out
 
-    def apply(self, func, kind="relative"):
-        """ apply a function to the field, in-place.
+    def apply(self, func, kind="relative", out=None):
+        """ apply a function to the field.
 
             Parameters
             ----------
@@ -591,13 +582,19 @@ class RealField(Field):
                 'relative' means distance from [-0.5 Boxsize, 0.5 BoxSize).
                 'index' means [0, Nmesh )
         """
-        for x, i, slab in zip(self.slabs.x, self.slabs.i, self.slabs):
+        if out is None:
+            out = self.copy()
+        if is_inplace(out):
+            out = self
+
+        for x, i, islab, oslab in zip(self.slabs.x, self.slabs.i, self.slabs, out.slabs):
             if kind == 'relative':
-                slab[...] = func(x, slab)
+                oslab[...] = func(x, islab)
             elif kind == 'index':
-                slab[...] = func(i, slab)
+                oslab[...] = func(i, islab)
             else:
                 raise ValueError("kind is relative, or index")
+        return out
 
 class ComplexField(Field):
     def __init__(self, pm, base=None):
@@ -643,15 +640,7 @@ class ComplexField(Field):
             a[mask] = b[mask]
         return out
 
-    def generate_whitenoise(self, seed):
-        """ Generate white noise to the field with the given seed.
-
-            The scheme is supposed to be compatible with Gadget when the field is three-dimensional.
-        """
-        from .whitenoise import generate
-        generate(self.value, self.start, self.Nmesh, seed)
-
-    def apply(self, func, kind="wavenumber"):
+    def apply(self, func, kind="wavenumber", out=None):
         """ apply a function to the field, in-place.
 
             Parameters
@@ -665,16 +654,22 @@ class ComplexField(Field):
                 'circular' means circular frequency from [- pi, pi).
                 'index' means [0, Nmesh )
         """
-        for k, i, slab in zip(self.slabs.x, self.slabs.i, self.slabs):
+        if out is None:
+            out = self.copy()
+        if is_inplace(out):
+            out = self
+
+        for k, i, islab, oslab in zip(self.slabs.x, self.slabs.i, self.slabs, out.slabs):
             if kind == 'wavenumber':
-                slab[...] = func(k, slab)
+                oslab[...] = func(k, islab)
             elif kind == 'circular':
                 w = [ ki * L / N for ki, L, N in zip(k, self.BoxSize, self.Nmesh)]
-                slab[...] = func(w, slab)
+                oslab[...] = func(w, islab)
             elif kind == 'index':
-                slab[...] = func(i, slab)
+                oslab[...] = func(i, islab)
             else:
                 raise ValueError("kind is wavenumber, circular, or index")
+        return out
 
 def build_index(indices, fullshape):
     """
@@ -897,11 +892,33 @@ class ParticleMesh(object):
         """
 
         if mode == 'real':
-            return RealField(self, base=None)
+            return RealField(self, base=base)
         elif mode == 'complex':
-            return ComplexField(self, base=None)
+            return ComplexField(self, base=base)
         else:
             raise ValueError('mode must be real or complex')
+
+    def generate_whitenoise(self, seed, unitary=False, mode='complex', base=None):
+        """ Generate white noise to the field with the given seed.
+
+            The scheme is supposed to be compatible with Gadget when the field is three-dimensional.
+
+            Parameters
+            ----------
+            seed : int
+                The random seed
+            unitary : bool
+                True to generate a unitary white noise where the amplitude is fixed to 1 and
+                only the phase is random.
+        """
+        from .whitenoise import generate
+        complex = ComplexField(self, base=base)
+        generate(complex.value, complex.start, complex.Nmesh, seed, bool(unitary))
+
+        if mode == 'complex':
+            return complex
+        else:
+            return complex.c2r(out=Ellipsis)
 
     def decompose(self, pos, smoothing=None):
         """ 

@@ -94,6 +94,10 @@ mkname(_generic_fill)(PMeshWhiteNoiseGenerator * self, void * delta_k, int seed)
                 /* we want two numbers that are of std ~ 1/sqrt(2) */
                 ampl = sqrt(- log(ampl));
 
+                /* Unitary gaussian, the norm of real and imag is fixed to 1/sqrt(2) */
+                if(self->unitary)
+                    ampl = 1.0;
+
                 if(iabs[0] == 0 && iabs[1] == 0 && iabs[2] == 0) {
                     /* the mean is zero */
                     ampl = 0;

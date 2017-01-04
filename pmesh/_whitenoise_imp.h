@@ -1,6 +1,8 @@
 typedef struct PMeshWhiteNoiseGenerator {
     int ndim;
     unsigned int seed;
+    unsigned int unitary;
+
     ptrdiff_t Nmesh[32]; /* periodicity */
     ptrdiff_t start[32];
 

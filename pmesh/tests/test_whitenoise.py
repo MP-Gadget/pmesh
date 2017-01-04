@@ -7,12 +7,12 @@ from pmesh.whitenoise import generate
 def test_generate():
     value = numpy.zeros((64, 64, 64), dtype='complex128')
 
-    generate(value, 0, value.shape, 1)
+    generate(value, 0, value.shape, 1, unitary=False)
 
     piece = numpy.zeros((32, 4, 4),dtype='complex128')
     offset = [2, 2, 2]
     offset = [2, 2, 2]
-    generate(piece, offset, value.shape, 1)
+    generate(piece, offset, value.shape, 1, unitary=False)
     truth = value[
         offset[0]:offset[0] + piece.shape[0],
         offset[1]:offset[1] + piece.shape[1],
@@ -23,12 +23,12 @@ def test_generate():
 def test_generate_2d():
     value = numpy.zeros((64, 64), dtype='complex128')
 
-    generate(value, 0, value.shape, 1)
+    generate(value, 0, value.shape, 1, unitary=False)
 
     piece = numpy.zeros((32, 4),dtype='complex128')
     offset = [2, 2]
     offset = [2, 2]
-    generate(piece, offset, value.shape, 1)
+    generate(piece, offset, value.shape, 1, unitary=False)
     truth = value[
         offset[0]:offset[0] + piece.shape[0],
         offset[1]:offset[1] + piece.shape[1]]
@@ -38,12 +38,12 @@ def test_generate_2d():
 def test_generate_1d():
     value = numpy.zeros((64), dtype='complex128')
 
-    generate(value, 0, value.shape, 1)
+    generate(value, 0, value.shape, 1, unitary=False)
 
     piece = numpy.zeros((32),dtype='complex128')
     offset = [2]
     offset = [2]
-    generate(piece, offset, value.shape, 1)
+    generate(piece, offset, value.shape, 1, unitary=False)
     truth = value[
         offset[0]:offset[0] + piece.shape[0]]
 

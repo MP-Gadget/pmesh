@@ -14,6 +14,7 @@ cdef extern from "_whitenoise_imp.h":
         # determined during paint / readout
         void * canvas
         int canvas_dtype_elsize
+        int unitary
         ptrdiff_t size[32]
         ptrdiff_t start[32]
         ptrdiff_t strides[32]
@@ -22,7 +23,7 @@ cdef extern from "_whitenoise_imp.h":
     void pmesh_whitenoise_generator_init(PMeshWhiteNoiseGenerator * self)
     void pmesh_whitenoise_generator_fill(PMeshWhiteNoiseGenerator * self)
 
-def generate(numpy.ndarray complex, ptrdiff_t [:] start, ptrdiff_t [:] Nmesh, unsigned int seed):
+def generate(numpy.ndarray complex, ptrdiff_t [:] start, ptrdiff_t [:] Nmesh, unsigned int seed, int unitary):
     assert complex.dtype.kind == 'c'
     assert complex.ndim == 3
 
@@ -37,6 +38,7 @@ def generate(numpy.ndarray complex, ptrdiff_t [:] start, ptrdiff_t [:] Nmesh, un
         generator.strides[i] =  complex.strides[i]
         generator.Nmesh[i] =  Nmesh[i]
 
+    generator.unitary = unitary
     generator.seed = seed
 
     pmesh_whitenoise_generator_init(generator)

@@ -42,8 +42,7 @@ def get_pos(pos, ind, comm):
 def test_c2r_gradient(comm):
     pm = ParticleMesh(BoxSize=8.0, Nmesh=[4, 4], comm=comm, dtype='f8')
 
-    real = RealField(pm)
-    real.generate_whitenoise(1234)
+    real = pm.generate_whitenoise(1234, mode='real')
     comp = real.r2c()
 
     def objective(comp):
@@ -76,8 +75,7 @@ def test_c2r_gradient(comm):
 def test_readout_gradient(comm):
     pm = ParticleMesh(BoxSize=8.0, Nmesh=[4, 4], comm=comm, dtype='f8', method='cic')
 
-    real = RealField(pm)
-    real.generate_whitenoise(1234)
+    real = pm.generate_whitenoise(1234, mode='real')
 
     def objective(real, pos, layout):
         value = real.readout(pos, layout=layout)

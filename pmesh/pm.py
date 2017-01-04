@@ -27,6 +27,8 @@ class slabiter(object):
         self.x = xslabiter(axis, self.nslabs, self.optx)
         self.i = xslabiter(axis, self.nslabs, self.opti)
         self.axis = axis
+        self.Nmesh = field.Nmesh
+        self.BoxSize = field.BoxSize
 
     def __iter__(self):
         for irow in range(self.nslabs):
@@ -35,6 +37,8 @@ class slabiter(object):
             ii = [x[0] if d != self.axis else x[irow] for d, x in enumerate(self.opti)]
             s.x = kk
             s.i = ii
+            s.BoxSize = self.BoxSize
+            s.Nmesh = self.Nmesh
             yield s
 
 class xslabiter(slabiter):

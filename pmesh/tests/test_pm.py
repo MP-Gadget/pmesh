@@ -2,6 +2,7 @@ from mpi4py_test import MPITest
 from numpy.testing import assert_array_equal
 from numpy.testing import assert_allclose
 from numpy.testing import assert_almost_equal
+from numpy.testing.decorators import skipif
 
 from pmesh.pm import ParticleMesh, RealField, ComplexField
 from pmesh import window
@@ -23,6 +24,7 @@ def test_asarray(comm):
     a = numpy.array(real, copy=False)
     assert a is real.value
 
+@skipif(True, "1d is not supported")
 @MPITest(commsize=(1,))
 def test_1d(comm):
     pm = ParticleMesh(BoxSize=8.0, Nmesh=[8], comm=comm, dtype='f8')

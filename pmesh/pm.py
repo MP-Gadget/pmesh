@@ -58,6 +58,23 @@ class Field(object):
 
         It only supports those two subclasses.
     """
+    def __repr__(self):
+        return '%s:' % self.__class__.__name__ + repr(self.value)
+
+    def __radd__(self, other): return self.__add__(other)
+    def __rmul__(self, other): return self.__mul__(other)
+
+    def __add__(self, other):
+        r = self.copy()
+        r[...] += other
+        return r
+
+    def __mul__(self, other):
+        r = self.copy()
+        r[...] *= other
+        return r
+
+
     def copy(self):
         other = self.__class__(self.pm)
         other.value[...] = self.value
@@ -613,6 +630,23 @@ class ComplexField(Field):
     def __init__(self, pm, base=None):
         Field.__init__(self, pm, base)
 
+    def cdot(self, other):
+        """ Collective inner product between two Complex Fields """
+        r = self.copy()
+        r.plain[...] *= other.plain
+        # if a conjugate is stored, reduce the weight
+        def filter(i, v):
+            v = v.copy()
+            mask = numpy.ones_like(v, '?')
+            mask &= (i[-1] == 0) | (i[-1] == self.Nmesh[-1] // 2)
+            v[mask] *= 0.5
+            return v
+        r.apply(filter, kind='index', out=Ellipsis)
+        # if a mode is self conjugate, recover the weight
+        r.decompress_gradient(out=Ellipsis)
+
+        return self.pm.comm.allreduce(r.plain.sum(dtype=self.plain.dtype))
+
     def c2r(self, out=None):
         if out is None:
             out = RealField(self.pm)
@@ -793,8 +827,10 @@ class ParticleMesh(object):
         if np is None:
             if len(Nmesh) >= 3:
                 np = pfft.split_size_2d(self.comm.size)
-            else:
+            elif len(Nmesh) == 2:
                 np = [self.comm.size]
+            elif len(Nmesh) == 1:
+                np = []
 
         dtype = numpy.dtype(dtype)
         if dtype is numpy.dtype('f8'):

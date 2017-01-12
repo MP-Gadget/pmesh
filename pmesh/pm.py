@@ -438,7 +438,9 @@ class RealField(Field):
             return method.paint(self.value, pos, mass, transform=transform, diffdir=gradient)
         else:
             localpos = layout.exchange(pos)
-            if not numpy.isscalar(mass):
+            if numpy.isscalar(mass):
+                mass = numpy.array(mass)
+            if mass.ndim != 0:
                 localmass = layout.exchange(mass)
             else:
                 localmass = mass

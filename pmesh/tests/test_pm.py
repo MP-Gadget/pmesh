@@ -23,6 +23,12 @@ def test_asarray(comm):
     a = numpy.array(real, copy=False)
     assert a is real.value
 
+@MPITest(commsize=(1,))
+def test_1d(comm):
+    pm = ParticleMesh(BoxSize=8.0, Nmesh=[8], comm=comm, dtype='f8')
+    real = pm.generate_whitenoise(seed=123, mode='real')
+    complex = pm.generate_whitenoise(seed=123, mode='complex')
+    assert_array_equal(real, complex.c2r())
 
 @MPITest(commsize=(1,4))
 def test_fft(comm):

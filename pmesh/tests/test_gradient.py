@@ -191,6 +191,16 @@ def test_cdot_dependent(comm):
 
     assert_allclose(norm, norm_check)
 
+@MPITest([1, 4])
+def test_cdot_grad_dependent(comm):
+    pm = ParticleMesh(BoxSize=8.0, Nmesh=[8, 8], comm=comm, dtype='f8')
+
+    comp1 = pm.generate_whitenoise(1234, mode='complex')
+    comp2 = pm.generate_whitenoise(1235, mode='complex')
+
+    def objective(comp1, comp2):
+        return comp1.cdot(comp2, independent=False)
+
     grad_comp2 = comp1.cdot_gradient(gcdot=1.0, independent=False)
     grad_comp1 = comp2.cdot_gradient(gcdot=1.0, independent=False)
 
@@ -201,6 +211,35 @@ def test_cdot_dependent(comm):
     for ind1 in numpy.ndindex(*(list(comp1.cshape) + [2])):
         dx1, c1 = perturb(comp1, ind1, dx)
         ng1 = (objective(c1, comp2) - objective(comp1, comp2)) / dx
+        ag1 = grad_comp1.cgetitem(ind1) * dx1 / dx
+        print (ind1, 'a', ag1, 'n', ng1)
+        comm.barrier()
+        ng.append(ng1)
+        ag.append(ag1)
+        ind.append(ind1)
+
+    assert_allclose(ng, ag, rtol=1e-5)
+
+@MPITest([1, 4])
+def test_cdot_grad_independent(comm):
+    pm = ParticleMesh(BoxSize=8.0, Nmesh=[8, 8], comm=comm, dtype='f8')
+
+    comp1 = pm.generate_whitenoise(1234, mode='complex')
+    def metric(k):
+        return 3.
+
+    def objective(comp1):
+        return comp1.cdot(comp1, metric=metric, independent=True)
+
+    grad_comp1 = comp1.cdot_gradient(gcdot=2.0, metric=metric, independent=True)
+
+    ng = []
+    ag = []
+    ind = []
+    dx = 1e-7
+    for ind1 in numpy.ndindex(*(list(comp1.cshape) + [2])):
+        dx1, c1 = perturb(comp1, ind1, dx)
+        ng1 = (objective(c1) - objective(comp1)) / dx
         ag1 = grad_comp1.cgetitem(ind1) * dx1 / dx
         print (ind1, 'a', ag1, 'n', ng1)
         comm.barrier()

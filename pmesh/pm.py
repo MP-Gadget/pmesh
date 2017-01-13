@@ -632,14 +632,29 @@ class ComplexField(Field):
     def __init__(self, pm, base=None):
         Field.__init__(self, pm, base)
 
-    def cdot(self, other, independent=True):
-        """ Collective inner product between two Complex Fields.
-            if independent is True,
+    def cdot(self, other, metric=None, independent=True):
+        r""" Collective inner product between two Complex Fields.
 
-            Only independent modes are added.
+            if independent is True, only independent modes are added.
+            if independent is False, all modes are added.
+
+            .. math ::
+
+                \sum_{m \in M} (self[m] * conjugate(other[m]) 
+                            +   conjugate(self[m]) * other[m])
+                             *  0.5  metric(k[m])
+
+            Parameters
+            ----------
+            other : ComplexField
+                the other field for the inner product
+            metric: callable
+                metric(k) gives the metric of each mode.
+
         """
         r = self.copy()
         r.plain[...] *= other.plain
+
         def filter_indep(i, v):
             v = v.copy()
             mask = numpy.ones_like(v, '?')
@@ -658,31 +673,40 @@ class ComplexField(Field):
             mask &= (i[-1] == 0) | (i[-1] == self.Nmesh[-1] // 2)
             v[~mask] *= 2
             return v
-        filter = filter_indep if independent else filter_dep
 
+        filter = filter_indep if independent else filter_dep
         r.apply(filter, kind='index', out=Ellipsis)
+
+        if metric is not None:
+            r.apply(lambda k, v: v * metric(sum(ki**2 for ki in k) ** 0.5), out=Ellipsis)
+
         return self.pm.comm.allreduce(r.plain.sum(dtype=self.plain.dtype))
 
-    def cdot_gradient(self, gcdot, independent=True):
+    def cdot_gradient(self, gcdot, metric=None, independent=True):
         """ backtrace gradient of cdot against other. This is a partial gradient.
         """
-        r = self.copy()
-        r[...] *= gcdot
+        r = self * gcdot
+
         def filter_indep(i, v):
-            # change any number is changing an independent mode.
+            # changing any number is changing an independent mode.
             return v
+
         def filter_dep(i, v):
             v = v.copy()
-            # change a number may change two modes unless
+            # changing a number may change two modes unless
             # the mode is self conjugate.
             mask1 = numpy.ones_like(v, '?')
             for ii, n in zip(i, self.Nmesh):
                 mask1 &= (n - ii) % n == ii
             v[~mask1] *= 2
-            print mask1
             return v
+
         filter = filter_indep if independent else filter_dep
         r.apply(filter, kind='index', out=Ellipsis)
+
+        if metric is not None:
+            r.apply(lambda k, v: v * metric(sum(ki**2 for ki in k) ** 0.5), out=Ellipsis)
+
         return r
 
     def c2r(self, out=None):

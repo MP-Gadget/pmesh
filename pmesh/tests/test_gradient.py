@@ -128,3 +128,84 @@ def test_readout_gradient(comm):
 
     assert_allclose(ng, ag, rtol=1e-5)
 
+@MPITest([1, 4])
+def test_cdot_independent(comm):
+    pm = ParticleMesh(BoxSize=8.0, Nmesh=[4, 4], comm=comm, dtype='f8')
+
+    comp1 = pm.generate_whitenoise(1234, mode='complex')
+    comp2 = pm.generate_whitenoise(1235, mode='complex')
+
+    def objective(comp1, comp2):
+        return comp1.cdot(comp2, independent=True)
+
+    norm = comp1.cdot(comp1, independent=True)
+    norm_check = 0
+    for ind1 in [(0, 0), (0, 1), (0, 2),
+                 (1, 0), (1, 1), (1, 2),
+                 (2, 0), (2, 1), (2, 2),
+                 (3, 0), (3, 1), (3, 2),]:
+        if ind1 == (3, 0): continue
+        if ind1 == (3, 2): continue
+        norm_check += abs(comp1.cgetitem(ind1)) ** 2
+    assert_allclose(norm, norm_check)
+
+    grad_comp2 = comp1.cdot_gradient(gcdot=1.0, independent=True)
+    grad_comp1 = comp2.cdot_gradient(gcdot=1.0, independent=True)
+
+    ng = []
+    ag = []
+    ind = []
+    dx = 1e-7
+    for ind1 in numpy.ndindex(*(list(comp1.cshape) + [2])):
+        dx1, c1 = perturb(comp1, ind1, dx)
+        ng1 = (objective(c1, comp2) - objective(comp1, comp2)) / dx
+        ag1 = grad_comp1.cgetitem(ind1) * dx1 / dx
+        print (ind1, 'a', ag1, 'n', ng1)
+        comm.barrier()
+        ng.append(ng1)
+        ag.append(ag1)
+        ind.append(ind1)
+
+    assert_allclose(ng, ag, rtol=1e-5)
+
+@MPITest([1, 4])
+def test_cdot_dependent(comm):
+    pm = ParticleMesh(BoxSize=8.0, Nmesh=[4, 4], comm=comm, dtype='f8')
+
+    comp1 = pm.generate_whitenoise(1234, mode='complex')
+    comp2 = pm.generate_whitenoise(1235, mode='complex')
+
+    def objective(comp1, comp2):
+        return comp1.cdot(comp2, independent=False)
+
+    norm = comp1.cdot(comp1, independent=False)
+    norm_check = 0
+    for ind1 in [(0, 0), (0, 1), (0, 2),
+                 (1, 0), (1, 1), (1, 2),
+                 (2, 0), (2, 1), (2, 2),
+                 (3, 0), (3, 1), (3, 2),]:
+        factor = 1
+        if ind1 in [(0, 1), (1, 1), (2, 1), (3, 1) ]:
+            factor = 2
+        norm_check += abs(comp1.cgetitem(ind1)) ** 2 * factor
+
+    assert_allclose(norm, norm_check)
+
+    grad_comp2 = comp1.cdot_gradient(gcdot=1.0, independent=False)
+    grad_comp1 = comp2.cdot_gradient(gcdot=1.0, independent=False)
+
+    ng = []
+    ag = []
+    ind = []
+    dx = 1e-7
+    for ind1 in numpy.ndindex(*(list(comp1.cshape) + [2])):
+        dx1, c1 = perturb(comp1, ind1, dx)
+        ng1 = (objective(c1, comp2) - objective(comp1, comp2)) / dx
+        ag1 = grad_comp1.cgetitem(ind1) * dx1 / dx
+        print (ind1, 'a', ag1, 'n', ng1)
+        comm.barrier()
+        ng.append(ng1)
+        ag.append(ag1)
+        ind.append(ind1)
+
+    assert_allclose(ng, ag, rtol=1e-5)

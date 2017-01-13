@@ -632,22 +632,58 @@ class ComplexField(Field):
     def __init__(self, pm, base=None):
         Field.__init__(self, pm, base)
 
-    def cdot(self, other):
-        """ Collective inner product between two Complex Fields """
+    def cdot(self, other, independent=True):
+        """ Collective inner product between two Complex Fields.
+            if independent is True,
+
+            Only independent modes are added.
+        """
         r = self.copy()
         r.plain[...] *= other.plain
-        # if a conjugate is stored, reduce the weight
-        def filter(i, v):
+        def filter_indep(i, v):
             v = v.copy()
             mask = numpy.ones_like(v, '?')
+            # if a conjugate is stored and not self, reduce the weight
             mask &= (i[-1] == 0) | (i[-1] == self.Nmesh[-1] // 2)
+            mask1 = numpy.ones_like(v, '?')
+            for ii, n in zip(i, self.Nmesh):
+                mask1 &= (n - ii) % n == ii
+            mask &= ~mask1
             v[mask] *= 0.5
             return v
-        r.apply(filter, kind='index', out=Ellipsis)
-        # if a mode is self conjugate, recover the weight
-        r.decompress_gradient(out=Ellipsis)
+        def filter_dep(i, v):
+            v = v.copy()
+            mask = numpy.ones_like(v, '?')
+            # if a conjugate not stored, boost the weight
+            mask &= (i[-1] == 0) | (i[-1] == self.Nmesh[-1] // 2)
+            v[~mask] *= 2
+            return v
+        filter = filter_indep if independent else filter_dep
 
+        r.apply(filter, kind='index', out=Ellipsis)
         return self.pm.comm.allreduce(r.plain.sum(dtype=self.plain.dtype))
+
+    def cdot_gradient(self, gcdot, independent=True):
+        """ backtrace gradient of cdot against other. This is a partial gradient.
+        """
+        r = self.copy()
+        r[...] *= gcdot
+        def filter_indep(i, v):
+            # change any number is changing an independent mode.
+            return v
+        def filter_dep(i, v):
+            v = v.copy()
+            # change a number may change two modes unless
+            # the mode is self conjugate.
+            mask1 = numpy.ones_like(v, '?')
+            for ii, n in zip(i, self.Nmesh):
+                mask1 &= (n - ii) % n == ii
+            v[~mask1] *= 2
+            print mask1
+            return v
+        filter = filter_indep if independent else filter_dep
+        r.apply(filter, kind='index', out=Ellipsis)
+        return r
 
     def c2r(self, out=None):
         if out is None:
@@ -674,7 +710,10 @@ class ComplexField(Field):
         return out
 
     def decompress_gradient(btgrad, out=None):
-        """ Back-propagate the gradient of decompress from self to out. """
+        """ Back-propagate the gradient of decompress from self to out.
+            If I change this mode in the .value array, how many modes are
+            actually changed in order to maintain the hermitian?
+        """
         if out is None:
             out = ComplexField(btgrad.pm)
         if is_inplace(out):

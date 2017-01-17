@@ -1044,7 +1044,7 @@ class ParticleMesh(object):
         pos    : array_like (, ndim)
             position of particles in simulation  unit
 
-        smoothing : None, float, string, or ResampleWindow
+        smoothing : None, float, array_like, string, or ResampleWindow
             if given as a string or ResampleWindow, use 0.5 * support.
             This is the size of the buffer region around a domain.
             Default: None, use self.method
@@ -1063,8 +1063,6 @@ class ParticleMesh(object):
 
         if isinstance(smoothing, window.ResampleWindow):
             smoothing = smoothing.support * 0.5
-
-        assert isinstance(smoothing, numbers.Number)
 
         # Transform from simulation unit to global grid unit.
         def transform0(x):

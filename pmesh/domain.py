@@ -304,10 +304,10 @@ class GridND(object):
             position of particles, ndim can be more than the dimenions
             of the domains, in which case only the first few directions are used.
 
-        smoothing : float
+        smoothing : float, or array_like
             Smoothing of particles. Any particle that intersects a domain will
             be transported to the domain. Smoothing is in the coordinate system
-            of the edges.
+            of the edges. if array_like, smoothing per dimension.
 
         transform : callable
             Apply the transformation on pos before the decompostion.
@@ -324,6 +324,10 @@ class GridND(object):
         # we can't deal with too many points per rank, by  MPI
         assert len(pos) < 1024 * 1024 * 1024 * 2
         pos = numpy.asarray(pos)
+
+        _smoothing = smoothing
+        smoothing = numpy.empty(self.ndim, dtype='f8')
+        smoothing[:] = _smoothing
 
         assert pos.shape[1] >= self.ndim
 
@@ -345,8 +349,8 @@ class GridND(object):
                         tmp = numpy.remainder(chunk[:, j], self.edges[j][-1])
                     else:
                         tmp = chunk[:, j]
-                    sil[j, s] = self._digitize(tmp - smoothing, self.edges[j]) - 1
-                    sir[j, s] = self._digitize(tmp + smoothing, self.edges[j])
+                    sil[j, s] = self._digitize(tmp - smoothing[j], self.edges[j]) - 1
+                    sir[j, s] = self._digitize(tmp + smoothing[j], self.edges[j])
 
             for j in range(self.ndim):
                 dim = self.shape[j]

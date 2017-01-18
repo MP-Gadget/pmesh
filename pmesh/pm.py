@@ -590,7 +590,6 @@ class RealField(Field):
             if is_inplace(out_mass):
                 out_mass = mass
             btgrad.readout(pos, out=out_mass, method=method, transform=transform, gradient=gradient, layout=layout)
-            out_mass[...] *= mass
 
         return out_pos, out_mass
 

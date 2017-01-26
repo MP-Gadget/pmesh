@@ -1,5 +1,4 @@
 from distutils.core import setup
-from Cython.Build import cythonize
 from distutils.extension import Extension
 import numpy
 import os
@@ -27,7 +26,9 @@ extensions = [
                         ],
                 include_dirs=["pmesh/gsl", "pmesh", numpy.get_include()])
         ]
-#print(find_version("pmesh/version.py"))
+
+from Cython.Build import cythonize
+extensions = cythonize(extensions)
 
 setup(
     name="pmesh", version=find_version("pmesh/version.py"),
@@ -36,7 +37,7 @@ setup(
     package_dir = {'pmesh': 'pmesh'},
     packages= ['pmesh', 'pmesh.tests'],
     install_requires=['cython', 'numpy', 'mpi4py', 'mpsort', 'pfft-python'],
-    requires=['cython', 'numpy', 'mpi4py', 'mpsort', 'pfft_python'],
-    ext_modules = cythonize(extensions)
+    license='GPL3',
+    ext_modules = extensions,
 )
 

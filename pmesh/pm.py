@@ -861,6 +861,9 @@ class ParticleMesh(object):
     Nmesh   : array of int
         number of mesh points per side. The length decides the number of dimensions.
 
+    dtype : dtype
+        dtype of the buffers
+
     BoxSize : float
         size of box
 
@@ -897,6 +900,8 @@ class ParticleMesh(object):
                 np = []
 
         dtype = numpy.dtype(dtype)
+        self.dtype = dtype
+
         if dtype is numpy.dtype('f8'):
             forward = pfft.Type.PFFT_R2C
             backward = pfft.Type.PFFT_C2R

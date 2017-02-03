@@ -193,27 +193,40 @@ def test_downsample(comm):
     pm1 = ParticleMesh(BoxSize=8.0, Nmesh=[8, 8], comm=comm, dtype='f8')
     pm2 = ParticleMesh(BoxSize=8.0, Nmesh=[4, 4], comm=comm, dtype='f8')
 
+    numpy.random.seed(3333)
+    truth = numpy.fft.rfftn(numpy.random.normal(size=(8, 8)))
+        
     complex1 = ComplexField(pm1)
+    for ind in numpy.ndindex(*complex1.cshape):
+        complex1.csetitem(ind, truth[ind])
+
+    assert_almost_equal(complex1[...], complex1.c2r().r2c())
     complex2 = ComplexField(pm2)
-    real2 = RealField(pm2)
-    for i, kk, slab in zip(complex1.slabs.i, complex1.slabs.x, complex1.slabs):
-        slab[...] = sum([k**2 for k in kk]) **0.5
+    for ind in numpy.ndindex(*complex2.cshape):
+        newind = tuple([i if i <= 2 else 8 - (4 - i) for i in ind])
+        if any(i == 2 for i in ind):
+            complex2.csetitem(ind, 0)
+        else:
+            complex2.csetitem(ind, truth[newind])
 
-    complex1.resample(complex2)
+    tmpr = RealField(pm2)
+    tmp = ComplexField(pm2)
 
-    assert_array_equal(complex2, sum([k**2 for k in complex2.x]) **0.5)
+    complex1.resample(tmp)
 
-    complex1.c2r().resample(complex2)
+    assert_almost_equal(complex2[...], tmp[...], decimal=5)
 
-    assert_almost_equal(complex2, sum([k**2 for k in complex2.x]) **0.5, decimal=5)
+    complex1.c2r().resample(tmp)
 
-    complex1.resample(real2)
+    assert_almost_equal(complex2[...], tmp[...], decimal=5)
 
-    assert_almost_equal(real2.r2c(), sum([k**2 for k in complex2.x]) **0.5)
+    complex1.resample(tmpr)
 
-    complex1.c2r().resample(real2)
+    assert_almost_equal(tmpr.r2c(), tmp[...])
 
-    assert_almost_equal(real2.r2c(), sum([k**2 for k in complex2.x]) **0.5)
+    complex1.c2r().resample(tmpr)
+
+    assert_almost_equal(tmpr.r2c(), tmp[...])
 
 @MPITest(commsize=(1, 2, 3, 4))
 def test_cmean(comm):

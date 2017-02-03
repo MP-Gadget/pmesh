@@ -74,6 +74,8 @@ class Field(object):
         r[...] *= other
         return r
 
+    def __eq__(self, other):
+        return self[...] == other[...]
 
     def copy(self):
         other = self.__class__(self.pm)
@@ -332,10 +334,24 @@ class Field(object):
 
         # ensure the down sample is real
         for i, slab in zip(complex.slabs.i, complex.slabs):
-            mask = numpy.ones(slab.shape, '?')
-            for ii, n in zip(i, complex.Nmesh):
-               mask &= (n - ii) % n == ii
+            mask = numpy.bitwise_and.reduce(
+                 [(n - ii) % n == ii
+                    for ii, n in zip(i, complex.Nmesh)])
             slab.imag[mask] = 0
+            
+            # remove the nyquist of the output
+            # FIXME: the nyquist is messy due to hermitian constraints
+            # let's do not touch them till we know they are important.
+            mask = numpy.bitwise_or.reduce(
+                 [ ii == n // 2
+                   for ii, n in zip(i, complex.Nmesh)])
+            slab[mask] = 0
+
+            # also remove the nyquist of the input
+            mask = numpy.bitwise_or.reduce(
+                 [ ii == n // 2
+                   for ii, n in zip(i, self.Nmesh)])
+            slab[mask] = 0
 
         if isinstance(out, RealField):
             complex.c2r(out)

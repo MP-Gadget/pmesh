@@ -400,18 +400,18 @@ class Field(object):
                             dtype=self.pm.dtype, comm=self.pm.comm)
 
         out = pm.create(mode='real')
+        result = numpy.zeros([out.cshape[i] for i in axes], dtype=pm.dtype)
+        local_slice = tuple([out.slices[i] for i in axes])
+
         self.resample(out)
         if len(axes) != self.ndim:
             removeaxes = set(range(self.ndim)) - set(axes)
             all_axes = list(axes) + list(removeaxes)
             removeaxes = tuple(range(len(all_axes) - len(removeaxes), len(all_axes)))
-            out = out[...].transpose(all_axes).sum(axis=removeaxes)
+            result[local_slice] += out[...].transpose(all_axes).sum(axis=removeaxes)
         else:
-            out = out[...]
+            result[local_slice] += out[...]
 
-        result = numpy.zeros([self.cshape[i] for i in axes], dtype=self.pm.dtype)
-        local_slice = tuple([self.slices[i] for i in axes])
-        result[local_slice] += out
         self.pm.comm.Allreduce(MPI.IN_PLACE, result)
         return result
 

@@ -474,3 +474,5 @@ def test_preview(comm):
     preview5 = comp1.preview(Nmesh=4, axes=(0,))
     previewsum5 = preview.sum(axis=(1, 2))
     assert_allclose(preview5, previewsum5)
+
+    preview6 = comp1.preview(Nmesh=8, axes=(0,))

@@ -369,6 +369,50 @@ class Field(object):
 
         return out
 
+    def preview(self, Nmesh, axes=None):
+        """ gathers the mesh into as a numpy array, with
+            (reduced resolution). The result is broadcast to
+            all ranks, so this uses Nmesh ** 3 per rank.
+
+            Parameters
+            ----------
+            Nmesh : int, array_like
+                The desired Nmesh of the result. Be aware this function
+                allocates memory to hold A full Nmesh on each rank.
+            axes : list or None
+                list of axes to preserve.
+
+            Returns
+            -------
+            out : array_like
+                An numpy array for the real density field.
+
+        """
+        if axes is None: axes = range(self.ndim)
+
+        _Nmesh = self.pm.Nmesh.copy()
+        _Nmesh[...] = Nmesh
+
+        pm = ParticleMesh(BoxSize=self.BoxSize,
+                            Nmesh=_Nmesh,
+                            dtype=self.pm.dtype, comm=self.pm.comm)
+
+        out = pm.create(mode='real')
+        self.resample(out)
+        if len(axes) != self.ndim:
+            removeaxes = set(range(self.ndim)) - set(axes)
+            all_axes = list(axes) + list(removeaxes)
+            removeaxes = tuple(range(len(all_axes) - len(removeaxes), len(all_axes)))
+            out = out[...].transpose(all_axes).sum(axis=removeaxes)
+        else:
+            out = out[...]
+
+        result = numpy.zeros([self.cshape[i] for i in axes], dtype=self.pm.dtype)
+        local_slice = tuple([self.slices[i] for i in axes])
+        result[local_slice] += out
+        self.pm.comm.Allreduce(MPI.IN_PLACE, result)
+        return result
+
 class RealField(Field):
     def __init__(self, pm, base=None):
         Field.__init__(self, pm, base)

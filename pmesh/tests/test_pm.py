@@ -444,4 +444,29 @@ def test_cdot_cnorm(comm):
 
     assert_allclose(norm1 * 2, norm2 + self_conj_sum)
 
+@MPITest(commsize=(1, 4))
+def test_preview(comm):
+    pm = ParticleMesh(BoxSize=8.0, Nmesh=[4, 4, 4], comm=comm, dtype='f8')
 
+    comp1 = pm.generate_whitenoise(1234, mode='real')
+
+    preview = comp1.preview(Nmesh=4, axes=(0, 1, 2))
+
+    for ind1 in numpy.ndindex(*(list(comp1.cshape))):
+        assert_allclose(preview[ind1], comp1.cgetitem(ind1))
+
+    preview1 = comp1.preview(Nmesh=4, axes=(0, 1))
+    previewsum1 = preview.sum(axis=2)
+    assert_allclose(preview1, previewsum1)
+
+    preview2 = comp1.preview(Nmesh=4, axes=(1, 2))
+    previewsum2 = preview.sum(axis=0)
+    assert_allclose(preview2, previewsum2)
+
+    preview3 = comp1.preview(Nmesh=4, axes=(0, 2))
+    previewsum3 = preview.sum(axis=1)
+    assert_allclose(preview3, previewsum3)
+
+    preview4 = comp1.preview(Nmesh=4, axes=(2, 0))
+    previewsum4 = preview.sum(axis=1).T
+    assert_allclose(preview4, previewsum4)

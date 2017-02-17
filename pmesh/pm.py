@@ -69,6 +69,17 @@ class Field(object):
         r[...] += other
         return r
 
+    def __sub__(self, other):
+        r = self.copy()
+        r[...] += other
+        return r
+
+    def __rsub__(self, other):
+        r = self.copy()
+        r[...] *= -1
+        r[...] += other
+        return r
+
     def __mul__(self, other):
         r = self.copy()
         r[...] *= other

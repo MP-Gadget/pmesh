@@ -16,13 +16,22 @@ pmesh_whitenoise_generator_init(PMeshWhiteNoiseGenerator * generator)
     /* do nothing */
 }
 
+static void 
+SAMPLE(gsl_rng * rng, double * ampl, double * phase)
+{
+    *phase = gsl_rng_uniform(rng) * 2 * M_PI;
+    *ampl = 0;
+    do *ampl = gsl_rng_uniform(rng); while(*ampl == 0);
+}
+
+
 static inline void 
 SETSEED(PMeshWhiteNoiseGenerator * self, int i, int j, gsl_rng * rng) 
 { 
     unsigned int seed = 0x7fffffff * gsl_rng_uniform(rng); 
 
-    int ii[2] = {i, self->Nmesh[0] - i};
-    int jj[2] = {j, self->Nmesh[1] - j};
+    int ii[2] = {i, (self->Nmesh[0] - i) % self->Nmesh[0]};
+    int jj[2] = {j, (self->Nmesh[1] - j) % self->Nmesh[1]};
     int d1, d2;
     for(d1 = 0; d1 < 2; d1++) {
         ii[d1] -= self->start[0];

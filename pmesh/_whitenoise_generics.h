@@ -33,53 +33,51 @@ mkname(_generic_fill)(PMeshWhiteNoiseGenerator * self, void * delta_k, int seed)
         i < self->start[0] + self->size[0];
         i ++) {
 
-        gsl_rng * random_generator0 = gsl_rng_alloc(gsl_rng_ranlxd1);
-        gsl_rng * random_generator1 = gsl_rng_alloc(gsl_rng_ranlxd1);
+        gsl_rng * lower_rng = gsl_rng_alloc(gsl_rng_ranlxd1);
+        gsl_rng * this_rng = gsl_rng_alloc(gsl_rng_ranlxd1);
+
+        int ci = self->Nmesh[0] - i;
+        if(ci >= self->Nmesh[0]) ci -= self->Nmesh[0];
 
         for(j = self->start[1];
             j < self->start[1] + self->size[1];
             j ++) {
             /* always pull the whitenoise from the lower quadrant plane for k = 0
-             * plane*/
-            int hermitian = 0;
+             * plane and k == Nmesh / 2 plane*/
             int d1 = 0, d2 = 0;
+            int cj = self->Nmesh[1] - j;
+            if(cj >= self->Nmesh[1]) cj -= self->Nmesh[1];
 
-            if(i == 0) {
-                if(j > self->Nmesh[1] / 2) {
-                    hermitian = 1; 
-                    d2 = 1;
-                } 
-            } else {
-                if(i > self->Nmesh[0] / 2) {
-                    hermitian = 1;
-                    d1 = 1;
-                    d2 = j != 0;
-                }  else {
-                    /* no transpose */
-                    d1 = d2 = 0;
-                }
-            } 
+            /* d1, d2 points to the conjugate quandrant */
+            if( (ci == i && cj < j)
+             || (ci < i && cj != j)
+             || (ci > i && cj == j)) {
+                d1 = 1;
+                d2 = 1;
+            }
 
-            unsigned int seed;
-            seed = GETSEED(self, i, j, d1, d2);
-            gsl_rng_set(random_generator0, seed);
-
+            unsigned int seed_conj, seed_this;
             /* the lower quadrant generator */
-            seed = GETSEED(self, i, j, 0, 0);
-            gsl_rng_set(random_generator1, seed);
+            seed_conj = GETSEED(self, i, j, d1, d2);
+            gsl_rng_set(lower_rng, seed_conj);
 
-            /* this black magic matches two generators. */
-            double skip = gsl_rng_uniform(random_generator1);
-            do skip = gsl_rng_uniform(random_generator1);
-            while(skip == 0);
+            seed_this = GETSEED(self, i, j, 0, 0);
+            gsl_rng_set(this_rng, seed_this);
 
             for(k = 0; k <= self->Nmesh[2] / 2; k ++) {
-                gsl_rng * random_generator = k?random_generator1:random_generator0;
-                /* on k = 0 plane, we use the lower quadrant generator, 
-                 * then hermit transform the result if it is nessessary */
-                double phase = gsl_rng_uniform(random_generator) * 2 * M_PI;
-                double ampl = 0;
-                do ampl = gsl_rng_uniform(random_generator); while(ampl == 0);
+                int use_conj = (d1 != 0 || d2 != 0) && (k == 0 || k == self->Nmesh[2] / 2);
+                /*if(use_conj)
+                    printf("use_conj = %d, %d %d %d %d %d sl %d st %d\n", use_conj, i, j, k, d1, d2, seed_conj, seed_this);*/
+                double ampl, phase;
+                if(use_conj) {
+                    /* on k = 0 and Nmesh/2 plane, we use the lower quadrant generator, 
+                     * then hermit transform the result if it is nessessary */
+                    SAMPLE(this_rng, &ampl, &phase);
+                    SAMPLE(lower_rng, &ampl, &phase);
+                } else {
+                    SAMPLE(lower_rng, &ampl, &phase);
+                    SAMPLE(this_rng, &ampl, &phase);
+                }
 
                 ptrdiff_t iabs[3] = {i, j, k};
                 ptrdiff_t ip = 0;
@@ -106,7 +104,7 @@ mkname(_generic_fill)(PMeshWhiteNoiseGenerator * self, void * delta_k, int seed)
                 ((FLOAT*) (delta_k + ip))[0] = ampl * cos(phase);
                 ((FLOAT*) (delta_k + ip))[1] = ampl * sin(phase);
 
-                if(hermitian && k == 0) {
+                if(use_conj) {
                     ((FLOAT*) (delta_k + ip))[1] *= -1;
                 }
 
@@ -118,8 +116,8 @@ mkname(_generic_fill)(PMeshWhiteNoiseGenerator * self, void * delta_k, int seed)
                 }
             }
         }
-        gsl_rng_free(random_generator0);
-        gsl_rng_free(random_generator1);
+        gsl_rng_free(lower_rng);
+        gsl_rng_free(this_rng);
     }
 }
 

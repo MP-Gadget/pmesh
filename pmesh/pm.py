@@ -682,6 +682,7 @@ class ComplexField(Field):
             v.real **= 2
             v.imag **= 2
             if metric is not None:
+                k = sum([ki ** 2 for ki in k]) ** 0.5
                 v *= metric(k)
             return v
 
@@ -694,6 +695,7 @@ class ComplexField(Field):
         def filter2(k, v):
             r = (2 * gcnorm) * v
             if metric is not None:
+                k = sum([ki ** 2 for ki in k]) ** 0.5
                 r *= metric(k)
             return r
 

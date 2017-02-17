@@ -389,6 +389,8 @@ class Field(object):
 
         """
         if axes is None: axes = range(self.ndim)
+        if not hasattr(axes, '__iter__'): axes = (axes,)
+        else: axes = list(axes)
 
         _Nmesh = self.pm.Nmesh.copy()
         _Nmesh[...] = Nmesh

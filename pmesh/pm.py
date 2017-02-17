@@ -658,17 +658,56 @@ class ComplexField(Field):
     def __init__(self, pm, base=None):
         Field.__init__(self, pm, base)
 
-    def cdot(self, other, metric=None, independent=True):
-        r""" Collective inner product between two Complex Fields.
+    def cnorm(self, metric=None):
+        r"""compute the norm collectively. The conjugates are added too.
 
-            if independent is True, only independent modes are added.
-            if independent is False, all modes are added.
+            NORM = Self-conj + lower + upper
 
             .. math ::
 
                 \sum_{m \in M} (self[m] * conjugate(other[m]) 
                             +   conjugate(self[m]) * other[m])
                              *  0.5  metric(k[m])
+        """
+        def filter(i, v):
+            v = v.copy()
+            # if a conjugate is not stored and not self, increase the weight
+            # because we shall add it.
+            mask = (i[-1] != 0) & (i[-1] != self.Nmesh[-1] // 2)
+            v += mask * v
+            return v
+
+        def filter2(k, v):
+            v = v.copy()
+            v.real **= 2
+            v.imag **= 2
+            if metric is not None:
+                v *= metric(k)
+            return v
+
+        return self.pm.comm.allreduce(self\
+                .apply(filter2)\
+                .apply(filter, kind='index', out=Ellipsis)\
+                .plain.sum())
+
+    def cnorm_gradient(self, gcnorm, metric=None, out=None):
+        def filter2(k, v):
+            r = (2 * gcnorm) * v
+            if metric is not None:
+                r *= metric(k)
+            return r
+
+        return self.apply(filter2, out=out).decompress_gradient(out=Ellipsis)
+
+    def cdot(self, other, metric=None):
+        r""" Collective inner product between the independent modes of two Complex Fields.
+
+            This is the only reasonable way to define a real inner product of two complex fields.
+
+            when other == self,
+
+            cdot = Self-conj + lower
+            cdot = Self-conj + upper
 
             Parameters
             ----------
@@ -681,10 +720,11 @@ class ComplexField(Field):
         r = self.copy()
         r.plain[...] *= other.plain
 
-        def filter_indep(i, v):
+        def filter(i, v):
             v = v.copy()
             mask = numpy.ones_like(v, '?')
             # if a conjugate is stored and not self, reduce the weight
+            # because we should have used only one of them (independent)
             mask &= (i[-1] == 0) | (i[-1] == self.Nmesh[-1] // 2)
             mask1 = numpy.ones_like(v, '?')
             for ii, n in zip(i, self.Nmesh):
@@ -692,15 +732,7 @@ class ComplexField(Field):
             mask &= ~mask1
             v[mask] *= 0.5
             return v
-        def filter_dep(i, v):
-            v = v.copy()
-            mask = numpy.ones_like(v, '?')
-            # if a conjugate not stored, boost the weight
-            mask &= (i[-1] == 0) | (i[-1] == self.Nmesh[-1] // 2)
-            v[~mask] *= 2
-            return v
 
-        filter = filter_indep if independent else filter_dep
         r.apply(filter, kind='index', out=Ellipsis)
 
         if metric is not None:
@@ -708,26 +740,15 @@ class ComplexField(Field):
 
         return self.pm.comm.allreduce(r.plain.sum(dtype=self.plain.dtype))
 
-    def cdot_gradient(self, gcdot, metric=None, independent=True):
+    def cdot_gradient(self, gcdot, metric=None):
         """ backtrace gradient of cdot against other. This is a partial gradient.
         """
         r = self * gcdot
 
-        def filter_indep(i, v):
-            # changing any number is changing an independent mode.
+        def filter(i, v):
+            # changing any number results the same change on an independent mode.
             return v
 
-        def filter_dep(i, v):
-            v = v.copy()
-            # changing a number may change two modes unless
-            # the mode is self conjugate.
-            mask1 = numpy.ones_like(v, '?')
-            for ii, n in zip(i, self.Nmesh):
-                mask1 &= (n - ii) % n == ii
-            v[~mask1] *= 2
-            return v
-
-        filter = filter_indep if independent else filter_dep
         r.apply(filter, kind='index', out=Ellipsis)
 
         if metric is not None:

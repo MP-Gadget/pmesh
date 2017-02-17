@@ -417,3 +417,31 @@ def test_readout(comm):
     pos = numpy.ones ((1, 2), dtype='f4')
     out = numpy.empty((1), dtype='f4')
     real.readout(pos, out=out)
+
+@MPITest(commsize=(1))
+def test_cdot_cnorm(comm):
+    pm = ParticleMesh(BoxSize=8.0, Nmesh=[4, 4, 4], comm=comm, dtype='f8')
+    comp1 = pm.generate_whitenoise(1234, mode='complex')
+
+    norm1 = comp1.cdot(comp1)
+    norm2 = comp1.cnorm()
+    norm3 = (abs(numpy.fft.fftn(numpy.fft.irfftn(comp1.value))) ** 2).sum()
+    assert_allclose(norm2, norm3)
+
+    # p-2 norm of the full complex matrix (norm2) is
+    # NORM = Self + Lower + Upper
+    # CDOT = Self + Lower
+    # Upper = Lower
+
+    self_conj_sum = 0
+    for ind1 in numpy.ndindex(*(list(comp1.cshape))):
+        c = [(4 - i) % 4 for i, n in zip(ind1, comp1.cshape)]
+        ci = numpy.ravel_multi_index(c, comp1.Nmesh)
+        ii = numpy.ravel_multi_index(ind1, comp1.Nmesh)
+        v = comp1.cgetitem(ind1)
+        if ci == ii:
+            self_conj_sum += abs(v) ** 2
+
+    assert_allclose(norm1 * 2, norm2 + self_conj_sum)
+
+

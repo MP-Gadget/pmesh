@@ -71,7 +71,7 @@ class Field(object):
 
     def __sub__(self, other):
         r = self.copy()
-        r[...] += other
+        r[...] -= other
         return r
 
     def __rsub__(self, other):

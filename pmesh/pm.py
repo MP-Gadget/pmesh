@@ -700,6 +700,12 @@ class RealField(Field):
                 raise ValueError("kind is relative, or index")
         return out
 
+    def cdot(self, other):
+        return self.pm.comm.allreduce(numpy.sum(self[...] * other[...], dtype='f8'))
+
+    def cnorm(self):
+        return self.cdot(self)
+
 class ComplexField(Field):
     def __init__(self, pm, base=None):
         Field.__init__(self, pm, base)
@@ -1009,6 +1015,7 @@ class ParticleMesh(object):
 
         self.procmesh = pfft.ProcMesh(np, comm=comm)
         self.Nmesh = numpy.array(Nmesh, dtype='i8')
+        self.ndim = len(self.Nmesh)
         self.BoxSize = numpy.empty(len(Nmesh), dtype='f8')
         self.BoxSize[:] = BoxSize
         self.partition = pfft.Partition(forward,

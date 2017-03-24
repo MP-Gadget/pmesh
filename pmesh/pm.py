@@ -97,6 +97,7 @@ class Field(object):
         """ Used internally to add shortcuts of attributes from pm """
         if base is None:
             base = pfft.LocalBuffer(pm.partition)
+
         self.base = base
         self.pm = pm
         self.partition = pm.partition
@@ -1098,7 +1099,7 @@ class ParticleMesh(object):
             method = window.methods[method]
         self.method = method
 
-    def create(self, mode, base=None):
+    def create(self, mode, base=None, zeros=False):
         """
             Create a field object.
 
@@ -1113,11 +1114,14 @@ class ParticleMesh(object):
         """
 
         if mode == 'real':
-            return RealField(self, base=base)
+            r = RealField(self, base=base)
         elif mode == 'complex':
-            return ComplexField(self, base=base)
+            r = ComplexField(self, base=base)
         else:
             raise ValueError('mode must be real or complex')
+        if zeros:
+            r[...] = 0
+        return r
 
     def generate_whitenoise(self, seed, unitary=False, mode='complex', base=None):
         """ Generate white noise to the field with the given seed.

@@ -17,6 +17,10 @@
 
     Though that particular chapter may be updated for clarity in the future.
 
+    For a quick setup to run this script, download anaconda from continuum io, and run
+
+    conda install -c bccp pmesh
+
 """
 
 from mpi4py import MPI

@@ -94,31 +94,36 @@ def kgsolver(steps, u_0, du_0, F=lambda u : -1 * u ** 3, monitor=None):
     return u_n
 
 def main():
-    pm = ParticleMesh(BoxSize=32.0, Nmesh=[512, 512], comm=MPI.COMM_WORLD)
+    from argparse import ArgumentParser
+    ap = ArgumentParser()
+    ap.add_argument("--ndim", type=int, choices=[2, 3], default=2, help="Number of dimensions, 2 or 3")
+    ap.add_argument("--nmesh", type=int, default=256, help="Size of FFT mesh")
+    ns = ap.parse_args()
+
+    pm = ParticleMesh(BoxSize=32.0, Nmesh=[ns.nmesh] * ns.ndim, comm=MPI.COMM_WORLD)
     u = pm.create(mode='real')
     def transfer(i, v):
         r = [(ii - 0.5 * ni) * (Li / ni) for ii, ni, Li in zip(i, v.Nmesh, v.BoxSize)]
         r2 = sum(ri ** 2 for ri in r)
-        x, y = r
         return 4.0 * numpy.arctan(numpy.exp(3 - r2))
     u = u.apply(transfer, kind='index')
 
     du = pm.create(mode='real')
     du[...] = 0
 
-    steps = numpy.linspace(0, 16, 201, endpoint=True)
-
-    tmonitor = set([0, 4, 8, 11.5, 15])
+    steps = numpy.linspace(0, 16, 321, endpoint=True)
+    tmonitor = [0, 4, 8, 11.5, 15]
 
     def monitor(t, dt, u, du):
-        print("---- timestep %5.3f, step size %5.4f" % (t, dt))
         unorm = u.cnorm()
-        print("norm of u is %g." % unorm)
+        if pm.comm.rank == 0:
+            print("---- timestep %5.3f, step size %5.4f" % (t, dt))
+            print("norm of u is %g." % unorm)
 
         for tm in tmonitor.copy():
-            if (t - tm) * (t + dt - tm) > 0: continue
+            if abs(t - tm) > dt * 0.5: continue
 
-            preview = u.preview(Nmesh=512, axes=(0, 1))
+            preview = u.preview(Nmesh=min([512, ns.nmesh]), axes=(0, 1))
 
             if pm.comm.rank == 0:
                 print("writing a snapshot")

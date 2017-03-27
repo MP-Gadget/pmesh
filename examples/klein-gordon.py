@@ -38,6 +38,9 @@ def kgsolver(steps, u_0, du_0, F=lambda u : -1 * u ** 3, monitor=None):
         + (- 1 / dt ** 2 - Nabla ** 2 / 4 + 1 / 4) * 2 * u_{n-1}
         + ( 1 / dt ** 2 - Nabla ** 2 + 1 / 4) * u_{n-2} = u_{n-1} ** 3
 
+        Internally we use u_k, the fourier transform of u, to reduce the number of
+        required FFTs per step.
+
         Parameters
         ----------
         steps : list of floats:
@@ -54,11 +57,11 @@ def kgsolver(steps, u_0, du_0, F=lambda u : -1 * u ** 3, monitor=None):
     """
     dsteps = numpy.diff(steps)
 
-    u_n_2 = u_0.copy()
-    u_n_1 = u_0 + du_0 * dsteps[0]
+    u_k_n_2 = u_0.r2c()
+    u_k_n_1 = (u_0 + du_0 * dsteps[0]).r2c()
 
     if monitor:
-        monitor(steps[0], dsteps[0], u_0, du_0)
+        monitor(steps[0], dsteps[0], u_0.r2c(), du_0.r2c())
 
     for t, dt in zip(steps[1:], dsteps[1:]):
         def transfer_n_2(k, v, dt=dt):
@@ -77,26 +80,24 @@ def kgsolver(steps, u_0, du_0, F=lambda u : -1 * u ** 3, monitor=None):
             factor = (1 / dt ** 2 - 1 / 4.0 * (-k2) + 1 / 4.0)
             return 1.0 / factor * v
 
-        u_n = ( u_n_1.apply(lambda x, v: F(v))
-                     .r2c(out=Ellipsis)
-              - u_n_1.r2c()
-                     .apply(transfer_n_1, out=Ellipsis)
-              - u_n_2.r2c()
-                     .apply(transfer_n_2, out=Ellipsis)
-              ).apply(transfer_n, out=Ellipsis) \
-               .c2r(out=Ellipsis)
+        u_k_n = ( u_k_n_1.c2r()
+                         .apply(lambda x, v: F(v), out=Ellipsis)
+                         .r2c(out=Ellipsis)
+                - u_k_n_1.apply(transfer_n_1, out=None)
+                ).apply(transfer_n, out=Ellipsis) \
+                - u_k_n_2
 
         if monitor:
-            monitor(t, dt, u_n_1, (u_n - u_n_1) / dt)
+            monitor(t, dt, u_k_n_1, (u_k_n - u_k_n_1) / dt)
 
         # forward the time step
-        u_n_2[...] = u_n_1
-        u_n_1[...] = u_n
+        u_k_n_2[...] = u_k_n_1
+        u_k_n_1[...] = u_k_n
 
     if monitor:
-        monitor(steps[-1], 0, u_n_1, (u_n - u_n_1) / dt)
+        monitor(steps[-1], 0, u_k_n_1, (u_k_n - u_k_n_1) / dt)
 
-    return u_n
+    return u_k_n.c2r()
 
 def main():
     from argparse import ArgumentParser
@@ -119,16 +120,16 @@ def main():
     steps = numpy.linspace(0, 16, 321, endpoint=True)
     tmonitor = [0, 4, 8, 11.5, 15]
 
-    def monitor(t, dt, u, du):
-        unorm = u.cnorm()
+    def monitor(t, dt, u_k, dv_k):
+        norm = u_k.cnorm()
         if pm.comm.rank == 0:
             print("---- timestep %5.3f, step size %5.4f" % (t, dt))
-            print("norm of u is %g." % unorm)
+            print("norm of u_k is %g." % norm)
 
         for tm in tmonitor.copy():
             if abs(t - tm) > dt * 0.5: continue
 
-            preview = u.preview(Nmesh=min([512, ns.nmesh]), axes=(0, 1))
+            preview = u_k.c2r().preview(Nmesh=min([512, ns.nmesh]), axes=(0, 1))
 
             if pm.comm.rank == 0:
                 print("writing a snapshot")

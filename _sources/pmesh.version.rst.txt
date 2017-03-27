@@ -1,0 +1,7 @@
+pmesh.version module
+====================
+
+.. automodule:: pmesh.version
+    :members:
+    :undoc-members:
+    :show-inheritance:

@@ -1,0 +1,7 @@
+pmesh.particlemesh module
+=========================
+
+.. automodule:: pmesh.particlemesh
+    :members:
+    :undoc-members:
+    :show-inheritance:

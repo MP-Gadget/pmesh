@@ -1,0 +1,7 @@
+pmesh.tests.test-particlemesh module
+====================================
+
+.. automodule:: pmesh.tests.test-particlemesh
+    :members:
+    :undoc-members:
+    :show-inheritance:

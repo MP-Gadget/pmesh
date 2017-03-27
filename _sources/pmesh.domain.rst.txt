@@ -1,0 +1,7 @@
+pmesh.domain module
+===================
+
+.. automodule:: pmesh.domain
+    :members:
+    :undoc-members:
+    :show-inheritance:

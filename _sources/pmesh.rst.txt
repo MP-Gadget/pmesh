@@ -1,0 +1,34 @@
+pmesh package
+=============
+
+Subpackages
+-----------
+
+.. toctree::
+
+    pmesh.tests
+
+Submodules
+----------
+
+.. toctree::
+
+   pmesh.cic
+   pmesh.domain
+   pmesh.lanczos
+   pmesh.particlemesh
+   pmesh.pm
+   pmesh.tools
+   pmesh.transfer
+   pmesh.tsc
+   pmesh.version
+   pmesh.whitenoise
+   pmesh.window
+
+Module contents
+---------------
+
+.. automodule:: pmesh
+    :members:
+    :undoc-members:
+    :show-inheritance:

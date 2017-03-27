@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>Installation &mdash; PyPM 0.1 documentation</title>
+    <title>Installation &#8212; PyPM 0.1 documentation</title>
     
     <link rel="stylesheet" href="_static/nature.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
@@ -17,14 +17,16 @@
         VERSION:     '0.1',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
-        HAS_SOURCE:  true
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
       };
     </script>
     <script type="text/javascript" src="_static/jquery.js"></script>
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
-    <link rel="top" title="PyPM 0.1 documentation" href="index.html" />
-    <link rel="next" title="pypm" href="modules.html" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="pmesh" href="modules.html" />
     <link rel="prev" title="Introduction" href="intro.html" /> 
   </head>
   <body role="document">
@@ -38,12 +40,12 @@
           <a href="py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
         <li class="right" >
-          <a href="modules.html" title="pypm"
+          <a href="modules.html" title="pmesh"
              accesskey="N">next</a> |</li>
         <li class="right" >
           <a href="intro.html" title="Introduction"
              accesskey="P">previous</a> |</li>
-        <li class="nav-item nav-item-0"><a href="index.html">PyPM 0.1 documentation</a> &raquo;</li> 
+        <li class="nav-item nav-item-0"><a href="index.html">PyPM 0.1 documentation</a> &#187;</li> 
       </ul>
     </div>  
 
@@ -54,21 +56,38 @@
             
   <div class="section" id="installation">
 <h1>Installation<a class="headerlink" href="#installation" title="Permalink to this headline">¶</a></h1>
-<p>PyPM depends on <a class="reference external" href="http://github.com/rainwoodman/pfft-python">pfft-python</a> for fast fourier
-transformation.</p>
-<p>Therefore, first install pfft-python via git (easy_install is not recommented yet)</p>
-<div class="highlight-sh"><div class="highlight"><pre>git clone http://github.com/rainwoodman/pfft-python
-<span class="nb">cd </span>pfft-python
-python setup.py install --user
-<span class="nb">cd</span> ..
+<div class="section" id="anaconda">
+<h2>Anaconda<a class="headerlink" href="#anaconda" title="Permalink to this headline">¶</a></h2>
+<p>With anaconda, a binary can be obtained from the BCCP channel via</p>
+<div class="highlight-sh"><div class="highlight"><pre><span></span>conda install -c bccp pmesh
 </pre></div>
 </div>
-<p>Next, install pypm itself</p>
-<div class="highlight-sh"><div class="highlight"><pre>git clone http://github.com/rainwoodman/pypm
-<span class="nb">cd </span>pypm
-python setup.py install
-<span class="nb">cd</span> ..
+</div>
+<div class="section" id="pypi">
+<h2>PyPI<a class="headerlink" href="#pypi" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-sh"><div class="highlight"><pre><span></span>pip install pfft-python pmesh
 </pre></div>
+</div>
+<p>pmesh depends on <a class="reference external" href="http://github.com/rainwoodman/pfft-python">pfft-python</a> for fast fourier
+transformation.</p>
+</div>
+<div class="section" id="for-development">
+<h2>For Development<a class="headerlink" href="#for-development" title="Permalink to this headline">¶</a></h2>
+<p>Recommended development environment is anaconda. First install pfft-python</p>
+<div class="highlight-sh"><div class="highlight"><pre><span></span>conda install -c bccp pfft-python
+</pre></div>
+</div>
+<p>Then install pmesh in development mode from git cloned version of source code.</p>
+<div class="highlight-sh"><div class="highlight"><pre><span></span>git clone https://github.com/rainwoodman/pmesh
+<span class="nb">cd</span> pmesh
+pip install -e .
+</pre></div>
+</div>
+<p>I recommended running the test suites</p>
+<div class="highlight-sh"><div class="highlight"><pre><span></span>python runtests.py  --mpirun
+</pre></div>
+</div>
+<p>No tests shall fail.</p>
 </div>
 </div>
 
@@ -78,30 +97,37 @@ python setup.py install
       </div>
       <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
         <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Installation</a><ul>
+<li><a class="reference internal" href="#anaconda">Anaconda</a></li>
+<li><a class="reference internal" href="#pypi">PyPI</a></li>
+<li><a class="reference internal" href="#for-development">For Development</a></li>
+</ul>
+</li>
+</ul>
+
   <h4>Previous topic</h4>
   <p class="topless"><a href="intro.html"
                         title="previous chapter">Introduction</a></p>
   <h4>Next topic</h4>
   <p class="topless"><a href="modules.html"
-                        title="next chapter">pypm</a></p>
+                        title="next chapter">pmesh</a></p>
   <div role="note" aria-label="source link">
     <h3>This Page</h3>
     <ul class="this-page-menu">
-      <li><a href="_sources/install.txt"
+      <li><a href="_sources/install.rst.txt"
             rel="nofollow">Show Source</a></li>
     </ul>
    </div>
 <div id="searchbox" style="display: none" role="search">
   <h3>Quick search</h3>
     <form class="search" action="search.html" method="get">
-      <input type="text" name="q" />
-      <input type="submit" value="Go" />
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
       <input type="hidden" name="check_keywords" value="yes" />
       <input type="hidden" name="area" value="default" />
     </form>
-    <p class="searchtip" style="font-size: 90%">
-    Enter search terms or a module, class or function name.
-    </p>
 </div>
 <script type="text/javascript">$('#searchbox').show(0);</script>
         </div>
@@ -118,17 +144,17 @@ python setup.py install
           <a href="py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
         <li class="right" >
-          <a href="modules.html" title="pypm"
+          <a href="modules.html" title="pmesh"
              >next</a> |</li>
         <li class="right" >
           <a href="intro.html" title="Introduction"
              >previous</a> |</li>
-        <li class="nav-item nav-item-0"><a href="index.html">PyPM 0.1 documentation</a> &raquo;</li> 
+        <li class="nav-item nav-item-0"><a href="index.html">PyPM 0.1 documentation</a> &#187;</li> 
       </ul>
     </div>
     <div class="footer" role="contentinfo">
-        &copy; Copyright 2015, Yu Feng.
-      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.3.1.
+        &#169; Copyright 2015, Yu Feng.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.5.1.
     </div>
   </body>
 </html>

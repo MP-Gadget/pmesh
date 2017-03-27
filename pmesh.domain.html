@@ -1,0 +1,279 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pmesh.domain module &#8212; PyPM 0.1 documentation</title>
+    
+    <link rel="stylesheet" href="_static/nature.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="pmesh.lanczos module" href="pmesh.lanczos.html" />
+    <link rel="prev" title="pmesh.cic module" href="pmesh.cic.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="pmesh.lanczos.html" title="pmesh.lanczos module"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="pmesh.cic.html" title="pmesh.cic module"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">PyPM 0.1 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="modules.html" >pmesh</a> &#187;</li>
+          <li class="nav-item nav-item-2"><a href="pmesh.html" accesskey="U">pmesh package</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="module-pmesh.domain">
+<span id="pmesh-domain-module"></span><h1>pmesh.domain module<a class="headerlink" href="#module-pmesh.domain" title="Permalink to this headline">¶</a></h1>
+<p>Domain Decomposition in Gaepsi</p>
+<blockquote>
+<div>currently we have a GridND decomposition algorithm.</div></blockquote>
+<dl class="class">
+<dt id="pmesh.domain.GridND">
+<em class="property">class </em><code class="descclassname">pmesh.domain.</code><code class="descname">GridND</code><span class="sig-paren">(</span><em>edges</em>, <em>comm=&lt;mpi4py.MPI.Intracomm object&gt;</em>, <em>periodic=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pmesh/domain.html#GridND"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pmesh.domain.GridND" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">object</span></code></p>
+<p>GridND is domain decomposition on a uniform grid of N dimensions.</p>
+<p>The total number of domains is prod([ len(dir) - 1 for dir in edges]).</p>
+<p class="rubric">Attributes</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="6%" />
+<col width="94%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td>edges</td>
+<td>(list  (Ndim)) A list of edges of the edges in each dimension. edges[i] is the edges on direction i. edges[i] includes 0 and BoxSize.</td>
+</tr>
+<tr class="row-even"><td>comm</td>
+<td>(<code class="xref py py-class docutils literal"><span class="pre">MPI.Comm</span></code>) MPI Communicator, default is <code class="code docutils literal"><span class="pre">MPI.COMM_WORLD</span></code></td>
+</tr>
+<tr class="row-odd"><td>periodic</td>
+<td>(boolean) Is the domain decomposition periodic? If so , edges[i][-1] is the period.</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="pmesh.domain.GridND.decompose">
+<code class="descname">decompose</code><span class="sig-paren">(</span><em>pos</em>, <em>smoothing=0</em>, <em>transform=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pmesh/domain.html#GridND.decompose"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pmesh.domain.GridND.decompose" title="Permalink to this definition">¶</a></dt>
+<dd><p>Decompose particles into domains.</p>
+<p>Create a decomposition layout for particles at <code class="code docutils literal"><span class="pre">pos</span></code>.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>pos</strong> :  array_like (, ndim)</p>
+<blockquote>
+<div><p>position of particles, ndim can be more than the dimenions
+of the domains, in which case only the first few directions are used.</p>
+</div></blockquote>
+<p><strong>smoothing</strong> : float, or array_like</p>
+<blockquote>
+<div><p>Smoothing of particles. Any particle that intersects a domain will
+be transported to the domain. Smoothing is in the coordinate system
+of the edges. if array_like, smoothing per dimension.</p>
+</div></blockquote>
+<p><strong>transform</strong> : callable</p>
+<blockquote>
+<div><p>Apply the transformation on pos before the decompostion.
+transform(pos[:, 3]) -&gt; domain_pos[:, 3]
+transform is needed if pos and the domain edges are of different units.
+For example, pos in physical simulation units and domain edges on a mesh unit.</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"><strong>layout</strong> :  <a class="reference internal" href="#pmesh.domain.Layout" title="pmesh.domain.Layout"><code class="xref py py-class docutils literal"><span class="pre">Layout</span></code></a> object that can be used to exchange data</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="classmethod">
+<dt id="pmesh.domain.GridND.uniform">
+<em class="property">classmethod </em><code class="descname">uniform</code><span class="sig-paren">(</span><em>BoxSize</em>, <em>comm=&lt;mpi4py.MPI.Intracomm object&gt;</em>, <em>periodic=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pmesh/domain.html#GridND.uniform"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pmesh.domain.GridND.uniform" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="pmesh.domain.Layout">
+<em class="property">class </em><code class="descclassname">pmesh.domain.</code><code class="descname">Layout</code><span class="sig-paren">(</span><em>comm</em>, <em>oldlength</em>, <em>sendcounts</em>, <em>indices</em>, <em>recvcounts=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pmesh/domain.html#Layout"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pmesh.domain.Layout" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">object</span></code></p>
+<p>The communication layout of a domain decomposition.</p>
+<p>Given a set of particles, Layout object knows how to move particles around.
+Do not create a Layout object directly. Always use <a class="reference internal" href="#pmesh.domain.GridND.decompose" title="pmesh.domain.GridND.decompose"><code class="xref py py-meth docutils literal"><span class="pre">GridND.decompose()</span></code></a>.</p>
+<p>Useful methods are <a class="reference internal" href="#pmesh.domain.Layout.exchange" title="pmesh.domain.Layout.exchange"><code class="xref py py-meth docutils literal"><span class="pre">exchange()</span></code></a>, and <a class="reference internal" href="#pmesh.domain.Layout.gather" title="pmesh.domain.Layout.gather"><code class="xref py py-meth docutils literal"><span class="pre">gather()</span></code></a>.</p>
+<dl class="method">
+<dt id="pmesh.domain.Layout.exchange">
+<code class="descname">exchange</code><span class="sig-paren">(</span><em>data</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pmesh/domain.html#Layout.exchange"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pmesh.domain.Layout.exchange" title="Permalink to this definition">¶</a></dt>
+<dd><p>Deliever data to the intersecting domains.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>data</strong> : array_like (, extra_dimensions)</p>
+<blockquote>
+<div><p>The data to be delievered. It shall be of the same length and of 
+the same ordering of the input position that builds the layout.
+Each element is a matching element of the position used in the call
+to <a class="reference internal" href="#pmesh.domain.GridND.decompose" title="pmesh.domain.GridND.decompose"><code class="xref py py-meth docutils literal"><span class="pre">GridND.decompose()</span></code></a></p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>newdata</strong> : array_like</p>
+<blockquote class="last">
+<div><p>The data delievered to the domain.
+Ghosts are created if a particle intersects multiple domains.
+Refer to <a class="reference internal" href="#pmesh.domain.Layout.gather" title="pmesh.domain.Layout.gather"><code class="xref py py-meth docutils literal"><span class="pre">gather()</span></code></a> for collecting data of ghosts.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="pmesh.domain.Layout.gather">
+<code class="descname">gather</code><span class="sig-paren">(</span><em>data</em>, <em>mode='sum'</em>, <em>out=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pmesh/domain.html#Layout.gather"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pmesh.domain.Layout.gather" title="Permalink to this definition">¶</a></dt>
+<dd><p>Pull the data from other ranks back to its original hosting rank.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>gathered</strong> : array_like</p>
+<blockquote class="last">
+<div><p>gathered data. It is of the same length and ordering of the original
+positions used in <code class="xref py py-meth docutils literal"><span class="pre">domain.decompose()</span></code>. When mode is &#8216;all&#8217;, 
+all gathered particles (corresponding to self.indices) are returned.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Attributes</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="1%" />
+<col width="99%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td>data</td>
+<td>(  array_like) data for each received particles.</td>
+</tr>
+<tr class="row-even"><td>mode</td>
+<td>(string &#8216;sum&#8217;, &#8216;any&#8217;, &#8216;mean&#8217;, &#8216;all&#8217;, &#8216;min&#8217;) <code class="code docutils literal"><span class="pre">all</span></code> is to return all ghosts without any reduction <code class="code docutils literal"><span class="pre">sum</span></code> is to add the ghosts together <code class="code docutils literal"><span class="pre">any</span></code> is to pick value of any ghosts <code class="code docutils literal"><span class="pre">min</span></code> is to pick value of any ghosts <code class="code docutils literal"><span class="pre">mean</span></code> is to use the mean of all ghosts</td>
+</tr>
+<tr class="row-odd"><td>out</td>
+<td>(array_like or None) stores the result of the gather operation.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="pmesh.domain.bincountv">
+<code class="descclassname">pmesh.domain.</code><code class="descname">bincountv</code><span class="sig-paren">(</span><em>x</em>, <em>weights</em>, <em>minlength=None</em>, <em>dtype=None</em>, <em>out=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pmesh/domain.html#bincountv"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pmesh.domain.bincountv" title="Permalink to this definition">¶</a></dt>
+<dd><p>bincount with vector weights</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="pmesh.domain.promote">
+<code class="descclassname">pmesh.domain.</code><code class="descname">promote</code><span class="sig-paren">(</span><em>data</em>, <em>comm</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pmesh/domain.html#promote"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pmesh.domain.promote" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="pmesh.cic.html"
+                        title="previous chapter">pmesh.cic module</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="pmesh.lanczos.html"
+                        title="next chapter">pmesh.lanczos module</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/pmesh.domain.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="pmesh.lanczos.html" title="pmesh.lanczos module"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="pmesh.cic.html" title="pmesh.cic module"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">PyPM 0.1 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="modules.html" >pmesh</a> &#187;</li>
+          <li class="nav-item nav-item-2"><a href="pmesh.html" >pmesh package</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2015, Yu Feng.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.5.1.
+    </div>
+  </body>
+</html>

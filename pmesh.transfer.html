@@ -1,0 +1,224 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pmesh.transfer module &#8212; PyPM 0.1 documentation</title>
+    
+    <link rel="stylesheet" href="_static/nature.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="pmesh.tsc module" href="pmesh.tsc.html" />
+    <link rel="prev" title="pmesh.tools module" href="pmesh.tools.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="pmesh.tsc.html" title="pmesh.tsc module"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="pmesh.tools.html" title="pmesh.tools module"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">PyPM 0.1 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="modules.html" >pmesh</a> &#187;</li>
+          <li class="nav-item nav-item-2"><a href="pmesh.html" accesskey="U">pmesh package</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="module-pmesh.transfer">
+<span id="pmesh-transfer-module"></span><h1>pmesh.transfer module<a class="headerlink" href="#module-pmesh.transfer" title="Permalink to this headline">¶</a></h1>
+<dl class="class">
+<dt id="pmesh.transfer.TransferFunction">
+<em class="property">class </em><code class="descclassname">pmesh.transfer.</code><code class="descname">TransferFunction</code><a class="reference internal" href="_modules/pmesh/transfer.html#TransferFunction"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pmesh.transfer.TransferFunction" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">object</span></code></p>
+<p>these a a function of Window Transfer functions used by PM.
+they take the fourier-space field complex and the dimensionless circular frequency 
+as inputs; complex is modified in-place.</p>
+<p>some functions are factories: they return an actually window with the
+given parameter.</p>
+<p>Working out the dimension of the input is important.</p>
+<p>the output of Poisson introduces a dimension to rho_k!
+the output of SuperLanzcos introduces a dimension to rho_k!</p>
+<p>w is a tuple of (w0, w1, w2, ...)
+w is in circular frequency units. The dimensionful k is w * Nmesh / BoxSize 
+(nyquist is at about w = pi)
+they broadcast to the correct shape of complex. This is to reduce
+memory usage somewhat.
+complex is modified in place.</p>
+<dl class="staticmethod">
+<dt id="pmesh.transfer.TransferFunction.Constant">
+<em class="property">static </em><code class="descname">Constant</code><span class="sig-paren">(</span><em>C</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pmesh/transfer.html#TransferFunction.Constant"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pmesh.transfer.TransferFunction.Constant" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="staticmethod">
+<dt id="pmesh.transfer.TransferFunction.Gaussian">
+<em class="property">static </em><code class="descname">Gaussian</code><span class="sig-paren">(</span><em>smoothing</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pmesh/transfer.html#TransferFunction.Gaussian"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pmesh.transfer.TransferFunction.Gaussian" title="Permalink to this definition">¶</a></dt>
+<dd><p>smoothing is in mesh units;
+Notice that this is different from the usual PM split convention.
+(used in Gadget2/3)
+The PM split is cut = sqrt(0.5) * smoothing</p>
+</dd></dl>
+
+<dl class="staticmethod">
+<dt id="pmesh.transfer.TransferFunction.Inspect">
+<em class="property">static </em><code class="descname">Inspect</code><span class="sig-paren">(</span><em>name</em>, <em>*indices</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pmesh/transfer.html#TransferFunction.Inspect"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pmesh.transfer.TransferFunction.Inspect" title="Permalink to this definition">¶</a></dt>
+<dd><p>inspect the complex array at given indices
+mostly for debugging.</p>
+</dd></dl>
+
+<dl class="staticmethod">
+<dt id="pmesh.transfer.TransferFunction.Laplace">
+<em class="property">static </em><code class="descname">Laplace</code><span class="sig-paren">(</span><em>pm</em>, <em>complex</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pmesh/transfer.html#TransferFunction.Laplace"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pmesh.transfer.TransferFunction.Laplace" title="Permalink to this definition">¶</a></dt>
+<dd><p>Take the Laplacian k-space: complex <a href="#id1"><span class="problematic" id="id2">*</span></a>= -w2</p>
+<p>where this function performs only the -w <a href="#id3"><span class="problematic" id="id4">**</span></a>-2 part.</p>
+<p>Note that k = w * Nmesh / BoxSize, thus the usual laplacian is</p>
+<ul class="simple">
+<li>k ** 2 * complex = (Nmesh / BoxSize) ** 2 (-w**2) * complex</li>
+</ul>
+</dd></dl>
+
+<dl class="staticmethod">
+<dt id="pmesh.transfer.TransferFunction.NormalizeDC">
+<em class="property">static </em><code class="descname">NormalizeDC</code><span class="sig-paren">(</span><em>pm</em>, <em>complex</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pmesh/transfer.html#TransferFunction.NormalizeDC"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pmesh.transfer.TransferFunction.NormalizeDC" title="Permalink to this definition">¶</a></dt>
+<dd><p>removes the DC amplitude. This effectively
+divides by the mean</p>
+</dd></dl>
+
+<dl class="staticmethod">
+<dt id="pmesh.transfer.TransferFunction.Poisson">
+<em class="property">static </em><code class="descname">Poisson</code><span class="sig-paren">(</span><em>pm</em>, <em>complex</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pmesh/transfer.html#TransferFunction.Poisson"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pmesh.transfer.TransferFunction.Poisson" title="Permalink to this definition">¶</a></dt>
+<dd><p>Solve Poisson equation in k-space: complex /= -w2</p>
+<p>Notes about gravity:</p>
+<p>gravity is</p>
+<div class="math">
+<p><img src="_images/math/b30b79c74262c696834a962e17621a5ad7ca4345.png" alt="\phi_k = -4 \pi G \delta_k k^{-2}"/></p>
+</div><p>where <img class="math" src="_images/math/2e666ccd4302d9a94fbd4422d4f0a967fca7ef4c.png" alt="k = \omega  N_m / L"/>.</p>
+<p>hence</p>
+<div class="math">
+<p><img src="_images/math/879704cab61dbcabce126840835d75744fc327a8.png" alt="\phi_k = -4 \pi G \delta_k
+        \omega^{-2}  
+        (N_m / L)^{-2}"/></p>
+</div><p>where this function performs only the <img class="math" src="_images/math/1e34995c5a9384f12d2d50db6655456e6ef4a089.png" alt="- \omega **-2"/> part.</p>
+</dd></dl>
+
+<dl class="staticmethod">
+<dt id="pmesh.transfer.TransferFunction.PowerSpectrum">
+<em class="property">static </em><code class="descname">PowerSpectrum</code><span class="sig-paren">(</span><em>wout</em>, <em>psout</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pmesh/transfer.html#TransferFunction.PowerSpectrum"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pmesh.transfer.TransferFunction.PowerSpectrum" title="Permalink to this definition">¶</a></dt>
+<dd><p>calculate the power spectrum.
+This shall be done after NormalizeDC and RemoveDC</p>
+</dd></dl>
+
+<dl class="staticmethod">
+<dt id="pmesh.transfer.TransferFunction.RemoveDC">
+<em class="property">static </em><code class="descname">RemoveDC</code><span class="sig-paren">(</span><em>pm</em>, <em>complex</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pmesh/transfer.html#TransferFunction.RemoveDC"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pmesh.transfer.TransferFunction.RemoveDC" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="staticmethod">
+<dt id="pmesh.transfer.TransferFunction.SuperLanzcos">
+<em class="property">static </em><code class="descname">SuperLanzcos</code><span class="sig-paren">(</span><em>dir</em>, <em>order=3</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pmesh/transfer.html#TransferFunction.SuperLanzcos"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pmesh.transfer.TransferFunction.SuperLanzcos" title="Permalink to this definition">¶</a></dt>
+<dd><p>Super Lanzcos kernel of order 3.
+is complex * i * w in a fancier way.</p>
+<p>Notice that for differentiation, one actually wants
+complex * i * k which is
+complex * i * w * Nmesh / BoxSize</p>
+</dd></dl>
+
+<dl class="staticmethod">
+<dt id="pmesh.transfer.TransferFunction.Trilinear">
+<em class="property">static </em><code class="descname">Trilinear</code><span class="sig-paren">(</span><em>comm</em>, <em>complex</em>, <em>w</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pmesh/transfer.html#TransferFunction.Trilinear"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pmesh.transfer.TransferFunction.Trilinear" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="pmesh.tools.html"
+                        title="previous chapter">pmesh.tools module</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="pmesh.tsc.html"
+                        title="next chapter">pmesh.tsc module</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/pmesh.transfer.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="pmesh.tsc.html" title="pmesh.tsc module"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="pmesh.tools.html" title="pmesh.tools module"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">PyPM 0.1 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="modules.html" >pmesh</a> &#187;</li>
+          <li class="nav-item nav-item-2"><a href="pmesh.html" >pmesh package</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2015, Yu Feng.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.5.1.
+    </div>
+  </body>
+</html>

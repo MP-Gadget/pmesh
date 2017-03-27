@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>Introduction &mdash; PyPM 0.1 documentation</title>
+    <title>Introduction &#8212; PyPM 0.1 documentation</title>
     
     <link rel="stylesheet" href="_static/nature.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
@@ -17,13 +17,15 @@
         VERSION:     '0.1',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
-        HAS_SOURCE:  true
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
       };
     </script>
     <script type="text/javascript" src="_static/jquery.js"></script>
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
-    <link rel="top" title="PyPM 0.1 documentation" href="index.html" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
     <link rel="next" title="Installation" href="install.html" />
     <link rel="prev" title="Welcome to PyPM’s documentation!" href="index.html" /> 
   </head>
@@ -43,7 +45,7 @@
         <li class="right" >
           <a href="index.html" title="Welcome to PyPM’s documentation!"
              accesskey="P">previous</a> |</li>
-        <li class="nav-item nav-item-0"><a href="index.html">PyPM 0.1 documentation</a> &raquo;</li> 
+        <li class="nav-item nav-item-0"><a href="index.html">PyPM 0.1 documentation</a> &#187;</li> 
       </ul>
     </div>  
 
@@ -54,46 +56,46 @@
             
   <div class="section" id="introduction">
 <span id="id1"></span><h1>Introduction<a class="headerlink" href="#introduction" title="Permalink to this headline">¶</a></h1>
-<p>PyPM provides a <a class="reference internal" href="pypm.particlemesh.html#pypm.particlemesh.ParticleMesh" title="pypm.particlemesh.ParticleMesh"><code class="xref py py-class docutils literal"><span class="pre">pypm.particlemesh.ParticleMesh</span></code></a> object for solving forces with the particle mesh
+<p>PyPM provides a <code class="xref py py-class docutils literal"><span class="pre">pypm.particlemesh.ParticleMesh</span></code> object for solving forces with the particle mesh
 method.</p>
 <p>ParticleMesh object is a state machine.</p>
 <p>The typical routine for calculating force is</p>
 <ol class="arabic simple">
-<li>Move particles to the correct domain via <a class="reference internal" href="pypm.particlemesh.html#pypm.particlemesh.ParticleMesh.decompose" title="pypm.particlemesh.ParticleMesh.decompose"><code class="xref py py-meth docutils literal"><span class="pre">pypm.particlemesh.ParticleMesh.decompose()</span></code></a>. In this step,
+<li>Move particles to the correct domain via <code class="xref py py-meth docutils literal"><span class="pre">pypm.particlemesh.ParticleMesh.decompose()</span></code>. In this step,
 mirror particles (ghosts) are created automatically.</li>
-<li>Clear the canvas via <a class="reference internal" href="pypm.particlemesh.html#pypm.particlemesh.ParticleMesh.clear" title="pypm.particlemesh.ParticleMesh.clear"><code class="xref py py-meth docutils literal"><span class="pre">pypm.particlemesh.ParticleMesh.clear()</span></code></a>.</li>
-<li>Paint particles via <a class="reference internal" href="pypm.particlemesh.html#pypm.particlemesh.ParticleMesh.paint" title="pypm.particlemesh.ParticleMesh.paint"><code class="xref py py-meth docutils literal"><span class="pre">pypm.particlemesh.ParticleMesh.paint()</span></code></a> . This step uses the Cloud-in-cell approximation implemented in
-<a class="reference internal" href="pypm.cic.html#module-pypm.cic" title="pypm.cic"><code class="xref py py-mod docutils literal"><span class="pre">pypm.cic</span></code></a>. If it is nessesary, the paint method can be called several times.</li>
-<li>Real to Complex transform via <a class="reference internal" href="pypm.particlemesh.html#pypm.particlemesh.ParticleMesh.r2c" title="pypm.particlemesh.ParticleMesh.r2c"><code class="xref py py-meth docutils literal"><span class="pre">pypm.particlemesh.ParticleMesh.r2c()</span></code></a></li>
+<li>Clear the canvas via <code class="xref py py-meth docutils literal"><span class="pre">pypm.particlemesh.ParticleMesh.clear()</span></code>.</li>
+<li>Paint particles via <code class="xref py py-meth docutils literal"><span class="pre">pypm.particlemesh.ParticleMesh.paint()</span></code> . This step uses the Cloud-in-cell approximation implemented in
+<code class="xref py py-mod docutils literal"><span class="pre">pypm.cic</span></code>. If it is nessesary, the paint method can be called several times.</li>
+<li>Real to Complex transform via <code class="xref py py-meth docutils literal"><span class="pre">pypm.particlemesh.ParticleMesh.r2c()</span></code></li>
 </ol>
 <div class="admonition note">
 <p class="first admonition-title">Note</p>
-<p class="last">Step 2, 3, 4 can be combined via a single call to <a class="reference internal" href="pypm.particlemesh.html#pypm.particlemesh.ParticleMesh.r2c" title="pypm.particlemesh.ParticleMesh.r2c"><code class="xref py py-meth docutils literal"><span class="pre">pypm.particlemesh.ParticleMesh.r2c()</span></code></a>, with the particle positions
+<p class="last">Step 2, 3, 4 can be combined via a single call to <code class="xref py py-meth docutils literal"><span class="pre">pypm.particlemesh.ParticleMesh.r2c()</span></code>, with the particle positions
 as an input parameter.</p>
 </div>
 <ol class="arabic simple" start="5">
-<li>Complex to Real transform via <a class="reference internal" href="pypm.particlemesh.html#pypm.particlemesh.ParticleMesh.c2r" title="pypm.particlemesh.ParticleMesh.c2r"><code class="xref py py-meth docutils literal"><span class="pre">pypm.particlemesh.ParticleMesh.c2r()</span></code></a>, applying transfer functions. (Refer to <a class="reference internal" href="pypm.transfer.html#pypm.transfer.TransferFunction" title="pypm.transfer.TransferFunction"><code class="xref py py-class docutils literal"><span class="pre">pypm.transfer.TransferFunction</span></code></a>)</li>
-<li>Read out force values     via <a class="reference internal" href="pypm.particlemesh.html#pypm.particlemesh.ParticleMesh.readout" title="pypm.particlemesh.ParticleMesh.readout"><code class="xref py py-meth docutils literal"><span class="pre">pypm.particlemesh.ParticleMesh.readout()</span></code></a>. This step uses the trilinear interpolation implemented in
-<a class="reference internal" href="pypm.cic.html#module-pypm.cic" title="pypm.cic"><code class="xref py py-mod docutils literal"><span class="pre">pypm.cic</span></code></a></li>
+<li>Complex to Real transform via <code class="xref py py-meth docutils literal"><span class="pre">pypm.particlemesh.ParticleMesh.c2r()</span></code>, applying transfer functions. (Refer to <code class="xref py py-class docutils literal"><span class="pre">pypm.transfer.TransferFunction</span></code>)</li>
+<li>Read out force values     via <code class="xref py py-meth docutils literal"><span class="pre">pypm.particlemesh.ParticleMesh.readout()</span></code>. This step uses the trilinear interpolation implemented in
+<code class="xref py py-mod docutils literal"><span class="pre">pypm.cic</span></code></li>
 <li>Add back the force values due to ghosts via <code class="xref py py-meth docutils literal"><span class="pre">pypm.particlemesh.ParticleMesh.gather()</span></code>.</li>
 <li>go back to 3, for other force components (eg, x, y, z)</li>
 </ol>
 <p>This is a fairly convoluted process; but it truthfully represents the level of complexity of distributed computation introduces.
 We may provide a higher level interface in the future.</p>
-<p>We provide an example to illustrate the process. Suppose pm is a <a class="reference internal" href="pypm.particlemesh.html#pypm.particlemesh.ParticleMesh" title="pypm.particlemesh.ParticleMesh"><code class="xref py py-class docutils literal"><span class="pre">pypm.particlemesh.ParticleMesh</span></code></a> object
+<p>We provide an example to illustrate the process. Suppose pm is a <code class="xref py py-class docutils literal"><span class="pre">pypm.particlemesh.ParticleMesh</span></code> object
 and position of particles is stored in <code class="code docutils literal"><span class="pre">P['Position']</span></code> .
 Here is an example for calculating gravity:</p>
-<div class="highlight-python"><div class="highlight"><pre><span class="n">pm</span> <span class="o">=</span> <span class="n">ParticleMesh</span><span class="p">(</span><span class="n">BoxSize</span><span class="p">,</span> <span class="n">Nmesh</span><span class="p">)</span>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">pm</span> <span class="o">=</span> <span class="n">ParticleMesh</span><span class="p">(</span><span class="n">BoxSize</span><span class="p">,</span> <span class="n">Nmesh</span><span class="p">)</span>
 
 <span class="n">smoothing</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">*</span> <span class="n">pm</span><span class="o">.</span><span class="n">Nmesh</span> <span class="o">/</span> <span class="n">pm</span><span class="o">.</span><span class="n">BoxSize</span>
 
-<span class="c"># lets get the correct mass distribution with particles on the edge mirrored</span>
-<span class="n">layout</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">decompose</span><span class="p">(</span><span class="n">P</span><span class="p">[</span><span class="s">&#39;Position&#39;</span><span class="p">])</span>
-<span class="n">tpos</span> <span class="o">=</span> <span class="n">layout</span><span class="o">.</span><span class="n">exchange</span><span class="p">(</span><span class="n">P</span><span class="p">[</span><span class="s">&#39;Position&#39;</span><span class="p">])</span>
+<span class="c1"># lets get the correct mass distribution with particles on the edge mirrored</span>
+<span class="n">layout</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">decompose</span><span class="p">(</span><span class="n">P</span><span class="p">[</span><span class="s1">&#39;Position&#39;</span><span class="p">])</span>
+<span class="n">tpos</span> <span class="o">=</span> <span class="n">layout</span><span class="o">.</span><span class="n">exchange</span><span class="p">(</span><span class="n">P</span><span class="p">[</span><span class="s1">&#39;Position&#39;</span><span class="p">])</span>
 
-<span class="n">pm</span><span class="o">.</span><span class="n">r2c</span><span class="p">(</span><span class="n">tpos</span><span class="p">,</span> <span class="n">P</span><span class="p">[</span><span class="s">&#39;Mass&#39;</span><span class="p">])</span>
+<span class="n">pm</span><span class="o">.</span><span class="n">r2c</span><span class="p">(</span><span class="n">tpos</span><span class="p">,</span> <span class="n">P</span><span class="p">[</span><span class="s1">&#39;Mass&#39;</span><span class="p">])</span>
 
-<span class="c"># calculate potential in k-space</span>
+<span class="c1"># calculate potential in k-space</span>
 <span class="n">pm</span><span class="o">.</span><span class="n">transfer</span><span class="p">(</span> <span class="p">[</span>
         <span class="n">TransferFunction</span><span class="o">.</span><span class="n">RemoveDC</span><span class="p">,</span>
         <span class="n">TransferFunction</span><span class="o">.</span><span class="n">Trilinear</span><span class="p">,</span>
@@ -106,13 +108,13 @@ Here is an example for calculating gravity:</p>
 <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">3</span><span class="p">):</span>
     <span class="n">pm</span><span class="o">.</span><span class="n">c2r</span><span class="p">(</span> <span class="p">[</span>
         <span class="n">TransferFunction</span><span class="o">.</span><span class="n">SuperLanzcos</span><span class="p">(</span><span class="n">d</span><span class="p">),</span>
-        <span class="c"># watch out negative for gravity *pulls*!</span>
+        <span class="c1"># watch out negative for gravity *pulls*!</span>
         <span class="n">TransferFunction</span><span class="o">.</span><span class="n">Constant</span><span class="p">(</span><span class="o">-</span> <span class="n">pm</span><span class="o">.</span><span class="n">Nmesh</span> <span class="o">**</span> <span class="mi">1</span> <span class="o">*</span> <span class="n">pm</span><span class="o">.</span><span class="n">BoxSize</span> <span class="o">**</span> <span class="o">-</span><span class="mi">1</span><span class="p">),</span>
         <span class="n">TransferFunction</span><span class="o">.</span><span class="n">Trilinear</span><span class="p">,</span>
         <span class="p">])</span>
     <span class="n">tmp</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">readout</span><span class="p">(</span><span class="n">tpos</span><span class="p">)</span>
-    <span class="n">tmp</span> <span class="o">=</span> <span class="n">layout</span><span class="o">.</span><span class="n">gather</span><span class="p">(</span><span class="n">tmp</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s">&#39;sum&#39;</span><span class="p">)</span>
-    <span class="n">P</span><span class="p">[</span><span class="s">&#39;Accel&#39;</span><span class="p">][:,</span> <span class="n">d</span><span class="p">]</span> <span class="o">=</span> <span class="n">tmp</span>
+    <span class="n">tmp</span> <span class="o">=</span> <span class="n">layout</span><span class="o">.</span><span class="n">gather</span><span class="p">(</span><span class="n">tmp</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;sum&#39;</span><span class="p">)</span>
+    <span class="n">P</span><span class="p">[</span><span class="s1">&#39;Accel&#39;</span><span class="p">][:,</span> <span class="n">d</span><span class="p">]</span> <span class="o">=</span> <span class="n">tmp</span>
 </pre></div>
 </div>
 </div>
@@ -132,21 +134,18 @@ Here is an example for calculating gravity:</p>
   <div role="note" aria-label="source link">
     <h3>This Page</h3>
     <ul class="this-page-menu">
-      <li><a href="_sources/intro.txt"
+      <li><a href="_sources/intro.rst.txt"
             rel="nofollow">Show Source</a></li>
     </ul>
    </div>
 <div id="searchbox" style="display: none" role="search">
   <h3>Quick search</h3>
     <form class="search" action="search.html" method="get">
-      <input type="text" name="q" />
-      <input type="submit" value="Go" />
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
       <input type="hidden" name="check_keywords" value="yes" />
       <input type="hidden" name="area" value="default" />
     </form>
-    <p class="searchtip" style="font-size: 90%">
-    Enter search terms or a module, class or function name.
-    </p>
 </div>
 <script type="text/javascript">$('#searchbox').show(0);</script>
         </div>
@@ -168,12 +167,12 @@ Here is an example for calculating gravity:</p>
         <li class="right" >
           <a href="index.html" title="Welcome to PyPM’s documentation!"
              >previous</a> |</li>
-        <li class="nav-item nav-item-0"><a href="index.html">PyPM 0.1 documentation</a> &raquo;</li> 
+        <li class="nav-item nav-item-0"><a href="index.html">PyPM 0.1 documentation</a> &#187;</li> 
       </ul>
     </div>
     <div class="footer" role="contentinfo">
-        &copy; Copyright 2015, Yu Feng.
-      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.3.1.
+        &#169; Copyright 2015, Yu Feng.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.5.1.
     </div>
   </body>
 </html>

@@ -1,0 +1,7 @@
+pmesh.tests.test_pm module
+==========================
+
+.. automodule:: pmesh.tests.test_pm
+    :members:
+    :undoc-members:
+    :show-inheritance:

@@ -1,0 +1,7 @@
+pmesh.window module
+===================
+
+.. automodule:: pmesh.window
+    :members:
+    :undoc-members:
+    :show-inheritance:

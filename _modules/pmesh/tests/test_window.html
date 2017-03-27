@@ -1,0 +1,332 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pmesh.tests.test_window &#8212; PyPM 0.1 documentation</title>
+    
+    <link rel="stylesheet" href="../../../_static/nature.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../index.html">PyPM 0.1 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../index.html" accesskey="U">Module code</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for pmesh.tests.test_window</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">pmesh.window</span> <span class="k">import</span> <span class="n">ResampleWindow</span><span class="p">,</span> <span class="n">Affine</span><span class="p">,</span> <span class="n">CIC</span><span class="p">,</span> <span class="n">LANCZOS2</span><span class="p">,</span> <span class="n">TSC</span><span class="p">,</span> <span class="n">CUBIC</span><span class="p">,</span> <span class="n">DB12</span><span class="p">,</span> <span class="n">DB20</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span>
+<span class="kn">from</span> <span class="nn">numpy.testing</span> <span class="k">import</span> <span class="n">assert_array_equal</span><span class="p">,</span> <span class="n">assert_allclose</span><span class="p">,</span> <span class="n">assert_almost_equal</span>
+<span class="kn">from</span> <span class="nn">numpy.testing.decorators</span> <span class="k">import</span> <span class="n">skipif</span>
+<div class="viewcode-block" id="test_unweighted"><a class="viewcode-back" href="../../../pmesh.tests.test_window.html#pmesh.tests.test_window.test_unweighted">[docs]</a><span class="k">def</span> <span class="nf">test_unweighted</span><span class="p">():</span>
+    <span class="n">real</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">4</span><span class="p">,</span> <span class="mi">4</span><span class="p">))</span>
+    <span class="n">pos</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span>
+        <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span>
+        <span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">],</span>
+        <span class="p">[</span><span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span>
+    <span class="p">]</span>
+    <span class="n">CIC</span><span class="o">.</span><span class="n">paint</span><span class="p">(</span><span class="n">real</span><span class="p">,</span> <span class="n">pos</span><span class="p">)</span>
+
+    <span class="n">assert_array_equal</span><span class="p">(</span><span class="n">real</span><span class="p">,</span>
+        <span class="p">[[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span>
+         <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span>
+         <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span>
+         <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]])</span></div>
+
+<div class="viewcode-block" id="test_weighted"><a class="viewcode-back" href="../../../pmesh.tests.test_window.html#pmesh.tests.test_window.test_weighted">[docs]</a><span class="k">def</span> <span class="nf">test_weighted</span><span class="p">():</span>
+    <span class="n">real</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">4</span><span class="p">,</span> <span class="mi">4</span><span class="p">))</span>
+    <span class="n">pos</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span>
+        <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span>
+        <span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">],</span>
+        <span class="p">[</span><span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span>
+    <span class="p">]</span>
+    <span class="n">mass</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">]</span>
+    <span class="n">CIC</span><span class="o">.</span><span class="n">paint</span><span class="p">(</span><span class="n">real</span><span class="p">,</span> <span class="n">pos</span><span class="p">,</span> <span class="n">mass</span><span class="p">)</span>
+    <span class="n">assert_array_equal</span><span class="p">(</span><span class="n">real</span><span class="p">,</span>
+        <span class="p">[[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span>
+         <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span>
+         <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span>
+         <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">3</span><span class="p">]])</span></div>
+
+<div class="viewcode-block" id="test_wide"><a class="viewcode-back" href="../../../pmesh.tests.test_window.html#pmesh.tests.test_window.test_wide">[docs]</a><span class="k">def</span> <span class="nf">test_wide</span><span class="p">():</span>
+    <span class="n">wcic</span> <span class="o">=</span> <span class="n">ResampleWindow</span><span class="p">(</span><span class="s2">&quot;linear&quot;</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>
+    <span class="n">real</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">4</span><span class="p">))</span>
+    <span class="n">pos</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="p">[</span><span class="mf">1.5</span><span class="p">],</span>
+    <span class="p">]</span>
+    <span class="n">wcic</span><span class="o">.</span><span class="n">paint</span><span class="p">(</span><span class="n">real</span><span class="p">,</span> <span class="n">pos</span><span class="p">)</span>
+    <span class="n">assert_almost_equal</span><span class="p">(</span><span class="n">real</span><span class="p">,</span> <span class="p">[</span> <span class="mf">0.125</span><span class="p">,</span>  <span class="mf">0.375</span><span class="p">,</span>  <span class="mf">0.375</span><span class="p">,</span>  <span class="mf">0.125</span><span class="p">])</span>
+
+    <span class="n">real</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">4</span><span class="p">))</span>
+    <span class="n">wcic</span><span class="o">.</span><span class="n">paint</span><span class="p">(</span><span class="n">real</span><span class="p">,</span> <span class="p">[[</span><span class="mf">1.51</span><span class="p">]])</span>
+    <span class="n">assert_almost_equal</span><span class="p">(</span><span class="n">real</span><span class="p">,</span> <span class="p">[</span> <span class="mf">0.1225</span><span class="p">,</span>  <span class="mf">0.3725</span><span class="p">,</span>  <span class="mf">0.3775</span><span class="p">,</span>  <span class="mf">0.1275</span> <span class="p">])</span>
+
+    <span class="n">real</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">4</span><span class="p">))</span>
+    <span class="n">wcic</span><span class="o">.</span><span class="n">paint</span><span class="p">(</span><span class="n">real</span><span class="p">,</span> <span class="n">pos</span><span class="p">,</span> <span class="n">diffdir</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">assert_almost_equal</span><span class="p">(</span><span class="n">real</span><span class="p">,</span> <span class="p">[</span><span class="o">-</span><span class="mf">0.25</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.25</span><span class="p">,</span> <span class="mf">0.25</span><span class="p">,</span> <span class="mf">0.25</span><span class="p">])</span></div>
+
+<div class="viewcode-block" id="test_wrap"><a class="viewcode-back" href="../../../pmesh.tests.test_window.html#pmesh.tests.test_window.test_wrap">[docs]</a><span class="k">def</span> <span class="nf">test_wrap</span><span class="p">():</span>
+    <span class="n">affine</span> <span class="o">=</span> <span class="n">Affine</span><span class="p">(</span><span class="n">ndim</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">period</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+    <span class="n">real</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">))</span>
+    <span class="n">pos</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="p">[</span><span class="o">-.</span><span class="mi">5</span><span class="p">,</span> <span class="o">-.</span><span class="mi">5</span><span class="p">],</span>
+    <span class="p">]</span>
+    <span class="n">CIC</span><span class="o">.</span><span class="n">paint</span><span class="p">(</span><span class="n">real</span><span class="p">,</span> <span class="n">pos</span><span class="p">,</span> <span class="n">transform</span><span class="o">=</span><span class="n">affine</span><span class="p">)</span>
+    <span class="n">assert_array_equal</span><span class="p">(</span><span class="n">real</span><span class="p">,</span>
+        <span class="p">[[</span><span class="mf">0.25</span><span class="p">,</span> <span class="mf">0.25</span><span class="p">],</span>
+         <span class="p">[</span><span class="mf">0.25</span><span class="p">,</span> <span class="mf">0.25</span><span class="p">]])</span>
+
+    <span class="n">real</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">))</span>
+    <span class="n">pos</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="p">[</span><span class="o">-.</span><span class="mi">5</span><span class="p">,</span> <span class="o">.</span><span class="mi">5</span><span class="p">],</span>
+    <span class="p">]</span>
+    <span class="n">CIC</span><span class="o">.</span><span class="n">paint</span><span class="p">(</span><span class="n">real</span><span class="p">,</span> <span class="n">pos</span><span class="p">,</span> <span class="n">transform</span><span class="o">=</span><span class="n">affine</span><span class="p">)</span>
+    <span class="n">assert_array_equal</span><span class="p">(</span><span class="n">real</span><span class="p">,</span>
+        <span class="p">[[</span><span class="mf">0.25</span><span class="p">,</span> <span class="mf">0.25</span><span class="p">],</span>
+         <span class="p">[</span><span class="mf">0.25</span><span class="p">,</span> <span class="mf">0.25</span><span class="p">]])</span>
+
+    <span class="n">real</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">))</span>
+    <span class="n">pos</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="p">[</span><span class="o">-.</span><span class="mi">5</span><span class="p">,</span> <span class="mf">1.5</span><span class="p">],</span>
+    <span class="p">]</span>
+    <span class="n">CIC</span><span class="o">.</span><span class="n">paint</span><span class="p">(</span><span class="n">real</span><span class="p">,</span> <span class="n">pos</span><span class="p">,</span> <span class="n">transform</span><span class="o">=</span><span class="n">affine</span><span class="p">)</span>
+    <span class="n">assert_array_equal</span><span class="p">(</span><span class="n">real</span><span class="p">,</span>
+        <span class="p">[[</span><span class="mf">0.25</span><span class="p">,</span> <span class="mf">0.25</span><span class="p">],</span>
+         <span class="p">[</span><span class="mf">0.25</span><span class="p">,</span> <span class="mf">0.25</span><span class="p">]])</span></div>
+
+<div class="viewcode-block" id="test_translate"><a class="viewcode-back" href="../../../pmesh.tests.test_window.html#pmesh.tests.test_window.test_translate">[docs]</a><span class="k">def</span> <span class="nf">test_translate</span><span class="p">():</span>
+    <span class="n">affine</span> <span class="o">=</span> <span class="n">Affine</span><span class="p">(</span><span class="n">ndim</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">translate</span><span class="o">=</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">])</span>
+    <span class="n">real</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">))</span>
+    <span class="n">pos</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="p">[</span><span class="mf">1.</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span>
+    <span class="p">]</span>
+    <span class="n">CIC</span><span class="o">.</span><span class="n">paint</span><span class="p">(</span><span class="n">real</span><span class="p">,</span> <span class="n">pos</span><span class="p">,</span> <span class="n">transform</span><span class="o">=</span><span class="n">affine</span><span class="p">)</span>
+    <span class="n">assert_array_equal</span><span class="p">(</span><span class="n">real</span><span class="p">,</span>
+        <span class="p">[[</span><span class="mf">1.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">],</span>
+         <span class="p">[</span><span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">]])</span></div>
+
+<div class="viewcode-block" id="test_affine"><a class="viewcode-back" href="../../../pmesh.tests.test_window.html#pmesh.tests.test_window.test_affine">[docs]</a><span class="k">def</span> <span class="nf">test_affine</span><span class="p">():</span>
+    <span class="n">affine</span> <span class="o">=</span> <span class="n">Affine</span><span class="p">(</span><span class="n">ndim</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+    <span class="n">real</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">4</span><span class="p">,</span> <span class="mi">4</span><span class="p">))</span>
+    <span class="n">pos</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="p">[</span><span class="o">.</span><span class="mi">5</span><span class="p">,</span> <span class="o">.</span><span class="mi">5</span><span class="p">],</span>
+    <span class="p">]</span>
+    <span class="n">CIC</span><span class="o">.</span><span class="n">paint</span><span class="p">(</span><span class="n">real</span><span class="p">,</span> <span class="n">pos</span><span class="p">,</span> <span class="n">transform</span><span class="o">=</span><span class="n">affine</span><span class="p">)</span>
+
+    <span class="n">translate</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">4</span><span class="p">,</span> <span class="mi">4</span><span class="p">))</span>
+    <span class="n">pos</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="p">[</span><span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">],</span>
+    <span class="p">]</span>
+    <span class="n">shift</span> <span class="o">=</span> <span class="n">affine</span><span class="o">.</span><span class="n">shift</span>
+
+    <span class="n">CIC</span><span class="o">.</span><span class="n">paint</span><span class="p">(</span><span class="n">translate</span><span class="p">,</span> <span class="n">pos</span><span class="p">,</span> <span class="n">transform</span><span class="o">=</span><span class="n">affine</span><span class="o">.</span><span class="n">shift</span><span class="p">(</span><span class="mf">0.5</span><span class="p">))</span>
+    <span class="n">assert_array_equal</span><span class="p">(</span><span class="n">translate</span><span class="p">,</span> <span class="n">real</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="test_scale"><a class="viewcode-back" href="../../../pmesh.tests.test_window.html#pmesh.tests.test_window.test_scale">[docs]</a><span class="k">def</span> <span class="nf">test_scale</span><span class="p">():</span>
+    <span class="n">affine</span> <span class="o">=</span> <span class="n">Affine</span><span class="p">(</span><span class="n">ndim</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">translate</span><span class="o">=</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">scale</span><span class="o">=</span><span class="mf">0.1</span><span class="p">)</span>
+    <span class="n">real</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">))</span>
+    <span class="n">pos</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="p">[</span><span class="mf">10.</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span>
+    <span class="p">]</span>
+    <span class="n">CIC</span><span class="o">.</span><span class="n">paint</span><span class="p">(</span><span class="n">real</span><span class="p">,</span> <span class="n">pos</span><span class="p">,</span> <span class="n">transform</span><span class="o">=</span><span class="n">affine</span><span class="p">)</span>
+    <span class="n">assert_array_equal</span><span class="p">(</span><span class="n">real</span><span class="p">,</span>
+        <span class="p">[[</span><span class="mf">1.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">],</span>
+         <span class="p">[</span><span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">]])</span></div>
+
+
+<div class="viewcode-block" id="test_strides"><a class="viewcode-back" href="../../../pmesh.tests.test_window.html#pmesh.tests.test_window.test_strides">[docs]</a><span class="k">def</span> <span class="nf">test_strides</span><span class="p">():</span>
+    <span class="n">real</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">20</span><span class="p">,</span> <span class="mi">20</span><span class="p">))[::</span><span class="mi">10</span><span class="p">,</span> <span class="p">::</span><span class="mi">10</span><span class="p">]</span>
+    <span class="n">pos</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="p">[</span><span class="mf">1.</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span>
+    <span class="p">]</span>
+    <span class="n">CIC</span><span class="o">.</span><span class="n">paint</span><span class="p">(</span><span class="n">real</span><span class="p">,</span> <span class="n">pos</span><span class="p">)</span>
+    <span class="n">assert_array_equal</span><span class="p">(</span><span class="n">real</span><span class="p">,</span>
+        <span class="p">[[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span>
+         <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">]])</span></div>
+
+<div class="viewcode-block" id="test_anisotropic"><a class="viewcode-back" href="../../../pmesh.tests.test_window.html#pmesh.tests.test_window.test_anisotropic">[docs]</a><span class="k">def</span> <span class="nf">test_anisotropic</span><span class="p">():</span>
+    <span class="n">real</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">2</span><span class="p">,</span> <span class="mi">4</span><span class="p">))</span>
+    <span class="n">pos</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="p">[</span><span class="mf">0.</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span>
+        <span class="p">[</span><span class="mf">1.</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span>
+        <span class="p">[</span><span class="mf">0.</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span>
+        <span class="p">[</span><span class="mf">0.</span><span class="p">,</span> <span class="mi">2</span><span class="p">],</span>
+        <span class="p">[</span><span class="mf">0.</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span>
+    <span class="p">]</span>
+    <span class="n">CIC</span><span class="o">.</span><span class="n">paint</span><span class="p">(</span><span class="n">real</span><span class="p">,</span> <span class="n">pos</span><span class="p">)</span>
+    <span class="n">assert_array_equal</span><span class="p">(</span><span class="n">real</span><span class="p">,</span>
+        <span class="p">[[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span>
+         <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]])</span></div>
+
+<div class="viewcode-block" id="test_diff"><a class="viewcode-back" href="../../../pmesh.tests.test_window.html#pmesh.tests.test_window.test_diff">[docs]</a><span class="k">def</span> <span class="nf">test_diff</span><span class="p">():</span>
+    <span class="n">real</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">))</span>
+    <span class="n">pos</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="p">[</span><span class="mf">0.5</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span>
+    <span class="p">]</span>
+    <span class="n">CIC</span><span class="o">.</span><span class="n">paint</span><span class="p">(</span><span class="n">real</span><span class="p">,</span> <span class="n">pos</span><span class="p">,</span> <span class="n">diffdir</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">assert_array_equal</span><span class="p">(</span><span class="n">real</span><span class="p">,</span>
+        <span class="p">[[</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span>
+         <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">]])</span>
+
+    <span class="n">pos</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">],</span>
+    <span class="p">]</span>
+    <span class="n">real</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">))</span>
+    <span class="n">CIC</span><span class="o">.</span><span class="n">paint</span><span class="p">(</span><span class="n">real</span><span class="p">,</span> <span class="n">pos</span><span class="p">,</span> <span class="n">diffdir</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">assert_array_equal</span><span class="p">(</span><span class="n">real</span><span class="p">,</span>
+        <span class="p">[[</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span>
+         <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]])</span></div>
+
+<div class="viewcode-block" id="test_lanczos2"><a class="viewcode-back" href="../../../pmesh.tests.test_window.html#pmesh.tests.test_window.test_lanczos2">[docs]</a><span class="k">def</span> <span class="nf">test_lanczos2</span><span class="p">():</span>
+    <span class="n">real</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">4</span><span class="p">,</span> <span class="mi">4</span><span class="p">))</span>
+    <span class="n">pos</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="p">[</span><span class="mf">1.5</span><span class="p">,</span> <span class="mf">1.5</span><span class="p">],</span>
+    <span class="p">]</span>
+    <span class="n">LANCZOS2</span><span class="o">.</span><span class="n">paint</span><span class="p">(</span><span class="n">real</span><span class="p">,</span> <span class="n">pos</span><span class="p">)</span>
+    <span class="n">assert_allclose</span><span class="p">(</span><span class="n">real</span><span class="p">,</span>
+      <span class="p">[[</span> <span class="mf">0.003977</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.035797</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.035797</span><span class="p">,</span>  <span class="mf">0.003977</span><span class="p">],</span> 
+       <span class="p">[</span><span class="o">-</span><span class="mf">0.035797</span><span class="p">,</span>  <span class="mf">0.322173</span><span class="p">,</span>  <span class="mf">0.322173</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.035797</span><span class="p">],</span>
+       <span class="p">[</span><span class="o">-</span><span class="mf">0.035797</span><span class="p">,</span>  <span class="mf">0.322173</span><span class="p">,</span>  <span class="mf">0.322173</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.035797</span><span class="p">],</span>
+       <span class="p">[</span> <span class="mf">0.003977</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.035797</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.035797</span><span class="p">,</span>  <span class="mf">0.003977</span><span class="p">]],</span> <span class="n">atol</span><span class="o">=</span><span class="mi">1</span><span class="n">e</span><span class="o">-</span><span class="mi">5</span><span class="p">)</span>
+    <span class="n">assert_array_equal</span><span class="p">(</span><span class="n">LANCZOS2</span><span class="o">.</span><span class="n">support</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="test_tsc"><a class="viewcode-back" href="../../../pmesh.tests.test_window.html#pmesh.tests.test_window.test_tsc">[docs]</a><span class="k">def</span> <span class="nf">test_tsc</span><span class="p">():</span>
+    <span class="n">real</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">4</span><span class="p">))</span>
+    <span class="n">pos</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="p">[</span><span class="mf">1.5</span><span class="p">],</span>
+    <span class="p">]</span>
+    <span class="n">TSC</span><span class="o">.</span><span class="n">paint</span><span class="p">(</span><span class="n">real</span><span class="p">,</span> <span class="n">pos</span><span class="p">)</span>
+    <span class="n">assert_array_equal</span><span class="p">(</span><span class="n">real</span><span class="p">,</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">,</span> <span class="mi">0</span><span class="p">])</span>
+
+    <span class="n">real</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">4</span><span class="p">))</span>
+    <span class="n">pos</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="p">[</span><span class="mf">1.8</span><span class="p">],</span>
+    <span class="p">]</span>
+    <span class="n">TSC</span><span class="o">.</span><span class="n">paint</span><span class="p">(</span><span class="n">real</span><span class="p">,</span> <span class="n">pos</span><span class="p">)</span>
+    <span class="c1"># this is special for odd support kernels. #10</span>
+    <span class="n">assert_almost_equal</span><span class="p">(</span><span class="n">real</span><span class="p">,</span> <span class="p">[</span> <span class="mf">0.</span>   <span class="p">,</span>  <span class="mf">0.245</span><span class="p">,</span>  <span class="mf">0.71</span> <span class="p">,</span>  <span class="mf">0.045</span><span class="p">])</span>
+
+    <span class="n">real</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">5</span><span class="p">))</span>
+    <span class="n">pos</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="p">[</span><span class="mi">2</span><span class="p">],</span>
+    <span class="p">]</span>
+    <span class="n">TSC</span><span class="o">.</span><span class="n">paint</span><span class="p">(</span><span class="n">real</span><span class="p">,</span> <span class="n">pos</span><span class="p">)</span>
+    <span class="n">assert_array_equal</span><span class="p">(</span><span class="n">real</span><span class="p">,</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mf">0.125</span><span class="p">,</span> <span class="mf">0.75</span><span class="p">,</span> <span class="mf">0.125</span><span class="p">,</span> <span class="mi">0</span><span class="p">])</span>
+
+    <span class="n">real</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">5</span><span class="p">))</span>
+    <span class="n">pos</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+    <span class="p">]</span>
+    <span class="n">affine</span> <span class="o">=</span> <span class="n">Affine</span><span class="p">(</span><span class="n">ndim</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">period</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
+    <span class="n">TSC</span><span class="o">.</span><span class="n">paint</span><span class="p">(</span><span class="n">real</span><span class="p">,</span> <span class="n">pos</span><span class="p">,</span> <span class="n">transform</span><span class="o">=</span><span class="n">affine</span><span class="p">)</span>
+    <span class="n">assert_array_equal</span><span class="p">(</span><span class="n">real</span><span class="p">,</span> <span class="p">[</span><span class="mf">0.75</span><span class="p">,</span> <span class="mf">0.125</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mf">0.125</span><span class="p">])</span></div>
+
+<div class="viewcode-block" id="test_cubic"><a class="viewcode-back" href="../../../pmesh.tests.test_window.html#pmesh.tests.test_window.test_cubic">[docs]</a><span class="k">def</span> <span class="nf">test_cubic</span><span class="p">():</span>
+    <span class="n">real</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">6</span><span class="p">))</span>
+    <span class="n">pos</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="p">[</span><span class="mf">2.5</span><span class="p">],</span>
+    <span class="p">]</span>
+    <span class="n">CUBIC</span><span class="o">.</span><span class="n">paint</span><span class="p">(</span><span class="n">real</span><span class="p">,</span> <span class="n">pos</span><span class="p">)</span>
+    <span class="n">assert_array_equal</span><span class="p">(</span><span class="n">real</span><span class="p">,</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.0625</span><span class="p">,</span> <span class="mf">0.5625</span><span class="p">,</span> <span class="mf">0.5625</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.0625</span><span class="p">,</span> <span class="mi">0</span><span class="p">])</span></div>
+
+
+<span class="nd">@skipif</span><span class="p">(</span><span class="kc">True</span><span class="p">,</span> <span class="s2">&quot;numerical details of wavelets undecided&quot;</span><span class="p">)</span>
+<div class="viewcode-block" id="test_db12"><a class="viewcode-back" href="../../../pmesh.tests.test_window.html#pmesh.tests.test_window.test_db12">[docs]</a><span class="k">def</span> <span class="nf">test_db12</span><span class="p">():</span>
+    <span class="n">real</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">10</span><span class="p">))</span>
+    <span class="n">pos</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="p">[</span><span class="mf">4.5</span><span class="p">],</span>
+    <span class="p">]</span>
+    <span class="n">DB12</span><span class="o">.</span><span class="n">paint</span><span class="p">(</span><span class="n">real</span><span class="p">,</span> <span class="n">pos</span><span class="p">)</span>
+    <span class="n">assert_almost_equal</span><span class="p">(</span><span class="n">real</span><span class="p">,</span>  <span class="p">[</span> <span class="o">-</span><span class="mf">8.0292000e-04</span><span class="p">,</span>  <span class="o">-</span><span class="mf">5.4008900e-03</span><span class="p">,</span>   <span class="mf">3.2057780e-02</span><span class="p">,</span>  <span class="o">-</span><span class="mf">9.6184070e-02</span><span class="p">,</span>
+         <span class="mf">2.0444605e-01</span><span class="p">,</span>  <span class="o">-</span><span class="mf">3.4209320e-01</span><span class="p">,</span>   <span class="mf">3.9515054e-01</span><span class="p">,</span>   <span class="mf">7.4167734e-01</span><span class="p">,</span>
+         <span class="mf">7.0450990e-02</span><span class="p">,</span>   <span class="mf">1.3687000e-04</span><span class="p">])</span></div>
+
+<span class="nd">@skipif</span><span class="p">(</span><span class="kc">True</span><span class="p">,</span> <span class="s2">&quot;numerical details of wavelets undecided&quot;</span><span class="p">)</span>
+<div class="viewcode-block" id="test_db20"><a class="viewcode-back" href="../../../pmesh.tests.test_window.html#pmesh.tests.test_window.test_db20">[docs]</a><span class="k">def</span> <span class="nf">test_db20</span><span class="p">():</span>
+    <span class="n">real</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">13</span><span class="p">))</span>
+    <span class="n">pos</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="p">[</span><span class="mi">6</span><span class="p">],</span>
+    <span class="p">]</span>
+    <span class="n">DB20</span><span class="o">.</span><span class="n">paint</span><span class="p">(</span><span class="n">real</span><span class="p">,</span> <span class="n">pos</span><span class="p">)</span>
+    <span class="n">assert_almost_equal</span><span class="p">(</span><span class="n">real</span><span class="p">,</span> <span class="p">[</span>  <span class="mf">8.7396600e-03</span><span class="p">,</span>  <span class="o">-</span><span class="mf">6.7160500e-03</span><span class="p">,</span>  <span class="o">-</span><span class="mf">6.5716800e-03</span><span class="p">,</span>   <span class="mf">3.5024950e-02</span><span class="p">,</span>
+        <span class="o">-</span><span class="mf">7.4218390e-02</span><span class="p">,</span>   <span class="mf">1.0433001e-01</span><span class="p">,</span>  <span class="o">-</span><span class="mf">7.1827390e-02</span><span class="p">,</span>  <span class="o">-</span><span class="mf">1.6736320e-01</span><span class="p">,</span>
+         <span class="mf">8.4381209e-01</span><span class="p">,</span>   <span class="mf">3.1778939e-01</span><span class="p">,</span>   <span class="mf">2.0722960e-02</span><span class="p">,</span>   <span class="mf">1.5644000e-04</span><span class="p">,</span>
+         <span class="mf">0.0000000e+00</span><span class="p">])</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../index.html">PyPM 0.1 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../index.html" >Module code</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2015, Yu Feng.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.5.1.
+    </div>
+  </body>
+</html>

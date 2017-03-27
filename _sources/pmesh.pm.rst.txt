@@ -1,0 +1,7 @@
+pmesh.pm module
+===============
+
+.. automodule:: pmesh.pm
+    :members:
+    :undoc-members:
+    :show-inheritance:

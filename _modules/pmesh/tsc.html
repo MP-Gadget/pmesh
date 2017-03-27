@@ -1,0 +1,199 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pmesh.tsc &#8212; PyPM 0.1 documentation</title>
+    
+    <link rel="stylesheet" href="../../_static/nature.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">PyPM 0.1 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../index.html" accesskey="U">Module code</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for pmesh.tsc</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">warnings</span>
+<span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s2">&quot;tsc.py is deprecated; switch to window.TSC&quot;</span><span class="p">,</span> <span class="ne">DeprecationWarning</span><span class="p">)</span>
+<span class="c1"># numba version of the tsc.</span>
+<span class="kn">import</span> <span class="nn">numpy</span>
+<span class="kn">import</span> <span class="nn">numba</span>
+<span class="kn">import</span> <span class="nn">math</span>
+<div class="viewcode-block" id="paint"><a class="viewcode-back" href="../../pmesh.tsc.html#pmesh.tsc.paint">[docs]</a><span class="k">def</span> <span class="nf">paint</span><span class="p">(</span><span class="n">pos</span><span class="p">,</span> <span class="n">mesh</span><span class="p">,</span> <span class="n">weights</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;raise&quot;</span><span class="p">,</span> <span class="n">period</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">transform</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">weights</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">weights</span> <span class="o">=</span> <span class="mf">1.0</span>
+    <span class="k">return</span> <span class="n">driver</span><span class="p">(</span><span class="n">pos</span><span class="p">,</span> <span class="n">mesh</span><span class="p">,</span> <span class="n">weights</span><span class="p">,</span> <span class="n">mode</span><span class="p">,</span> <span class="n">period</span><span class="p">,</span> <span class="n">transform</span><span class="p">,</span> <span class="n">paint_some</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="readout"><a class="viewcode-back" href="../../pmesh.tsc.html#pmesh.tsc.readout">[docs]</a><span class="k">def</span> <span class="nf">readout</span><span class="p">(</span><span class="n">mesh</span><span class="p">,</span> <span class="n">pos</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;raise&quot;</span><span class="p">,</span> <span class="n">period</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">transform</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">out</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">out</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">out</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">pos</span><span class="p">),</span> <span class="s1">&#39;f8&#39;</span><span class="p">)</span>
+    <span class="n">driver</span><span class="p">(</span><span class="n">pos</span><span class="p">,</span> <span class="n">mesh</span><span class="p">,</span> <span class="n">out</span><span class="p">,</span> <span class="n">mode</span><span class="p">,</span> <span class="n">period</span><span class="p">,</span> <span class="n">transform</span><span class="p">,</span> <span class="n">readout_some</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">out</span></div>
+
+<div class="viewcode-block" id="driver"><a class="viewcode-back" href="../../pmesh.tsc.html#pmesh.tsc.driver">[docs]</a><span class="k">def</span> <span class="nf">driver</span><span class="p">(</span><span class="n">pos</span><span class="p">,</span> <span class="n">mesh</span><span class="p">,</span> <span class="n">weights</span><span class="p">,</span> <span class="n">mode</span><span class="p">,</span> <span class="n">period</span><span class="p">,</span> <span class="n">transform</span><span class="p">,</span>
+        <span class="n">callback</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; TSC approximation, painting points to Nmesh,</span>
+<span class="sd">        each point has a weight given by weights.</span>
+<span class="sd">        This does not give density.</span>
+<span class="sd">        pos is supposed to be row vectors. aka for 3d input</span>
+<span class="sd">        pos.shape is (?, 3).</span>
+
+<span class="sd">        pos[:, i] should have been normalized in the range of [ 0,  mesh.shape[i] )</span>
+
+<span class="sd">        thus z is the fast moving index</span>
+
+<span class="sd">        mode can be :</span>
+<span class="sd">            &quot;raise&quot; : raise exceptions if a particle is painted</span>
+<span class="sd">             outside the mesh</span>
+<span class="sd">            &quot;ignore&quot;: ignore particle contribution outside of the mesh</span>
+<span class="sd">        period can be a scalar or of length len(mesh.shape). if period is given</span>
+<span class="sd">        the particles are wrapped by the period.</span>
+
+<span class="sd">        transform is a function that transforms pos to mesh units:</span>
+<span class="sd">        transform(pos[:, 3]) -&gt; meshpos[:, 3]</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">pos</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">pos</span><span class="p">)</span>
+    <span class="n">chunksize</span> <span class="o">=</span> <span class="mi">1024</span> <span class="o">*</span> <span class="mi">1024</span>
+    <span class="n">Ndim</span> <span class="o">=</span> <span class="n">pos</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+    <span class="n">Np</span> <span class="o">=</span> <span class="n">pos</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">mesh</span><span class="o">.</span><span class="n">flags</span><span class="p">[</span><span class="s1">&#39;C_CONTIGUOUS&#39;</span><span class="p">]:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;mesh must be C continguous&#39;</span><span class="p">)</span>
+
+    <span class="c1"># scratch </span>
+    <span class="k">if</span> <span class="n">transform</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">transform</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span><span class="n">x</span>
+    <span class="k">if</span> <span class="n">period</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span> <span class="n">period</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">for</span> <span class="n">start</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">Np</span><span class="p">,</span> <span class="n">chunksize</span><span class="p">):</span>
+        <span class="n">chunk</span> <span class="o">=</span> <span class="nb">slice</span><span class="p">(</span><span class="n">start</span><span class="p">,</span> <span class="n">start</span><span class="o">+</span><span class="n">chunksize</span><span class="p">)</span>
+        <span class="n">mypos</span> <span class="o">=</span> <span class="n">transform</span><span class="p">(</span><span class="n">pos</span><span class="p">[</span><span class="n">chunk</span><span class="p">])</span>
+        <span class="k">if</span> <span class="n">numpy</span><span class="o">.</span><span class="n">isscalar</span><span class="p">(</span><span class="n">weights</span><span class="p">):</span>
+            <span class="n">wchunk</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="n">chunksize</span><span class="p">)</span>
+            <span class="n">wchunk</span><span class="p">[:]</span> <span class="o">=</span> <span class="n">weights</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">wchunk</span> <span class="o">=</span> <span class="n">weights</span><span class="p">[</span><span class="n">chunk</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">callback</span><span class="p">(</span><span class="n">mypos</span><span class="p">,</span> <span class="n">mesh</span><span class="p">,</span> <span class="n">mesh</span><span class="o">.</span><span class="n">ravel</span><span class="p">(),</span> <span class="n">wchunk</span><span class="p">,</span> <span class="n">period</span><span class="p">)</span> \
+                <span class="ow">and</span> <span class="n">mode</span> <span class="o">==</span> <span class="s2">&quot;raise&quot;</span><span class="p">:</span>
+           <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Some points are out of boundary&quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">mesh</span></div>
+
+<span class="nd">@numba</span><span class="o">.</span><span class="n">jit</span><span class="p">(</span><span class="n">nopython</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<div class="viewcode-block" id="paint_some"><a class="viewcode-back" href="../../pmesh.tsc.html#pmesh.tsc.paint_some">[docs]</a><span class="k">def</span> <span class="nf">paint_some</span><span class="p">(</span><span class="n">pos</span><span class="p">,</span> <span class="n">mesh</span><span class="p">,</span> <span class="n">meshflat</span><span class="p">,</span> <span class="n">weights</span><span class="p">,</span> <span class="n">period</span><span class="p">):</span>
+    <span class="n">Ndim</span> <span class="o">=</span> <span class="n">pos</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+    <span class="n">Np</span> <span class="o">=</span> <span class="n">pos</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">Nmax</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="mi">3</span> <span class="o">**</span> <span class="n">Ndim</span><span class="p">)</span>
+    <span class="n">ignore</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">period</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">period</span><span class="p">)</span>
+    <span class="n">outbound</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">Np</span><span class="p">):</span>
+        <span class="n">w</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">weights</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+        <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">Nmax</span><span class="p">):</span>
+            <span class="n">ignore</span> <span class="o">=</span> <span class="kc">False</span>
+            <span class="n">kernel</span> <span class="o">=</span> <span class="mf">1.0</span>
+            <span class="n">ind</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">Ndim</span><span class="p">):</span>
+                <span class="n">intpos</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">rint</span><span class="p">(</span><span class="n">pos</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">d</span><span class="p">])</span> <span class="c1"># NGP index</span>
+                <span class="n">diff</span> <span class="o">=</span> <span class="n">intpos</span> <span class="o">-</span> <span class="n">pos</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">d</span><span class="p">]</span>
+                <span class="n">rel</span> <span class="o">=</span> <span class="p">(</span><span class="n">n</span> <span class="o">//</span> <span class="mi">3</span><span class="o">**</span><span class="n">d</span><span class="p">)</span> <span class="o">%</span> <span class="mi">3</span> <span class="o">-</span> <span class="mi">1</span> <span class="c1"># maps offset (rel. to NGP) to (-1, 0, 1)</span>
+                <span class="n">targetpos</span> <span class="o">=</span> <span class="n">intpos</span> <span class="o">+</span> <span class="n">rel</span> <span class="o">-</span> <span class="mi">1</span>
+                <span class="k">if</span> <span class="n">rel</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">:</span> <span class="c1"># before NGP</span>
+                    <span class="n">kernel</span> <span class="o">*=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="mf">0.5</span><span class="o">+</span><span class="n">diff</span><span class="p">)</span><span class="o">*</span><span class="p">(</span><span class="mf">0.5</span><span class="o">+</span><span class="n">diff</span><span class="p">)</span>
+                <span class="k">elif</span> <span class="n">rel</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span> <span class="c1"># NGP</span>
+                    <span class="n">kernel</span> <span class="o">*=</span> <span class="mf">0.75</span> <span class="o">-</span> <span class="n">diff</span><span class="o">*</span><span class="n">diff</span>
+                <span class="k">else</span><span class="p">:</span> <span class="c1"># after NGPs</span>
+                    <span class="n">kernel</span> <span class="o">*=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="mf">0.5</span><span class="o">-</span><span class="n">diff</span><span class="p">)</span><span class="o">*</span><span class="p">(</span><span class="mf">0.5</span><span class="o">-</span><span class="n">diff</span><span class="p">)</span>
+                
+                <span class="c1"># wrap by period</span>
+                <span class="k">if</span> <span class="n">period</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="k">while</span> <span class="n">targetpos</span> <span class="o">&gt;=</span> <span class="n">period</span><span class="p">:</span>
+                        <span class="n">targetpos</span> <span class="o">-=</span> <span class="n">period</span>
+                    <span class="k">while</span> <span class="n">targetpos</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+                        <span class="n">targetpos</span> <span class="o">+=</span> <span class="n">period</span>
+                <span class="k">if</span> <span class="n">targetpos</span> <span class="o">&lt;</span> <span class="mi">0</span> <span class="ow">or</span> \
+                        <span class="n">targetpos</span> <span class="o">&gt;=</span> <span class="n">mesh</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="n">d</span><span class="p">]:</span>
+                    <span class="n">ignore</span> <span class="o">=</span> <span class="kc">True</span>
+                    <span class="k">break</span>
+                <span class="n">ind</span> <span class="o">+=</span> <span class="n">mesh</span><span class="o">.</span><span class="n">strides</span><span class="p">[</span><span class="n">d</span><span class="p">]</span><span class="o">*</span><span class="n">targetpos</span>
+
+            <span class="k">if</span> <span class="n">ignore</span><span class="p">:</span>
+                <span class="n">outbound</span> <span class="o">+=</span> <span class="mi">1</span>
+                <span class="k">continue</span>
+            <span class="n">meshflat</span><span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">ind</span><span class="o">/</span><span class="n">mesh</span><span class="o">.</span><span class="n">itemsize</span><span class="p">)]</span> <span class="o">+=</span> <span class="n">w</span> <span class="o">*</span> <span class="n">kernel</span>
+
+    <span class="k">return</span> <span class="n">outbound</span></div>
+
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">PyPM 0.1 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../index.html" >Module code</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2015, Yu Feng.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.5.1.
+    </div>
+  </body>
+</html>

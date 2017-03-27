@@ -1,0 +1,7 @@
+pmesh.cic module
+================
+
+.. automodule:: pmesh.cic
+    :members:
+    :undoc-members:
+    :show-inheritance:

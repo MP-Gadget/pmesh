@@ -1,7 +1,0 @@
-pypm.particlemesh module
-========================
-
-.. automodule:: pypm.particlemesh
-    :members:
-    :undoc-members:
-    :show-inheritance:

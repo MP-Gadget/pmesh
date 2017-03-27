@@ -1,0 +1,1280 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pmesh.pm &#8212; PyPM 0.1 documentation</title>
+    
+    <link rel="stylesheet" href="../../_static/nature.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">PyPM 0.1 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../index.html" accesskey="U">Module code</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for pmesh.pm</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">numpy</span>
+<span class="kn">import</span> <span class="nn">pfft</span>
+<span class="kn">import</span> <span class="nn">mpsort</span>
+<span class="kn">from</span> <span class="nn">.</span> <span class="k">import</span> <span class="n">domain</span>
+<span class="kn">from</span> <span class="nn">.</span> <span class="k">import</span> <span class="n">window</span>
+<span class="kn">from</span> <span class="nn">mpi4py</span> <span class="k">import</span> <span class="n">MPI</span>
+
+<span class="kn">import</span> <span class="nn">numbers</span> <span class="c1"># for testing Numbers</span>
+
+<div class="viewcode-block" id="is_inplace"><a class="viewcode-back" href="../../pmesh.pm.html#pmesh.pm.is_inplace">[docs]</a><span class="k">def</span> <span class="nf">is_inplace</span><span class="p">(</span><span class="n">out</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">out</span> <span class="ow">is</span> <span class="bp">Ellipsis</span></div>
+
+<div class="viewcode-block" id="slab"><a class="viewcode-back" href="../../pmesh.pm.html#pmesh.pm.slab">[docs]</a><span class="k">class</span> <span class="nc">slab</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
+    <span class="k">pass</span></div>
+
+<div class="viewcode-block" id="slabiter"><a class="viewcode-back" href="../../pmesh.pm.html#pmesh.pm.slabiter">[docs]</a><span class="k">class</span> <span class="nc">slabiter</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">field</span><span class="p">):</span>
+        <span class="c1"># we iterate over the slowest axis to gain locality.</span>
+        <span class="k">if</span> <span class="n">field</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="n">axis</span> <span class="o">=</span> <span class="mi">2</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">optimized_view</span> <span class="o">=</span> <span class="n">field</span><span class="o">.</span><span class="n">value</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">nslabs</span> <span class="o">=</span> <span class="mi">1</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">optx</span> <span class="o">=</span> <span class="p">[</span><span class="n">xx</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="k">for</span> <span class="n">xx</span> <span class="ow">in</span> <span class="n">field</span><span class="o">.</span><span class="n">x</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">opti</span> <span class="o">=</span> <span class="p">[</span><span class="n">ii</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="k">for</span> <span class="n">ii</span> <span class="ow">in</span> <span class="n">field</span><span class="o">.</span><span class="n">i</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">axissort</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">argsort</span><span class="p">(</span><span class="n">field</span><span class="o">.</span><span class="n">value</span><span class="o">.</span><span class="n">strides</span><span class="p">)[::</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+            <span class="n">axis</span> <span class="o">=</span> <span class="n">axissort</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">optimized_view</span> <span class="o">=</span> <span class="n">field</span><span class="o">.</span><span class="n">value</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="n">axissort</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">nslabs</span> <span class="o">=</span> <span class="n">field</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="n">axis</span><span class="p">]</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">optx</span> <span class="o">=</span> <span class="p">[</span><span class="n">xx</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="n">axissort</span><span class="p">)</span> <span class="k">for</span> <span class="n">xx</span> <span class="ow">in</span> <span class="n">field</span><span class="o">.</span><span class="n">x</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">opti</span> <span class="o">=</span> <span class="p">[</span><span class="n">ii</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="n">axissort</span><span class="p">)</span> <span class="k">for</span> <span class="n">ii</span> <span class="ow">in</span> <span class="n">field</span><span class="o">.</span><span class="n">i</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">x</span> <span class="o">=</span> <span class="n">xslabiter</span><span class="p">(</span><span class="n">axis</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">nslabs</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">optx</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">i</span> <span class="o">=</span> <span class="n">xslabiter</span><span class="p">(</span><span class="n">axis</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">nslabs</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">opti</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">axis</span> <span class="o">=</span> <span class="n">axis</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Nmesh</span> <span class="o">=</span> <span class="n">field</span><span class="o">.</span><span class="n">Nmesh</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">BoxSize</span> <span class="o">=</span> <span class="n">field</span><span class="o">.</span><span class="n">BoxSize</span>
+
+    <span class="k">def</span> <span class="nf">__iter__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">irow</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nslabs</span><span class="p">):</span>
+            <span class="n">s</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">optimized_view</span><span class="p">[</span><span class="n">irow</span><span class="p">]</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="nb">type</span><span class="o">=</span><span class="n">slab</span><span class="p">)</span>
+            <span class="n">kk</span> <span class="o">=</span> <span class="p">[</span><span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">if</span> <span class="n">d</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">axis</span> <span class="k">else</span> <span class="n">x</span><span class="p">[</span><span class="n">irow</span><span class="p">]</span> <span class="k">for</span> <span class="n">d</span><span class="p">,</span> <span class="n">x</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">optx</span><span class="p">)]</span>
+            <span class="n">ii</span> <span class="o">=</span> <span class="p">[</span><span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">if</span> <span class="n">d</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">axis</span> <span class="k">else</span> <span class="n">x</span><span class="p">[</span><span class="n">irow</span><span class="p">]</span> <span class="k">for</span> <span class="n">d</span><span class="p">,</span> <span class="n">x</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">opti</span><span class="p">)]</span>
+            <span class="n">s</span><span class="o">.</span><span class="n">x</span> <span class="o">=</span> <span class="n">kk</span>
+            <span class="n">s</span><span class="o">.</span><span class="n">i</span> <span class="o">=</span> <span class="n">ii</span>
+            <span class="n">s</span><span class="o">.</span><span class="n">BoxSize</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">BoxSize</span>
+            <span class="n">s</span><span class="o">.</span><span class="n">Nmesh</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">Nmesh</span>
+            <span class="k">yield</span> <span class="n">s</span></div>
+
+<div class="viewcode-block" id="xslabiter"><a class="viewcode-back" href="../../pmesh.pm.html#pmesh.pm.xslabiter">[docs]</a><span class="k">class</span> <span class="nc">xslabiter</span><span class="p">(</span><span class="n">slabiter</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">axis</span><span class="p">,</span> <span class="n">nslabs</span><span class="p">,</span> <span class="n">optx</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">axis</span> <span class="o">=</span> <span class="n">axis</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">nslabs</span> <span class="o">=</span> <span class="n">nslabs</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">optx</span> <span class="o">=</span> <span class="n">optx</span>
+
+    <span class="k">def</span> <span class="nf">__iter__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">irow</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nslabs</span><span class="p">):</span>
+            <span class="n">kk</span> <span class="o">=</span> <span class="p">[</span><span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">if</span> <span class="n">d</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">axis</span> <span class="k">else</span> <span class="n">x</span><span class="p">[</span><span class="n">irow</span><span class="p">]</span> <span class="k">for</span> <span class="n">d</span><span class="p">,</span> <span class="n">x</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">optx</span><span class="p">)]</span>
+            <span class="k">yield</span> <span class="n">kk</span></div>
+
+
+<div class="viewcode-block" id="Field"><a class="viewcode-back" href="../../pmesh.pm.html#pmesh.pm.Field">[docs]</a><span class="k">class</span> <span class="nc">Field</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Base class for RealField and ComplexField.</span>
+
+<span class="sd">        It only supports those two subclasses.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="s1">&#39;</span><span class="si">%s</span><span class="s1">:&#39;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span> <span class="o">+</span> <span class="nb">repr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">value</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">__radd__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span> <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__add__</span><span class="p">(</span><span class="n">other</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">__rmul__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span> <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__mul__</span><span class="p">(</span><span class="n">other</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">__add__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="n">r</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="n">r</span><span class="p">[</span><span class="o">...</span><span class="p">]</span> <span class="o">+=</span> <span class="n">other</span>
+        <span class="k">return</span> <span class="n">r</span>
+
+    <span class="k">def</span> <span class="nf">__sub__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="n">r</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="n">r</span><span class="p">[</span><span class="o">...</span><span class="p">]</span> <span class="o">-=</span> <span class="n">other</span>
+        <span class="k">return</span> <span class="n">r</span>
+
+    <span class="k">def</span> <span class="nf">__rsub__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="n">r</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="n">r</span><span class="p">[</span><span class="o">...</span><span class="p">]</span> <span class="o">*=</span> <span class="o">-</span><span class="mi">1</span>
+        <span class="n">r</span><span class="p">[</span><span class="o">...</span><span class="p">]</span> <span class="o">+=</span> <span class="n">other</span>
+        <span class="k">return</span> <span class="n">r</span>
+
+    <span class="k">def</span> <span class="nf">__mul__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="n">r</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="n">r</span><span class="p">[</span><span class="o">...</span><span class="p">]</span> <span class="o">*=</span> <span class="n">other</span>
+        <span class="k">return</span> <span class="n">r</span>
+
+    <span class="k">def</span> <span class="nf">__eq__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="p">[</span><span class="o">...</span><span class="p">]</span> <span class="o">==</span> <span class="n">other</span><span class="p">[</span><span class="o">...</span><span class="p">]</span>
+
+<div class="viewcode-block" id="Field.copy"><a class="viewcode-back" href="../../pmesh.pm.html#pmesh.pm.Field.copy">[docs]</a>    <span class="k">def</span> <span class="nf">copy</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">other</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__class__</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">pm</span><span class="p">)</span>
+        <span class="n">other</span><span class="o">.</span><span class="n">value</span><span class="p">[</span><span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">value</span>
+        <span class="k">return</span> <span class="n">other</span></div>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pm</span><span class="p">,</span> <span class="n">base</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Used internally to add shortcuts of attributes from pm &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">base</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">base</span> <span class="o">=</span> <span class="n">pfft</span><span class="o">.</span><span class="n">LocalBuffer</span><span class="p">(</span><span class="n">pm</span><span class="o">.</span><span class="n">partition</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">base</span> <span class="o">=</span> <span class="n">base</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pm</span> <span class="o">=</span> <span class="n">pm</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">partition</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">partition</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">BoxSize</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">BoxSize</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Nmesh</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Nmesh</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ndim</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">pm</span><span class="o">.</span><span class="n">Nmesh</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">RealField</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">value</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">base</span><span class="o">.</span><span class="n">view_input</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">start</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">partition</span><span class="o">.</span><span class="n">local_i_start</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">cshape</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Nmesh</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">x</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">x</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">i</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">i_ind</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ComplexField</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">value</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">base</span><span class="o">.</span><span class="n">view_output</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">start</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">partition</span><span class="o">.</span><span class="n">local_o_start</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">cshape</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">Nmesh</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">cshape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cshape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">//</span> <span class="mi">2</span> <span class="o">+</span> <span class="mi">1</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">x</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">k</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">i</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">o_ind</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">real</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">value</span><span class="o">.</span><span class="n">real</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">imag</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">value</span><span class="o">.</span><span class="n">imag</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">plain</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">value</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">real</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="mi">2</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;Olny RealField and ComplexField. No more subclassing&quot;</span><span class="p">);</span>
+
+        <span class="c1"># copy over a few ndarray attributes</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">flat</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">value</span><span class="o">.</span><span class="n">flat</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">shape</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">value</span><span class="o">.</span><span class="n">shape</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">size</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">value</span><span class="o">.</span><span class="n">size</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dtype</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">value</span><span class="o">.</span><span class="n">dtype</span>
+
+        <span class="c1"># the slices in the full array </span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">slices</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">([</span>
+                <span class="nb">slice</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">s</span> <span class="o">+</span> <span class="n">n</span><span class="p">)</span>
+                <span class="k">for</span> <span class="n">s</span><span class="p">,</span> <span class="n">n</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">start</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+                <span class="p">])</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">csize</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">comm</span><span class="o">.</span><span class="n">allreduce</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">size</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_ctol</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">index</span><span class="p">):</span>
+        <span class="n">oldindex</span> <span class="o">=</span> <span class="n">index</span>
+        <span class="n">index</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="n">copy</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">index</span><span class="p">)</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">ndim</span> <span class="o">+</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">value</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">plain</span>
+            <span class="n">index1</span> <span class="o">=</span> <span class="n">index</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+        <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">index</span><span class="p">)</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">ndim</span><span class="p">:</span>
+            <span class="n">value</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">value</span>
+            <span class="n">index1</span> <span class="o">=</span> <span class="n">index</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">IndexError</span><span class="p">(</span><span class="s2">&quot;Only vector index in global indexing is supported. for complex append 0 or 1 for real and imag&quot;</span><span class="p">)</span>
+
+        <span class="c1"># negative indexing</span>
+        <span class="n">index1</span><span class="p">[</span><span class="n">index1</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">]</span> <span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="n">Nmesh</span><span class="p">[</span><span class="n">index1</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">]</span>
+        <span class="k">if</span> <span class="nb">all</span><span class="p">(</span><span class="n">index1</span> <span class="o">&gt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">start</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">all</span><span class="p">(</span><span class="n">index1</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">start</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">value</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">index1</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">start</span><span class="p">)</span> <span class="o">+</span> <span class="nb">list</span><span class="p">(</span><span class="n">index</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">ndim</span><span class="p">:]))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">value</span><span class="p">,</span> <span class="kc">None</span>
+        
+<div class="viewcode-block" id="Field.cgetitem"><a class="viewcode-back" href="../../pmesh.pm.html#pmesh.pm.Field.cgetitem">[docs]</a>    <span class="k">def</span> <span class="nf">cgetitem</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">index</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; get a value from absolute index collectively.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">value</span><span class="p">,</span> <span class="n">localindex</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_ctol</span><span class="p">(</span><span class="n">index</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">localindex</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">ret</span> <span class="o">=</span> <span class="n">value</span><span class="p">[</span><span class="n">localindex</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">ret</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">pm</span><span class="o">.</span><span class="n">comm</span><span class="o">.</span><span class="n">allreduce</span><span class="p">(</span><span class="n">ret</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Field.csetitem"><a class="viewcode-back" href="../../pmesh.pm.html#pmesh.pm.Field.csetitem">[docs]</a>    <span class="k">def</span> <span class="nf">csetitem</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">index</span><span class="p">,</span> <span class="n">v</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; get a value from absolute index collectively.</span>
+<span class="sd">            maintains Hermitian conjugation.</span>
+<span class="sd">            Returns the actually value that is set.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        
+        <span class="n">index</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="n">copy</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">value</span><span class="p">,</span> <span class="n">localindex</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_ctol</span><span class="p">(</span><span class="n">index</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ComplexField</span><span class="p">):</span>
+            <span class="n">dualindex</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">negative</span><span class="p">(</span><span class="n">index</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">dualindex</span><span class="p">)</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">ndim</span> <span class="o">+</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="n">dualindex</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">*=</span> <span class="o">-</span><span class="mi">1</span>
+
+            <span class="n">dualindex</span><span class="p">[:</span><span class="bp">self</span><span class="o">.</span><span class="n">ndim</span><span class="p">]</span> <span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="n">Nmesh</span>
+            <span class="n">dualindex</span><span class="p">[:</span><span class="bp">self</span><span class="o">.</span><span class="n">ndim</span><span class="p">]</span> <span class="o">%=</span> <span class="bp">self</span><span class="o">.</span><span class="n">Nmesh</span>
+
+            <span class="n">unused</span><span class="p">,</span> <span class="n">duallocalindex</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_ctol</span><span class="p">(</span><span class="n">dualindex</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># real field, no dual</span>
+            <span class="n">duallocalindex</span> <span class="o">=</span> <span class="kc">None</span>
+
+        <span class="n">dualv</span> <span class="o">=</span> <span class="n">v</span>
+        <span class="k">if</span> <span class="n">localindex</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">v</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">if</span> <span class="n">duallocalindex</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">dualv</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">index</span><span class="p">)</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">ndim</span> <span class="o">+</span> <span class="mi">1</span> <span class="ow">and</span> <span class="n">index</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">dualv</span> <span class="o">=</span> <span class="o">-</span><span class="n">dualv</span>
+            <span class="k">if</span> <span class="n">localindex</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">duallocalindex</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">localindex</span> <span class="o">==</span> <span class="n">duallocalindex</span><span class="p">:</span>
+                    <span class="c1"># self dual and imag</span>
+                    <span class="n">v</span> <span class="o">=</span> <span class="mi">0</span>
+                    <span class="n">dualv</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">index</span><span class="p">)</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">ndim</span><span class="p">:</span>
+            <span class="n">dualv</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">conjugate</span><span class="p">(</span><span class="n">dualv</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">localindex</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">duallocalindex</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">localindex</span> <span class="o">==</span> <span class="n">duallocalindex</span><span class="p">:</span>
+                    <span class="c1"># self conjugate</span>
+                    <span class="n">dualv</span> <span class="o">=</span> <span class="n">dualv</span><span class="o">.</span><span class="n">real</span>
+                    <span class="n">v</span> <span class="o">=</span> <span class="n">v</span><span class="o">.</span><span class="n">real</span>
+        <span class="k">if</span> <span class="n">localindex</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">value</span><span class="p">[</span><span class="n">localindex</span><span class="p">]</span> <span class="o">=</span> <span class="n">v</span>
+        <span class="k">if</span> <span class="n">duallocalindex</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">value</span><span class="p">[</span><span class="n">duallocalindex</span><span class="p">]</span> <span class="o">=</span> <span class="n">dualv</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">pm</span><span class="o">.</span><span class="n">comm</span><span class="o">.</span><span class="n">allreduce</span><span class="p">(</span><span class="n">v</span><span class="p">)</span></div>
+
+    <span class="k">def</span> <span class="nf">__getitem__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">index</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">value</span><span class="o">.</span><span class="n">__getitem__</span><span class="p">(</span><span class="n">index</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">__setitem__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">index</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">value</span><span class="o">.</span><span class="n">__setitem__</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">__array__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">value</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">slabs</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">slabiter</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+
+<div class="viewcode-block" id="Field.sort"><a class="viewcode-back" href="../../pmesh.pm.html#pmesh.pm.Field.sort">[docs]</a>    <span class="k">def</span> <span class="nf">sort</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">out</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Sort the field to &#39;C&#39;-order, partitioned by MPI ranks. Save the</span>
+<span class="sd">            result to flatiter.</span>
+
+<span class="sd">            Parameters</span>
+<span class="sd">            ----------</span>
+<span class="sd">            out : numpy.flatiter, or Ellipsis for inplace</span>
+<span class="sd">                A flatiter to store the &#39;C&#39; order. If not a flatiter, the .flat</span>
+<span class="sd">                attribute is used.</span>
+
+<span class="sd">            Returns</span>
+<span class="sd">            -------</span>
+<span class="sd">            numpy.flatiter : the flatiter provided or created.</span>
+
+<span class="sd">            Notes</span>
+<span class="sd">            -----</span>
+<span class="sd">            Set `out` to or Ellisps self.value for an &#39;inplace&#39; sort.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">ind</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">ravel_multi_index</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">mgrid</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">slices</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">cshape</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">out</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">out</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">empty_like</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">value</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">is_inplace</span><span class="p">(</span><span class="n">out</span><span class="p">):</span>
+            <span class="n">out</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">value</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">out</span><span class="p">,</span> <span class="n">numpy</span><span class="o">.</span><span class="n">flatiter</span><span class="p">):</span>
+            <span class="n">out</span> <span class="o">=</span> <span class="n">out</span><span class="o">.</span><span class="n">flat</span>
+
+        <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">out</span><span class="p">,</span> <span class="n">numpy</span><span class="o">.</span><span class="n">flatiter</span><span class="p">)</span>
+        <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">out</span><span class="p">)</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">size</span>
+
+        <span class="k">return</span> <span class="n">mpsort</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">flat</span><span class="p">,</span> <span class="n">orderby</span><span class="o">=</span><span class="n">ind</span><span class="o">.</span><span class="n">flat</span><span class="p">,</span> <span class="n">comm</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">pm</span><span class="o">.</span><span class="n">comm</span><span class="p">,</span> <span class="n">out</span><span class="o">=</span><span class="n">out</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Field.unsort"><a class="viewcode-back" href="../../pmesh.pm.html#pmesh.pm.Field.unsort">[docs]</a>    <span class="k">def</span> <span class="nf">unsort</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">flatiter</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Unsort c-ordered field values to the field.</span>
+
+<span class="sd">            Parameters</span>
+<span class="sd">            ----------</span>
+<span class="sd">            flatiter : numpy.flatiter</span>
+
+<span class="sd">            Notes</span>
+<span class="sd">            -----</span>
+<span class="sd">            self is updated. `array` does not have to be C_CONTIGUOUS flat iterator of array is used.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">flatiter</span><span class="p">,</span> <span class="n">numpy</span><span class="o">.</span><span class="n">flatiter</span><span class="p">):</span>
+            <span class="n">flatiter</span> <span class="o">=</span> <span class="n">flatiter</span><span class="o">.</span><span class="n">flat</span>
+
+        <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">flatiter</span><span class="p">,</span> <span class="n">numpy</span><span class="o">.</span><span class="n">flatiter</span><span class="p">)</span>
+        <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">flatiter</span><span class="p">)</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">size</span>
+
+        <span class="n">ind</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">ravel_multi_index</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">mgrid</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">slices</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">cshape</span><span class="p">)</span>
+        <span class="n">mpsort</span><span class="o">.</span><span class="n">permute</span><span class="p">(</span><span class="n">flatiter</span><span class="p">,</span> <span class="n">argindex</span><span class="o">=</span><span class="n">ind</span><span class="o">.</span><span class="n">flat</span><span class="p">,</span> <span class="n">comm</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">pm</span><span class="o">.</span><span class="n">comm</span><span class="p">,</span> <span class="n">out</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">flat</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Field.resample"><a class="viewcode-back" href="../../pmesh.pm.html#pmesh.pm.Field.resample">[docs]</a>    <span class="k">def</span> <span class="nf">resample</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">out</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Resample the Field by filling 0 or truncating modes.</span>
+<span class="sd">            Convert from and between Real/Complex automatically.</span>
+
+<span class="sd">            Parameters</span>
+<span class="sd">            ----------</span>
+<span class="sd">            out : Field</span>
+<span class="sd">                must be provided because it is a different PM. Can be RealField or ComplexField</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">out</span><span class="p">,</span> <span class="n">Field</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="nb">all</span><span class="p">(</span><span class="n">out</span><span class="o">.</span><span class="n">Nmesh</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">Nmesh</span><span class="p">):</span>
+            <span class="c1"># no resampling needed. Just do Fourier transforms.</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">RealField</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">out</span><span class="p">,</span> <span class="n">ComplexField</span><span class="p">):</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">r2c</span><span class="p">(</span><span class="n">out</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">RealField</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">out</span><span class="p">,</span> <span class="n">RealField</span><span class="p">):</span>
+                <span class="n">out</span><span class="o">.</span><span class="n">value</span><span class="p">[</span><span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">value</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ComplexField</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">out</span><span class="p">,</span> <span class="n">RealField</span><span class="p">):</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">c2r</span><span class="p">(</span><span class="n">out</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ComplexField</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">out</span><span class="p">,</span> <span class="n">ComplexField</span><span class="p">):</span>
+                <span class="n">out</span><span class="o">.</span><span class="n">value</span><span class="p">[</span><span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">value</span>
+            <span class="k">return</span> <span class="n">out</span>
+
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">RealField</span><span class="p">):</span>
+            <span class="bp">self</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">r2c</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">out</span><span class="p">,</span> <span class="n">RealField</span><span class="p">):</span>
+            <span class="nb">complex</span> <span class="o">=</span> <span class="n">ComplexField</span><span class="p">(</span><span class="n">out</span><span class="o">.</span><span class="n">pm</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="nb">complex</span> <span class="o">=</span> <span class="n">out</span>
+
+        <span class="nb">complex</span><span class="o">.</span><span class="n">value</span><span class="p">[</span><span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.0</span>
+
+        <span class="n">tmp</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">empty_like</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">value</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">out</span><span class="o">=</span><span class="n">tmp</span><span class="p">)</span>
+
+        <span class="c1"># indtable stores the index in pmsrc for the mode in pmdest</span>
+        <span class="c1"># since pmdest &lt; pmsrc, all items are alright.</span>
+        <span class="n">indtable</span> <span class="o">=</span> <span class="p">[</span><span class="n">reindex</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">Nmesh</span><span class="p">[</span><span class="n">d</span><span class="p">],</span> <span class="n">out</span><span class="o">.</span><span class="n">Nmesh</span><span class="p">[</span><span class="n">d</span><span class="p">])</span> <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">value</span><span class="o">.</span><span class="n">ndim</span><span class="p">)]</span>
+
+        <span class="n">ind</span> <span class="o">=</span> <span class="n">build_index</span><span class="p">(</span>
+                <span class="p">[</span><span class="n">t</span><span class="p">[</span><span class="n">numpy</span><span class="o">.</span><span class="n">r_</span><span class="p">[</span><span class="n">s</span><span class="p">]]</span>
+                <span class="k">for</span> <span class="n">t</span><span class="p">,</span> <span class="n">s</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">indtable</span><span class="p">,</span> <span class="nb">complex</span><span class="o">.</span><span class="n">slices</span><span class="p">)</span> <span class="p">],</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">cshape</span><span class="p">)</span>
+
+        <span class="c1"># fill the points that has values in pmsrc</span>
+        <span class="n">mask</span> <span class="o">=</span> <span class="n">ind</span> <span class="o">&gt;=</span> <span class="mi">0</span>
+        <span class="c1"># their indices</span>
+        <span class="n">argind</span> <span class="o">=</span> <span class="n">ind</span><span class="p">[</span><span class="n">mask</span><span class="p">]</span>
+        <span class="c1"># take the data</span>
+
+        <span class="n">data</span> <span class="o">=</span> <span class="n">mpsort</span><span class="o">.</span><span class="n">take</span><span class="p">(</span><span class="n">tmp</span><span class="o">.</span><span class="n">flat</span><span class="p">,</span> <span class="n">argind</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">pm</span><span class="o">.</span><span class="n">comm</span><span class="p">)</span>
+
+        <span class="c1"># fill in the value</span>
+        <span class="nb">complex</span><span class="p">[</span><span class="n">mask</span><span class="p">]</span> <span class="o">=</span> <span class="n">data</span>
+
+        <span class="c1"># ensure the down sample is real</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">slab</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="nb">complex</span><span class="o">.</span><span class="n">slabs</span><span class="o">.</span><span class="n">i</span><span class="p">,</span> <span class="nb">complex</span><span class="o">.</span><span class="n">slabs</span><span class="p">):</span>
+            <span class="n">mask</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">bitwise_and</span><span class="o">.</span><span class="n">reduce</span><span class="p">(</span>
+                 <span class="p">[(</span><span class="n">n</span> <span class="o">-</span> <span class="n">ii</span><span class="p">)</span> <span class="o">%</span> <span class="n">n</span> <span class="o">==</span> <span class="n">ii</span>
+                    <span class="k">for</span> <span class="n">ii</span><span class="p">,</span> <span class="n">n</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="nb">complex</span><span class="o">.</span><span class="n">Nmesh</span><span class="p">)])</span>
+            <span class="n">slab</span><span class="o">.</span><span class="n">imag</span><span class="p">[</span><span class="n">mask</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+            
+            <span class="c1"># remove the nyquist of the output</span>
+            <span class="c1"># FIXME: the nyquist is messy due to hermitian constraints</span>
+            <span class="c1"># let&#39;s do not touch them till we know they are important.</span>
+            <span class="n">mask</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">bitwise_or</span><span class="o">.</span><span class="n">reduce</span><span class="p">(</span>
+                 <span class="p">[</span> <span class="n">ii</span> <span class="o">==</span> <span class="n">n</span> <span class="o">//</span> <span class="mi">2</span>
+                   <span class="k">for</span> <span class="n">ii</span><span class="p">,</span> <span class="n">n</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="nb">complex</span><span class="o">.</span><span class="n">Nmesh</span><span class="p">)])</span>
+            <span class="n">slab</span><span class="p">[</span><span class="n">mask</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+
+            <span class="c1"># also remove the nyquist of the input</span>
+            <span class="n">mask</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">bitwise_or</span><span class="o">.</span><span class="n">reduce</span><span class="p">(</span>
+                 <span class="p">[</span> <span class="n">ii</span> <span class="o">==</span> <span class="n">n</span> <span class="o">//</span> <span class="mi">2</span>
+                   <span class="k">for</span> <span class="n">ii</span><span class="p">,</span> <span class="n">n</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">Nmesh</span><span class="p">)])</span>
+            <span class="n">slab</span><span class="p">[</span><span class="n">mask</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">out</span><span class="p">,</span> <span class="n">RealField</span><span class="p">):</span>
+            <span class="nb">complex</span><span class="o">.</span><span class="n">c2r</span><span class="p">(</span><span class="n">out</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">out</span></div>
+
+<div class="viewcode-block" id="Field.preview"><a class="viewcode-back" href="../../pmesh.pm.html#pmesh.pm.Field.preview">[docs]</a>    <span class="k">def</span> <span class="nf">preview</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">Nmesh</span><span class="p">,</span> <span class="n">axes</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; gathers the mesh into as a numpy array, with</span>
+<span class="sd">            (reduced resolution). The result is broadcast to</span>
+<span class="sd">            all ranks, so this uses Nmesh ** 3 per rank.</span>
+
+<span class="sd">            Parameters</span>
+<span class="sd">            ----------</span>
+<span class="sd">            Nmesh : int, array_like</span>
+<span class="sd">                The desired Nmesh of the result. Be aware this function</span>
+<span class="sd">                allocates memory to hold A full Nmesh on each rank.</span>
+<span class="sd">            axes : list or None</span>
+<span class="sd">                list of axes to preserve.</span>
+
+<span class="sd">            Returns</span>
+<span class="sd">            -------</span>
+<span class="sd">            out : array_like</span>
+<span class="sd">                An numpy array for the real density field.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">axes</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span> <span class="n">axes</span> <span class="o">=</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ndim</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">axes</span><span class="p">,</span> <span class="s1">&#39;__iter__&#39;</span><span class="p">):</span> <span class="n">axes</span> <span class="o">=</span> <span class="p">(</span><span class="n">axes</span><span class="p">,)</span>
+        <span class="k">else</span><span class="p">:</span> <span class="n">axes</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">axes</span><span class="p">)</span>
+
+        <span class="n">_Nmesh</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">pm</span><span class="o">.</span><span class="n">Nmesh</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="n">_Nmesh</span><span class="p">[</span><span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">Nmesh</span>
+
+        <span class="n">pm</span> <span class="o">=</span> <span class="n">ParticleMesh</span><span class="p">(</span><span class="n">BoxSize</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">BoxSize</span><span class="p">,</span>
+                            <span class="n">Nmesh</span><span class="o">=</span><span class="n">_Nmesh</span><span class="p">,</span>
+                            <span class="n">dtype</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">pm</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="n">comm</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">pm</span><span class="o">.</span><span class="n">comm</span><span class="p">)</span>
+
+        <span class="n">out</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s1">&#39;real&#39;</span><span class="p">)</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">([</span><span class="n">out</span><span class="o">.</span><span class="n">cshape</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">axes</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">pm</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+        <span class="n">local_slice</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">([</span><span class="n">out</span><span class="o">.</span><span class="n">slices</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">axes</span><span class="p">])</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">resample</span><span class="p">(</span><span class="n">out</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">axes</span><span class="p">)</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ndim</span><span class="p">:</span>
+            <span class="n">removeaxes</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ndim</span><span class="p">))</span> <span class="o">-</span> <span class="nb">set</span><span class="p">(</span><span class="n">axes</span><span class="p">)</span>
+            <span class="n">all_axes</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">axes</span><span class="p">)</span> <span class="o">+</span> <span class="nb">list</span><span class="p">(</span><span class="n">removeaxes</span><span class="p">)</span>
+            <span class="n">removeaxes</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">all_axes</span><span class="p">)</span> <span class="o">-</span> <span class="nb">len</span><span class="p">(</span><span class="n">removeaxes</span><span class="p">),</span> <span class="nb">len</span><span class="p">(</span><span class="n">all_axes</span><span class="p">)))</span>
+            <span class="n">result</span><span class="p">[</span><span class="n">local_slice</span><span class="p">]</span> <span class="o">+=</span> <span class="n">out</span><span class="p">[</span><span class="o">...</span><span class="p">]</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="n">all_axes</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="n">removeaxes</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">result</span><span class="p">[</span><span class="n">local_slice</span><span class="p">]</span> <span class="o">+=</span> <span class="n">out</span><span class="p">[</span><span class="o">...</span><span class="p">]</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">pm</span><span class="o">.</span><span class="n">comm</span><span class="o">.</span><span class="n">Allreduce</span><span class="p">(</span><span class="n">MPI</span><span class="o">.</span><span class="n">IN_PLACE</span><span class="p">,</span> <span class="n">result</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">result</span></div></div>
+
+<div class="viewcode-block" id="RealField"><a class="viewcode-back" href="../../pmesh.pm.html#pmesh.pm.RealField">[docs]</a><span class="k">class</span> <span class="nc">RealField</span><span class="p">(</span><span class="n">Field</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pm</span><span class="p">,</span> <span class="n">base</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="n">Field</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pm</span><span class="p">,</span> <span class="n">base</span><span class="p">)</span>
+
+<div class="viewcode-block" id="RealField.r2c"><a class="viewcode-back" href="../../pmesh.pm.html#pmesh.pm.RealField.r2c">[docs]</a>    <span class="k">def</span> <span class="nf">r2c</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">out</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; </span>
+<span class="sd">        Perform real to complex transformation.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">out</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">out</span> <span class="o">=</span> <span class="n">ComplexField</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">pm</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">is_inplace</span><span class="p">(</span><span class="n">out</span><span class="p">):</span>
+            <span class="n">out</span> <span class="o">=</span> <span class="bp">self</span>
+
+        <span class="k">if</span> <span class="n">out</span> <span class="ow">is</span> <span class="bp">self</span><span class="p">:</span>
+            <span class="n">out</span> <span class="o">=</span> <span class="n">ComplexField</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">pm</span><span class="p">,</span> <span class="n">base</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">base</span><span class="p">)</span>
+
+        <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">out</span><span class="p">,</span> <span class="n">ComplexField</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">base</span> <span class="ow">is</span> <span class="n">out</span><span class="o">.</span><span class="n">base</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">pm</span><span class="o">.</span><span class="n">ipforward</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">base</span><span class="p">,</span> <span class="n">out</span><span class="o">.</span><span class="n">base</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">pm</span><span class="o">.</span><span class="n">forward</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">base</span><span class="p">,</span> <span class="n">out</span><span class="o">.</span><span class="n">base</span><span class="p">)</span>
+
+        <span class="c1"># PFFT normalization, same as FastPM</span>
+        <span class="n">out</span><span class="o">.</span><span class="n">value</span><span class="p">[</span><span class="o">...</span><span class="p">]</span> <span class="o">*=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">prod</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">pm</span><span class="o">.</span><span class="n">Nmesh</span> <span class="o">**</span> <span class="o">-</span><span class="mf">1.0</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">out</span></div>
+
+<div class="viewcode-block" id="RealField.csum"><a class="viewcode-back" href="../../pmesh.pm.html#pmesh.pm.RealField.csum">[docs]</a>    <span class="k">def</span> <span class="nf">csum</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Collective mean. Sum of the entire mesh. (Must be called collectively)&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">pm</span><span class="o">.</span><span class="n">comm</span><span class="o">.</span><span class="n">allreduce</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">value</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dtype</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="RealField.cmean"><a class="viewcode-back" href="../../pmesh.pm.html#pmesh.pm.RealField.cmean">[docs]</a>    <span class="k">def</span> <span class="nf">cmean</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Collective mean. Mean of the entire mesh. (Must be called collectively)&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">csum</span><span class="p">()</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">csize</span></div>
+
+<div class="viewcode-block" id="RealField.paint"><a class="viewcode-back" href="../../pmesh.pm.html#pmesh.pm.RealField.paint">[docs]</a>    <span class="k">def</span> <span class="nf">paint</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pos</span><span class="p">,</span> <span class="n">mass</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">transform</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">hold</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">gradient</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">layout</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; </span>
+<span class="sd">        Paint particles into the internal real canvas. </span>
+
+<span class="sd">        Transform the particle field given by pos and mass</span>
+<span class="sd">        to the overdensity field in fourier space and save</span>
+<span class="sd">        it in the internal storage. </span>
+<span class="sd">        A multi-linear CIC approximation scheme is used.</span>
+
+<span class="sd">        The function can be called multiple times: </span>
+<span class="sd">        the result is cummulative. In a multi-step simulation where</span>
+<span class="sd">        :py:class:`ParticleMesh` object is reused,  before calling </span>
+<span class="sd">        :py:meth:`paint`, make sure the canvas is cleared with :py:meth:`clear`.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        pos    : array_like (, ndim)</span>
+<span class="sd">            position of particles in simulation unit</span>
+
+<span class="sd">        mass   : scalar or array_like (,)</span>
+<span class="sd">            mass of particles in simulation unit</span>
+
+<span class="sd">        hold   : bool</span>
+<span class="sd">            If true, do not clear the current value in the field.</span>
+
+<span class="sd">        gradient : None or integer</span>
+<span class="sd">            Direction to take the gradient of the window. The affine transformation</span>
+<span class="sd">            is properly applied.</span>
+
+<span class="sd">        method: None or string</span>
+<span class="sd">            type of window. Default : None, use self.pm.method</span>
+
+<span class="sd">        layout : Layout</span>
+<span class="sd">            domain decomposition to use for the readout. The position is first</span>
+<span class="sd">            routed to the target ranks and the result is reduced</span>
+
+<span class="sd">        Notes</span>
+<span class="sd">        -----</span>
+<span class="sd">        the painter operation conserves the total mass. It is not the density.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Transform from simulation unit to local grid unit.</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">transform</span><span class="p">:</span>
+            <span class="n">transform</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">pm</span><span class="o">.</span><span class="n">affine</span>
+
+        <span class="k">if</span> <span class="n">method</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">method</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">pm</span><span class="o">.</span><span class="n">method</span>
+
+        <span class="k">if</span> <span class="n">method</span> <span class="ow">in</span> <span class="n">window</span><span class="o">.</span><span class="n">methods</span><span class="p">:</span>
+            <span class="n">method</span> <span class="o">=</span> <span class="n">window</span><span class="o">.</span><span class="n">methods</span><span class="p">[</span><span class="n">method</span><span class="p">]</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">hold</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">value</span><span class="p">[</span><span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="k">if</span> <span class="n">layout</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">method</span><span class="o">.</span><span class="n">paint</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">value</span><span class="p">,</span> <span class="n">pos</span><span class="p">,</span> <span class="n">mass</span><span class="p">,</span> <span class="n">transform</span><span class="o">=</span><span class="n">transform</span><span class="p">,</span> <span class="n">diffdir</span><span class="o">=</span><span class="n">gradient</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">localpos</span> <span class="o">=</span> <span class="n">layout</span><span class="o">.</span><span class="n">exchange</span><span class="p">(</span><span class="n">pos</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">numpy</span><span class="o">.</span><span class="n">isscalar</span><span class="p">(</span><span class="n">mass</span><span class="p">):</span>
+                <span class="n">mass</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">mass</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">mass</span><span class="o">.</span><span class="n">ndim</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">localmass</span> <span class="o">=</span> <span class="n">layout</span><span class="o">.</span><span class="n">exchange</span><span class="p">(</span><span class="n">mass</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">localmass</span> <span class="o">=</span> <span class="n">mass</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">paint</span><span class="p">(</span><span class="n">localpos</span><span class="p">,</span> <span class="n">localmass</span><span class="p">,</span>
+                    <span class="n">method</span><span class="o">=</span><span class="n">method</span><span class="p">,</span>
+                    <span class="n">transform</span><span class="o">=</span><span class="n">transform</span><span class="p">,</span>
+                    <span class="n">hold</span><span class="o">=</span><span class="n">hold</span><span class="p">,</span>
+                    <span class="n">gradient</span><span class="o">=</span><span class="n">gradient</span><span class="p">,</span>
+                    <span class="n">layout</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="RealField.readout"><a class="viewcode-back" href="../../pmesh.pm.html#pmesh.pm.RealField.readout">[docs]</a>    <span class="k">def</span> <span class="nf">readout</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pos</span><span class="p">,</span> <span class="n">out</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">transform</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">gradient</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">layout</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; </span>
+<span class="sd">        Read out from real field at positions</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        pos    : array_like (, ndim)</span>
+<span class="sd">            position of particles in simulation  unit</span>
+<span class="sd">        gradient : None or integer</span>
+<span class="sd">            Direction to take the gradient of the window. The affine transformation</span>
+<span class="sd">            is properly applied.</span>
+<span class="sd">        method : None or string</span>
+<span class="sd">            type of window, default to self.pm.method</span>
+<span class="sd">        layout : Layout</span>
+<span class="sd">            domain decomposition to use for the readout. The position is first</span>
+<span class="sd">            routed to the target ranks and the result is reduced</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        rt     : array_like (,)</span>
+<span class="sd">            read out values from the real field.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">transform</span><span class="p">:</span>
+            <span class="n">transform</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">pm</span><span class="o">.</span><span class="n">affine</span>
+
+        <span class="k">if</span> <span class="n">method</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">method</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">pm</span><span class="o">.</span><span class="n">method</span>
+
+        <span class="k">if</span> <span class="n">method</span> <span class="ow">in</span> <span class="n">window</span><span class="o">.</span><span class="n">methods</span><span class="p">:</span>
+            <span class="n">method</span> <span class="o">=</span> <span class="n">window</span><span class="o">.</span><span class="n">methods</span><span class="p">[</span><span class="n">method</span><span class="p">]</span>
+
+        <span class="k">if</span> <span class="n">layout</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">method</span><span class="o">.</span><span class="n">readout</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">value</span><span class="p">,</span> <span class="n">pos</span><span class="p">,</span> <span class="n">out</span><span class="o">=</span><span class="n">out</span><span class="p">,</span> <span class="n">transform</span><span class="o">=</span><span class="n">transform</span><span class="p">,</span> <span class="n">diffdir</span><span class="o">=</span><span class="n">gradient</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">localpos</span> <span class="o">=</span> <span class="n">layout</span><span class="o">.</span><span class="n">exchange</span><span class="p">(</span><span class="n">pos</span><span class="p">)</span>
+            <span class="n">localresult</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">readout</span><span class="p">(</span><span class="n">localpos</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="n">method</span><span class="p">,</span>
+                    <span class="n">transform</span><span class="o">=</span><span class="n">transform</span><span class="p">,</span>
+                    <span class="n">gradient</span><span class="o">=</span><span class="n">gradient</span><span class="p">,</span>
+                    <span class="n">out</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">layout</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">layout</span><span class="o">.</span><span class="n">gather</span><span class="p">(</span><span class="n">localresult</span><span class="p">,</span> <span class="n">out</span><span class="o">=</span><span class="n">out</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="RealField.readout_gradient"><a class="viewcode-back" href="../../pmesh.pm.html#pmesh.pm.RealField.readout_gradient">[docs]</a>    <span class="k">def</span> <span class="nf">readout_gradient</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pos</span><span class="p">,</span> <span class="n">btgrad</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">transform</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">gradient</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+            <span class="n">out_self</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">out_pos</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">layout</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; back-propagate the gradient of readout.</span>
+
+<span class="sd">            Returns a tuple of (out_self, out_pos), one of both can be False depending</span>
+<span class="sd">            on the value of out_self and out_pos.</span>
+
+<span class="sd">            Parameters</span>
+<span class="sd">            ----------</span>
+<span class="sd">            btgrad : array</span>
+<span class="sd">                current gradient over the result of readout.</span>
+
+<span class="sd">            layout : Layout</span>
+<span class="sd">                domain decomposition to use for the readout. The position is first</span>
+<span class="sd">                routed to the target ranks and the result is reduced</span>
+
+<span class="sd">            out_self: RealField, None, or False</span>
+<span class="sd">                stored the backtraced gradient against self</span>
+
+<span class="sd">                if False, then the gradient against self is not computed.</span>
+<span class="sd">                if None, a new RealField is created and returned</span>
+
+<span class="sd">            out_pos : array, None or False</span>
+<span class="sd">                store the backtraced graident against pos</span>
+
+<span class="sd">                if False, then the gradient against pos is not computed.</span>
+<span class="sd">                if None, a new array is created and returned</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">out_pos</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">False</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">gradient</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;gradient of gradient is not yet supported&quot;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">out_pos</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">out_pos</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">pos</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">is_inplace</span><span class="p">(</span><span class="n">out_pos</span><span class="p">):</span>
+                <span class="n">out_pos</span> <span class="o">=</span> <span class="n">pos</span>
+            <span class="k">if</span> <span class="n">out_pos</span> <span class="ow">is</span> <span class="n">pos</span><span class="p">:</span>
+                <span class="c1"># need to create a copy of pos because we use it later.</span>
+                <span class="n">pos</span> <span class="o">=</span> <span class="n">pos</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+            <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">pos</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]):</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">readout</span><span class="p">(</span><span class="n">pos</span><span class="p">,</span> <span class="n">out</span><span class="o">=</span><span class="n">out_pos</span><span class="p">[:,</span> <span class="n">d</span><span class="p">],</span> <span class="n">method</span><span class="o">=</span><span class="n">method</span><span class="p">,</span> <span class="n">transform</span><span class="o">=</span><span class="n">transform</span><span class="p">,</span> <span class="n">gradient</span><span class="o">=</span><span class="n">d</span><span class="p">,</span> <span class="n">layout</span><span class="o">=</span><span class="n">layout</span><span class="p">)</span>
+                <span class="n">out_pos</span><span class="p">[:,</span> <span class="n">d</span><span class="p">]</span> <span class="o">*=</span> <span class="n">btgrad</span>
+
+        <span class="k">if</span> <span class="n">out_self</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">False</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">out_self</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">out_self</span> <span class="o">=</span> <span class="n">RealField</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">pm</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">is_inplace</span><span class="p">(</span><span class="n">out_self</span><span class="p">):</span>
+                <span class="n">out_self</span> <span class="o">=</span> <span class="bp">self</span>
+
+            <span class="c1"># watch out: do this after using self, because out_self can be self.</span>
+            <span class="n">out_self</span><span class="o">.</span><span class="n">paint</span><span class="p">(</span><span class="n">pos</span><span class="p">,</span> <span class="n">mass</span><span class="o">=</span><span class="n">btgrad</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="n">method</span><span class="p">,</span> <span class="n">transform</span><span class="o">=</span><span class="n">transform</span><span class="p">,</span> <span class="n">gradient</span><span class="o">=</span><span class="n">gradient</span><span class="p">,</span> <span class="n">hold</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">layout</span><span class="o">=</span><span class="n">layout</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">out_self</span><span class="p">,</span> <span class="n">out_pos</span></div>
+
+<div class="viewcode-block" id="RealField.paint_gradient"><a class="viewcode-back" href="../../pmesh.pm.html#pmesh.pm.RealField.paint_gradient">[docs]</a>    <span class="k">def</span> <span class="nf">paint_gradient</span><span class="p">(</span><span class="n">btgrad</span><span class="p">,</span> <span class="n">pos</span><span class="p">,</span> <span class="n">mass</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">transform</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">gradient</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+            <span class="n">out_pos</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">out_mass</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">layout</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; back-propagate the gradient of paint from self. self contains</span>
+<span class="sd">            the current gradient.</span>
+
+<span class="sd">            Parameters</span>
+<span class="sd">            ----------</span>
+<span class="sd">            layout : Layout</span>
+<span class="sd">                domain decomposition to use for the readout. The position is first</span>
+<span class="sd">                routed to the target ranks and the result is reduced</span>
+
+<span class="sd">            out_mass: array , None, or False</span>
+<span class="sd">                stored the backtraced gradient against mass</span>
+
+<span class="sd">                if False, then the gradient against mass is not computed.</span>
+<span class="sd">                if None, a new RealField is created and returned</span>
+
+<span class="sd">            out_pos : array, None or False</span>
+<span class="sd">                store the backtraced graident against pos</span>
+
+<span class="sd">                if False, then the gradient against pos is not computed.</span>
+<span class="sd">                if None, a new array is created and returned</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">out_pos</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">False</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">gradient</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;gradient of gradient is not yet supported&quot;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">out_pos</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">out_pos</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">pos</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">is_inplace</span><span class="p">(</span><span class="n">out_pos</span><span class="p">):</span>
+                <span class="n">out_pos</span> <span class="o">=</span> <span class="n">pos</span>
+
+            <span class="k">if</span> <span class="n">out_pos</span> <span class="ow">is</span> <span class="n">pos</span><span class="p">:</span>
+                <span class="n">pos</span> <span class="o">=</span> <span class="n">pos</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+
+            <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">pos</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]):</span>
+                <span class="n">btgrad</span><span class="o">.</span><span class="n">readout</span><span class="p">(</span><span class="n">pos</span><span class="p">,</span> <span class="n">out</span><span class="o">=</span><span class="n">out_pos</span><span class="p">[:,</span> <span class="n">d</span><span class="p">],</span> <span class="n">method</span><span class="o">=</span><span class="n">method</span><span class="p">,</span> <span class="n">transform</span><span class="o">=</span><span class="n">transform</span><span class="p">,</span> <span class="n">gradient</span><span class="o">=</span><span class="n">d</span><span class="p">,</span> <span class="n">layout</span><span class="o">=</span><span class="n">layout</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">out_mass</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">False</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">out_mass</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">out_mass</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">mass</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">is_inplace</span><span class="p">(</span><span class="n">out_mass</span><span class="p">):</span>
+                <span class="n">out_mass</span> <span class="o">=</span> <span class="n">mass</span>
+            <span class="n">btgrad</span><span class="o">.</span><span class="n">readout</span><span class="p">(</span><span class="n">pos</span><span class="p">,</span> <span class="n">out</span><span class="o">=</span><span class="n">out_mass</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="n">method</span><span class="p">,</span> <span class="n">transform</span><span class="o">=</span><span class="n">transform</span><span class="p">,</span> <span class="n">gradient</span><span class="o">=</span><span class="n">gradient</span><span class="p">,</span> <span class="n">layout</span><span class="o">=</span><span class="n">layout</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">out_pos</span><span class="p">,</span> <span class="n">out_mass</span></div>
+
+<div class="viewcode-block" id="RealField.c2r_gradient"><a class="viewcode-back" href="../../pmesh.pm.html#pmesh.pm.RealField.c2r_gradient">[docs]</a>    <span class="k">def</span> <span class="nf">c2r_gradient</span><span class="p">(</span><span class="n">btgrad</span><span class="p">,</span> <span class="n">out</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Back-propagate the gradient of c2r from self to out &quot;&quot;&quot;</span>
+        <span class="n">out</span><span class="o">=</span><span class="n">btgrad</span><span class="o">.</span><span class="n">r2c</span><span class="p">(</span><span class="n">out</span><span class="p">)</span>
+        <span class="c1"># PFFT normalization, same as FastPM</span>
+        <span class="n">out</span><span class="o">.</span><span class="n">value</span><span class="p">[</span><span class="o">...</span><span class="p">]</span> <span class="o">*=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">prod</span><span class="p">(</span><span class="n">out</span><span class="o">.</span><span class="n">pm</span><span class="o">.</span><span class="n">Nmesh</span> <span class="o">**</span> <span class="mf">1.0</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">out</span></div>
+
+<div class="viewcode-block" id="RealField.apply"><a class="viewcode-back" href="../../pmesh.pm.html#pmesh.pm.RealField.apply">[docs]</a>    <span class="k">def</span> <span class="nf">apply</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">func</span><span class="p">,</span> <span class="n">kind</span><span class="o">=</span><span class="s2">&quot;relative&quot;</span><span class="p">,</span> <span class="n">out</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; apply a function to the field.</span>
+
+<span class="sd">            Parameters</span>
+<span class="sd">            ----------</span>
+<span class="sd">            func : callable</span>
+<span class="sd">                func(r, v) where r is a list of r values that broadcasts into a full array.</span>
+<span class="sd">                value of r depends on kind. v is the value of the field on the corresponding locations.</span>
+<span class="sd">            kind : string</span>
+<span class="sd">                The kind of value in r.</span>
+<span class="sd">                &#39;relative&#39; means distance from [-0.5 Boxsize, 0.5 BoxSize).</span>
+<span class="sd">                &#39;index&#39; means [0, Nmesh )</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">out</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">out</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">pm</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s1">&#39;real&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">is_inplace</span><span class="p">(</span><span class="n">out</span><span class="p">):</span>
+            <span class="n">out</span> <span class="o">=</span> <span class="bp">self</span>
+
+        <span class="k">for</span> <span class="n">x</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="n">islab</span><span class="p">,</span> <span class="n">oslab</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">slabs</span><span class="o">.</span><span class="n">x</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">slabs</span><span class="o">.</span><span class="n">i</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">slabs</span><span class="p">,</span> <span class="n">out</span><span class="o">.</span><span class="n">slabs</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">kind</span> <span class="o">==</span> <span class="s1">&#39;relative&#39;</span><span class="p">:</span>
+                <span class="n">oslab</span><span class="p">[</span><span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">func</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">islab</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">kind</span> <span class="o">==</span> <span class="s1">&#39;index&#39;</span><span class="p">:</span>
+                <span class="n">oslab</span><span class="p">[</span><span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">func</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">islab</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;kind is relative, or index&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">out</span></div>
+
+<div class="viewcode-block" id="RealField.cdot"><a class="viewcode-back" href="../../pmesh.pm.html#pmesh.pm.RealField.cdot">[docs]</a>    <span class="k">def</span> <span class="nf">cdot</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">pm</span><span class="o">.</span><span class="n">comm</span><span class="o">.</span><span class="n">allreduce</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="bp">self</span><span class="p">[</span><span class="o">...</span><span class="p">]</span> <span class="o">*</span> <span class="n">other</span><span class="p">[</span><span class="o">...</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="s1">&#39;f8&#39;</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="RealField.cnorm"><a class="viewcode-back" href="../../pmesh.pm.html#pmesh.pm.RealField.cnorm">[docs]</a>    <span class="k">def</span> <span class="nf">cnorm</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">cdot</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span></div></div>
+
+<div class="viewcode-block" id="ComplexField"><a class="viewcode-back" href="../../pmesh.pm.html#pmesh.pm.ComplexField">[docs]</a><span class="k">class</span> <span class="nc">ComplexField</span><span class="p">(</span><span class="n">Field</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pm</span><span class="p">,</span> <span class="n">base</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="n">Field</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pm</span><span class="p">,</span> <span class="n">base</span><span class="p">)</span>
+
+<div class="viewcode-block" id="ComplexField.cnorm"><a class="viewcode-back" href="../../pmesh.pm.html#pmesh.pm.ComplexField.cnorm">[docs]</a>    <span class="k">def</span> <span class="nf">cnorm</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">metric</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">r&quot;&quot;&quot;compute the norm collectively. The conjugates are added too.</span>
+
+<span class="sd">            NORM = Self-conj + lower + upper</span>
+
+<span class="sd">            .. math ::</span>
+
+<span class="sd">                \sum_{m \in M} (self[m] * conjugate(other[m]) </span>
+<span class="sd">                            +   conjugate(self[m]) * other[m])</span>
+<span class="sd">                             *  0.5  metric(k[m])</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">def</span> <span class="nf">filter</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">v</span><span class="p">):</span>
+            <span class="n">v</span> <span class="o">=</span> <span class="n">v</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+            <span class="c1"># if a conjugate is not stored and not self, increase the weight</span>
+            <span class="c1"># because we shall add it.</span>
+            <span class="n">mask</span> <span class="o">=</span> <span class="p">(</span><span class="n">i</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">i</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">Nmesh</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">//</span> <span class="mi">2</span><span class="p">)</span>
+            <span class="n">v</span> <span class="o">+=</span> <span class="n">mask</span> <span class="o">*</span> <span class="n">v</span>
+            <span class="k">return</span> <span class="n">v</span>
+
+        <span class="k">def</span> <span class="nf">filter2</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">v</span><span class="p">):</span>
+            <span class="n">v</span> <span class="o">=</span> <span class="n">v</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+            <span class="n">v</span><span class="o">.</span><span class="n">real</span> <span class="o">**=</span> <span class="mi">2</span>
+            <span class="n">v</span><span class="o">.</span><span class="n">imag</span> <span class="o">**=</span> <span class="mi">2</span>
+            <span class="k">if</span> <span class="n">metric</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">k</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">([</span><span class="n">ki</span> <span class="o">**</span> <span class="mi">2</span> <span class="k">for</span> <span class="n">ki</span> <span class="ow">in</span> <span class="n">k</span><span class="p">])</span> <span class="o">**</span> <span class="mf">0.5</span>
+                <span class="n">v</span> <span class="o">*=</span> <span class="n">metric</span><span class="p">(</span><span class="n">k</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">v</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">pm</span><span class="o">.</span><span class="n">comm</span><span class="o">.</span><span class="n">allreduce</span><span class="p">(</span><span class="bp">self</span>\
+                <span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="n">filter2</span><span class="p">)</span>\
+                <span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="nb">filter</span><span class="p">,</span> <span class="n">kind</span><span class="o">=</span><span class="s1">&#39;index&#39;</span><span class="p">,</span> <span class="n">out</span><span class="o">=</span><span class="bp">Ellipsis</span><span class="p">)</span>\
+                <span class="o">.</span><span class="n">plain</span><span class="o">.</span><span class="n">sum</span><span class="p">())</span></div>
+
+<div class="viewcode-block" id="ComplexField.cnorm_gradient"><a class="viewcode-back" href="../../pmesh.pm.html#pmesh.pm.ComplexField.cnorm_gradient">[docs]</a>    <span class="k">def</span> <span class="nf">cnorm_gradient</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">gcnorm</span><span class="p">,</span> <span class="n">metric</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">out</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="k">def</span> <span class="nf">filter2</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">v</span><span class="p">):</span>
+            <span class="n">r</span> <span class="o">=</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">gcnorm</span><span class="p">)</span> <span class="o">*</span> <span class="n">v</span>
+            <span class="k">if</span> <span class="n">metric</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">k</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">([</span><span class="n">ki</span> <span class="o">**</span> <span class="mi">2</span> <span class="k">for</span> <span class="n">ki</span> <span class="ow">in</span> <span class="n">k</span><span class="p">])</span> <span class="o">**</span> <span class="mf">0.5</span>
+                <span class="n">r</span> <span class="o">*=</span> <span class="n">metric</span><span class="p">(</span><span class="n">k</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">r</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="n">filter2</span><span class="p">,</span> <span class="n">out</span><span class="o">=</span><span class="n">out</span><span class="p">)</span><span class="o">.</span><span class="n">decompress_gradient</span><span class="p">(</span><span class="n">out</span><span class="o">=</span><span class="bp">Ellipsis</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="ComplexField.cdot"><a class="viewcode-back" href="../../pmesh.pm.html#pmesh.pm.ComplexField.cdot">[docs]</a>    <span class="k">def</span> <span class="nf">cdot</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">,</span> <span class="n">metric</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">r&quot;&quot;&quot; Collective inner product between the independent modes of two Complex Fields.</span>
+
+<span class="sd">            This is the only reasonable way to define a real inner product of two complex fields.</span>
+
+<span class="sd">            when other == self,</span>
+
+<span class="sd">            cdot = Self-conj + lower</span>
+<span class="sd">            cdot = Self-conj + upper</span>
+
+<span class="sd">            Parameters</span>
+<span class="sd">            ----------</span>
+<span class="sd">            other : ComplexField</span>
+<span class="sd">                the other field for the inner product</span>
+<span class="sd">            metric: callable</span>
+<span class="sd">                metric(k) gives the metric of each mode.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">r</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="n">r</span><span class="o">.</span><span class="n">plain</span><span class="p">[</span><span class="o">...</span><span class="p">]</span> <span class="o">*=</span> <span class="n">other</span><span class="o">.</span><span class="n">plain</span>
+
+        <span class="k">def</span> <span class="nf">filter</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">v</span><span class="p">):</span>
+            <span class="n">v</span> <span class="o">=</span> <span class="n">v</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+            <span class="n">mask</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">ones_like</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="s1">&#39;?&#39;</span><span class="p">)</span>
+            <span class="c1"># if a conjugate is stored and not self, reduce the weight</span>
+            <span class="c1"># because we should have used only one of them (independent)</span>
+            <span class="n">mask</span> <span class="o">&amp;=</span> <span class="p">(</span><span class="n">i</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="o">|</span> <span class="p">(</span><span class="n">i</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">Nmesh</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">//</span> <span class="mi">2</span><span class="p">)</span>
+            <span class="n">mask1</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">ones_like</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="s1">&#39;?&#39;</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">ii</span><span class="p">,</span> <span class="n">n</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">Nmesh</span><span class="p">):</span>
+                <span class="n">mask1</span> <span class="o">&amp;=</span> <span class="p">(</span><span class="n">n</span> <span class="o">-</span> <span class="n">ii</span><span class="p">)</span> <span class="o">%</span> <span class="n">n</span> <span class="o">==</span> <span class="n">ii</span>
+            <span class="n">mask</span> <span class="o">&amp;=</span> <span class="o">~</span><span class="n">mask1</span>
+            <span class="n">v</span><span class="p">[</span><span class="n">mask</span><span class="p">]</span> <span class="o">*=</span> <span class="mf">0.5</span>
+            <span class="k">return</span> <span class="n">v</span>
+
+        <span class="n">r</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="nb">filter</span><span class="p">,</span> <span class="n">kind</span><span class="o">=</span><span class="s1">&#39;index&#39;</span><span class="p">,</span> <span class="n">out</span><span class="o">=</span><span class="bp">Ellipsis</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">metric</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">r</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="k">lambda</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span><span class="p">:</span> <span class="n">v</span> <span class="o">*</span> <span class="n">metric</span><span class="p">(</span><span class="nb">sum</span><span class="p">(</span><span class="n">ki</span><span class="o">**</span><span class="mi">2</span> <span class="k">for</span> <span class="n">ki</span> <span class="ow">in</span> <span class="n">k</span><span class="p">)</span> <span class="o">**</span> <span class="mf">0.5</span><span class="p">),</span> <span class="n">out</span><span class="o">=</span><span class="bp">Ellipsis</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">pm</span><span class="o">.</span><span class="n">comm</span><span class="o">.</span><span class="n">allreduce</span><span class="p">(</span><span class="n">r</span><span class="o">.</span><span class="n">plain</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">plain</span><span class="o">.</span><span class="n">dtype</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="ComplexField.cdot_gradient"><a class="viewcode-back" href="../../pmesh.pm.html#pmesh.pm.ComplexField.cdot_gradient">[docs]</a>    <span class="k">def</span> <span class="nf">cdot_gradient</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">gcdot</span><span class="p">,</span> <span class="n">metric</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; backtrace gradient of cdot against other. This is a partial gradient.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">r</span> <span class="o">=</span> <span class="bp">self</span> <span class="o">*</span> <span class="n">gcdot</span>
+
+        <span class="k">def</span> <span class="nf">filter</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">v</span><span class="p">):</span>
+            <span class="c1"># changing any number results the same change on an independent mode.</span>
+            <span class="k">return</span> <span class="n">v</span>
+
+        <span class="n">r</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="nb">filter</span><span class="p">,</span> <span class="n">kind</span><span class="o">=</span><span class="s1">&#39;index&#39;</span><span class="p">,</span> <span class="n">out</span><span class="o">=</span><span class="bp">Ellipsis</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">metric</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">r</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="k">lambda</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span><span class="p">:</span> <span class="n">v</span> <span class="o">*</span> <span class="n">metric</span><span class="p">(</span><span class="nb">sum</span><span class="p">(</span><span class="n">ki</span><span class="o">**</span><span class="mi">2</span> <span class="k">for</span> <span class="n">ki</span> <span class="ow">in</span> <span class="n">k</span><span class="p">)</span> <span class="o">**</span> <span class="mf">0.5</span><span class="p">),</span> <span class="n">out</span><span class="o">=</span><span class="bp">Ellipsis</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">r</span></div>
+
+<div class="viewcode-block" id="ComplexField.c2r"><a class="viewcode-back" href="../../pmesh.pm.html#pmesh.pm.ComplexField.c2r">[docs]</a>    <span class="k">def</span> <span class="nf">c2r</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">out</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">out</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">out</span> <span class="o">=</span> <span class="n">RealField</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">pm</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">is_inplace</span><span class="p">(</span><span class="n">out</span><span class="p">):</span>
+            <span class="n">out</span> <span class="o">=</span> <span class="bp">self</span>
+
+        <span class="k">if</span> <span class="n">out</span> <span class="ow">is</span> <span class="bp">self</span><span class="p">:</span>
+            <span class="n">out</span> <span class="o">=</span> <span class="n">RealField</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">pm</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">base</span><span class="p">)</span>
+
+        <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">out</span><span class="p">,</span> <span class="n">RealField</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">out</span><span class="o">.</span><span class="n">base</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">base</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">pm</span><span class="o">.</span><span class="n">backward</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">base</span><span class="p">,</span> <span class="n">out</span><span class="o">.</span><span class="n">base</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">pm</span><span class="o">.</span><span class="n">ipbackward</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">base</span><span class="p">,</span> <span class="n">out</span><span class="o">.</span><span class="n">base</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">out</span></div>
+
+<div class="viewcode-block" id="ComplexField.r2c_gradient"><a class="viewcode-back" href="../../pmesh.pm.html#pmesh.pm.ComplexField.r2c_gradient">[docs]</a>    <span class="k">def</span> <span class="nf">r2c_gradient</span><span class="p">(</span><span class="n">btgrad</span><span class="p">,</span> <span class="n">out</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Back-propagate the gradient of r2c to self. &quot;&quot;&quot;</span>
+        <span class="n">out</span> <span class="o">=</span> <span class="n">btgrad</span><span class="o">.</span><span class="n">c2r</span><span class="p">(</span><span class="n">out</span><span class="p">)</span>
+        <span class="c1"># PFFT normalization, same as FastPM</span>
+        <span class="n">out</span><span class="o">.</span><span class="n">value</span><span class="p">[</span><span class="o">...</span><span class="p">]</span> <span class="o">*=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">prod</span><span class="p">(</span><span class="n">out</span><span class="o">.</span><span class="n">pm</span><span class="o">.</span><span class="n">Nmesh</span> <span class="o">**</span> <span class="o">-</span><span class="mf">1.0</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">out</span></div>
+
+<div class="viewcode-block" id="ComplexField.decompress_gradient"><a class="viewcode-back" href="../../pmesh.pm.html#pmesh.pm.ComplexField.decompress_gradient">[docs]</a>    <span class="k">def</span> <span class="nf">decompress_gradient</span><span class="p">(</span><span class="n">btgrad</span><span class="p">,</span> <span class="n">out</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Back-propagate the gradient of decompress from self to out.</span>
+<span class="sd">            If I change this mode in the .value array, how many modes are</span>
+<span class="sd">            actually changed in order to maintain the hermitian?</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">out</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">out</span> <span class="o">=</span> <span class="n">ComplexField</span><span class="p">(</span><span class="n">btgrad</span><span class="o">.</span><span class="n">pm</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">is_inplace</span><span class="p">(</span><span class="n">out</span><span class="p">):</span>
+            <span class="n">out</span> <span class="o">=</span> <span class="n">btgrad</span>
+
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">a</span><span class="p">,</span> <span class="n">b</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">btgrad</span><span class="o">.</span><span class="n">slabs</span><span class="o">.</span><span class="n">i</span><span class="p">,</span> <span class="n">out</span><span class="o">.</span><span class="n">slabs</span><span class="p">,</span> <span class="n">btgrad</span><span class="o">.</span><span class="n">slabs</span><span class="p">):</span>
+            <span class="c1"># modes that are self conjugates do not gain a factor</span>
+            <span class="n">mask</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">a</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="s1">&#39;?&#39;</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">ii</span><span class="p">,</span> <span class="n">n</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">btgrad</span><span class="o">.</span><span class="n">Nmesh</span><span class="p">):</span>
+               <span class="n">mask</span> <span class="o">&amp;=</span> <span class="p">(</span><span class="n">n</span> <span class="o">-</span> <span class="n">ii</span><span class="p">)</span> <span class="o">%</span> <span class="n">n</span> <span class="o">==</span> <span class="n">ii</span>
+            <span class="n">a</span><span class="p">[</span><span class="o">~</span><span class="n">mask</span><span class="p">]</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">b</span><span class="p">[</span><span class="o">~</span><span class="n">mask</span><span class="p">]</span>
+            <span class="n">a</span><span class="p">[</span><span class="n">mask</span><span class="p">]</span> <span class="o">=</span> <span class="n">b</span><span class="p">[</span><span class="n">mask</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">out</span></div>
+
+<div class="viewcode-block" id="ComplexField.apply"><a class="viewcode-back" href="../../pmesh.pm.html#pmesh.pm.ComplexField.apply">[docs]</a>    <span class="k">def</span> <span class="nf">apply</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">func</span><span class="p">,</span> <span class="n">kind</span><span class="o">=</span><span class="s2">&quot;wavenumber&quot;</span><span class="p">,</span> <span class="n">out</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; apply a function to the field, in-place.</span>
+
+<span class="sd">            Parameters</span>
+<span class="sd">            ----------</span>
+<span class="sd">            func : callable</span>
+<span class="sd">                func(k, v) where k is a list of k values that broadcasts into a full array.</span>
+<span class="sd">                value of k depends on kind. v is the corrsponding value of field.</span>
+<span class="sd">            kind : string</span>
+<span class="sd">                The kind of value in k.</span>
+<span class="sd">                &#39;wavenumber&#39; means wavenumber from [- 2 pi / L * N / 2, 2 pi / L * N / 2).</span>
+<span class="sd">                &#39;circular&#39; means circular frequency from [- pi, pi).</span>
+<span class="sd">                &#39;index&#39; means [0, Nmesh )</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">out</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">out</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">pm</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s1">&#39;complex&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">is_inplace</span><span class="p">(</span><span class="n">out</span><span class="p">):</span>
+            <span class="n">out</span> <span class="o">=</span> <span class="bp">self</span>
+
+        <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="n">islab</span><span class="p">,</span> <span class="n">oslab</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">slabs</span><span class="o">.</span><span class="n">x</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">slabs</span><span class="o">.</span><span class="n">i</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">slabs</span><span class="p">,</span> <span class="n">out</span><span class="o">.</span><span class="n">slabs</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">kind</span> <span class="o">==</span> <span class="s1">&#39;wavenumber&#39;</span><span class="p">:</span>
+                <span class="n">oslab</span><span class="p">[</span><span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">func</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">islab</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">kind</span> <span class="o">==</span> <span class="s1">&#39;circular&#39;</span><span class="p">:</span>
+                <span class="n">w</span> <span class="o">=</span> <span class="p">[</span> <span class="n">ki</span> <span class="o">*</span> <span class="n">L</span> <span class="o">/</span> <span class="n">N</span> <span class="k">for</span> <span class="n">ki</span><span class="p">,</span> <span class="n">L</span><span class="p">,</span> <span class="n">N</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">BoxSize</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">Nmesh</span><span class="p">)]</span>
+                <span class="n">oslab</span><span class="p">[</span><span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">func</span><span class="p">(</span><span class="n">w</span><span class="p">,</span> <span class="n">islab</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">kind</span> <span class="o">==</span> <span class="s1">&#39;index&#39;</span><span class="p">:</span>
+                <span class="n">oslab</span><span class="p">[</span><span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">func</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">islab</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;kind is wavenumber, circular, or index&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">out</span></div></div>
+
+<div class="viewcode-block" id="build_index"><a class="viewcode-back" href="../../pmesh.pm.html#pmesh.pm.build_index">[docs]</a><span class="k">def</span> <span class="nf">build_index</span><span class="p">(</span><span class="n">indices</span><span class="p">,</span> <span class="n">fullshape</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Build a linear index array based on indices on an array of fullshape.</span>
+<span class="sd">        This is similar to numpy.ravel_multi_index.</span>
+
+<span class="sd">        index value of -1 will on any axes will be translated to -1 in the final.</span>
+
+<span class="sd">        Parameters:</span>
+<span class="sd">            indices : a tuple of index per dimension.</span>
+
+<span class="sd">            fullshape : a tuple of the shape of the full array</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            ind : a 3-d array of the indices of the coordinates in indices in</span>
+<span class="sd">                an array of size fullshape. -1 if any indices is -1.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">localshape</span> <span class="o">=</span> <span class="p">[</span> <span class="nb">len</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">indices</span><span class="p">]</span>
+    <span class="n">ndim</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">localshape</span><span class="p">)</span>
+    <span class="n">ind</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">localshape</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="s1">&#39;i8&#39;</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">indices</span><span class="p">)):</span>
+        <span class="n">i</span> <span class="o">=</span> <span class="n">indices</span><span class="p">[</span><span class="n">d</span><span class="p">]</span>
+        <span class="n">i</span> <span class="o">=</span> <span class="n">i</span><span class="o">.</span><span class="n">reshape</span><span class="p">([</span><span class="o">-</span><span class="mi">1</span> <span class="k">if</span> <span class="n">dd</span> <span class="o">==</span> <span class="n">d</span> <span class="k">else</span> <span class="mi">1</span> <span class="k">for</span> <span class="n">dd</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">ndim</span><span class="p">)])</span>
+        <span class="n">ind</span><span class="p">[</span><span class="o">...</span><span class="p">]</span> <span class="o">*=</span> <span class="n">fullshape</span><span class="p">[</span><span class="n">d</span><span class="p">]</span>
+        <span class="n">ind</span><span class="p">[</span><span class="o">...</span><span class="p">]</span> <span class="o">+=</span> <span class="n">i</span>
+
+    <span class="n">mask</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">localshape</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="s1">&#39;?&#39;</span><span class="p">)</span>
+
+    <span class="c1"># now mask out bad points by -1</span>
+    <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">indices</span><span class="p">)):</span>
+        <span class="n">i</span> <span class="o">=</span> <span class="n">indices</span><span class="p">[</span><span class="n">d</span><span class="p">]</span>
+        <span class="n">i</span> <span class="o">=</span> <span class="n">i</span><span class="o">.</span><span class="n">reshape</span><span class="p">([</span><span class="o">-</span><span class="mi">1</span> <span class="k">if</span> <span class="n">dd</span> <span class="o">==</span> <span class="n">d</span> <span class="k">else</span> <span class="mi">1</span> <span class="k">for</span> <span class="n">dd</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">ndim</span><span class="p">)])</span>
+        <span class="n">mask</span> <span class="o">|=</span> <span class="n">i</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span>
+
+    <span class="n">ind</span><span class="p">[</span><span class="n">mask</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+    <span class="k">return</span> <span class="n">ind</span></div>
+
+<div class="viewcode-block" id="reindex"><a class="viewcode-back" href="../../pmesh.pm.html#pmesh.pm.reindex">[docs]</a><span class="k">def</span> <span class="nf">reindex</span><span class="p">(</span><span class="n">Nsrc</span><span class="p">,</span> <span class="n">Ndest</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; returns the index in the frequency array for corresponding</span>
+<span class="sd">        k in Nsrc and composes Ndest</span>
+
+<span class="sd">        For those Ndest that doesn&#39;t exist in Nsrc, return -1</span>
+
+<span class="sd">        Example:</span>
+<span class="sd">        &gt;&gt;&gt; reindex(8, 4)</span>
+<span class="sd">        &gt;&gt;&gt; array([0, 1, 2, 7])</span>
+<span class="sd">        &gt;&gt;&gt; reindex(4, 8)</span>
+<span class="sd">        &gt;&gt;&gt; array([ 0,  1,  2, -1, -1, -1,  -1,  3])</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">reindex</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">Ndest</span><span class="p">)</span>
+    <span class="n">reindex</span><span class="p">[</span><span class="n">Ndest</span> <span class="o">//</span> <span class="mi">2</span> <span class="o">+</span> <span class="mi">1</span><span class="p">:]</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">Nsrc</span> <span class="o">-</span> <span class="n">Ndest</span> <span class="o">//</span> <span class="mi">2</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">Nsrc</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="n">reindex</span><span class="p">[</span><span class="n">Nsrc</span> <span class="o">//</span> <span class="mi">2</span> <span class="o">+</span> <span class="mi">1</span><span class="p">:</span> <span class="n">Ndest</span> <span class="o">-</span><span class="n">Nsrc</span> <span class="o">//</span><span class="mi">2</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+    <span class="k">return</span> <span class="n">reindex</span></div>
+
+<div class="viewcode-block" id="ParticleMesh"><a class="viewcode-back" href="../../pmesh.pm.html#pmesh.pm.ParticleMesh">[docs]</a><span class="k">class</span> <span class="nc">ParticleMesh</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    ParticleMesh provides an interface to solver for forces</span>
+<span class="sd">    with particle mesh method</span>
+
+<span class="sd">    ParticleMesh does not deal with memory. Use RealField(pm) and ComplexField(pm)</span>
+<span class="sd">    to create memory buffers.</span>
+
+<span class="sd">    Attributes</span>
+<span class="sd">    ----------</span>
+<span class="sd">    np      : array_like (npx, npy)</span>
+<span class="sd">        The shape of the process mesh. This is the number of domains per direction.</span>
+<span class="sd">        The product of the items shall equal to the size of communicator. </span>
+<span class="sd">        For example, for 64 rank job, np = (8, 8) is a good choice.</span>
+<span class="sd">        Since for now only 3d simulations are supported, np must be of length-2.</span>
+<span class="sd">        The default is try to split the total number of ranks equally. (eg, for</span>
+<span class="sd">        a 64 rank job, default is (8, 8)</span>
+
+<span class="sd">    comm    : :py:class:`MPI.Comm`</span>
+<span class="sd">        the MPI communicator, (default is MPI.COMM_WORLD)</span>
+
+<span class="sd">    Nmesh   : array of int</span>
+<span class="sd">        number of mesh points per side. The length decides the number of dimensions.</span>
+
+<span class="sd">    dtype : dtype</span>
+<span class="sd">        dtype of the buffers</span>
+
+<span class="sd">    BoxSize : float</span>
+<span class="sd">        size of box</span>
+
+<span class="sd">    domain   : :py:class:`pmesh.domain.GridND`</span>
+<span class="sd">        domain decomposition (private)</span>
+
+<span class="sd">    partition : :py:class:`pfft.Partition`</span>
+<span class="sd">        domain partition (private)</span>
+
+<span class="sd">    w   : list</span>
+<span class="sd">        a list of the circular frequencies along each direction (-pi to pi)</span>
+<span class="sd">    k   : list</span>
+<span class="sd">        a list of the wave numbers k along each direction (- pi N/ L to pi N/ L)</span>
+<span class="sd">    x   : list</span>
+<span class="sd">        a list of the position along each direction (-L/2 to L/ 2). x is conjugate of k.</span>
+<span class="sd">    r   : list</span>
+<span class="sd">        a list of the mesh position along each direction (-N/2 to N/2). r is conjugate of w.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">Nmesh</span><span class="p">,</span> <span class="n">BoxSize</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">comm</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">np</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="s1">&#39;f8&#39;</span><span class="p">,</span> <span class="n">plan_method</span><span class="o">=</span><span class="s1">&#39;estimate&#39;</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s1">&#39;cic&#39;</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; create a PM object.  &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">comm</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">comm</span> <span class="o">=</span> <span class="n">MPI</span><span class="o">.</span><span class="n">COMM_WORLD</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">comm</span> <span class="o">=</span> <span class="n">comm</span>
+
+        <span class="k">if</span> <span class="n">np</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">Nmesh</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="mi">3</span><span class="p">:</span>
+                <span class="n">np</span> <span class="o">=</span> <span class="n">pfft</span><span class="o">.</span><span class="n">split_size_2d</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">comm</span><span class="o">.</span><span class="n">size</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">Nmesh</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+                <span class="n">np</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">comm</span><span class="o">.</span><span class="n">size</span><span class="p">]</span>
+            <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">Nmesh</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="n">np</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="n">dtype</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">dtype</span><span class="p">(</span><span class="n">dtype</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dtype</span> <span class="o">=</span> <span class="n">dtype</span>
+
+        <span class="k">if</span> <span class="n">dtype</span> <span class="ow">is</span> <span class="n">numpy</span><span class="o">.</span><span class="n">dtype</span><span class="p">(</span><span class="s1">&#39;f8&#39;</span><span class="p">):</span>
+            <span class="n">forward</span> <span class="o">=</span> <span class="n">pfft</span><span class="o">.</span><span class="n">Type</span><span class="o">.</span><span class="n">PFFT_R2C</span>
+            <span class="n">backward</span> <span class="o">=</span> <span class="n">pfft</span><span class="o">.</span><span class="n">Type</span><span class="o">.</span><span class="n">PFFT_C2R</span>
+        <span class="k">elif</span> <span class="n">dtype</span> <span class="ow">is</span> <span class="n">numpy</span><span class="o">.</span><span class="n">dtype</span><span class="p">(</span><span class="s1">&#39;f4&#39;</span><span class="p">):</span>
+            <span class="n">forward</span> <span class="o">=</span> <span class="n">pfft</span><span class="o">.</span><span class="n">Type</span><span class="o">.</span><span class="n">PFFTF_R2C</span>
+            <span class="n">backward</span> <span class="o">=</span> <span class="n">pfft</span><span class="o">.</span><span class="n">Type</span><span class="o">.</span><span class="n">PFFTF_C2R</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;dtype must be f8 or f4&quot;</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">procmesh</span> <span class="o">=</span> <span class="n">pfft</span><span class="o">.</span><span class="n">ProcMesh</span><span class="p">(</span><span class="n">np</span><span class="p">,</span> <span class="n">comm</span><span class="o">=</span><span class="n">comm</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Nmesh</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">Nmesh</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="s1">&#39;i8&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ndim</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">Nmesh</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">BoxSize</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">Nmesh</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="s1">&#39;f8&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">BoxSize</span><span class="p">[:]</span> <span class="o">=</span> <span class="n">BoxSize</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">partition</span> <span class="o">=</span> <span class="n">pfft</span><span class="o">.</span><span class="n">Partition</span><span class="p">(</span><span class="n">forward</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">Nmesh</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">procmesh</span><span class="p">,</span>
+            <span class="n">pfft</span><span class="o">.</span><span class="n">Flags</span><span class="o">.</span><span class="n">PFFT_TRANSPOSED_OUT</span> <span class="o">|</span> <span class="n">pfft</span><span class="o">.</span><span class="n">Flags</span><span class="o">.</span><span class="n">PFFT_PADDED_R2C</span><span class="p">)</span>
+
+        <span class="n">bufferin</span> <span class="o">=</span> <span class="n">pfft</span><span class="o">.</span><span class="n">LocalBuffer</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">partition</span><span class="p">)</span>
+        <span class="n">bufferout</span> <span class="o">=</span> <span class="n">pfft</span><span class="o">.</span><span class="n">LocalBuffer</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">partition</span><span class="p">)</span>
+
+        <span class="n">plan_method</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;estimate&quot;</span><span class="p">:</span> <span class="n">pfft</span><span class="o">.</span><span class="n">Flags</span><span class="o">.</span><span class="n">PFFT_ESTIMATE</span><span class="p">,</span>
+            <span class="s2">&quot;measure&quot;</span><span class="p">:</span> <span class="n">pfft</span><span class="o">.</span><span class="n">Flags</span><span class="o">.</span><span class="n">PFFT_MEASURE</span><span class="p">,</span>
+            <span class="s2">&quot;exhaustive&quot;</span><span class="p">:</span> <span class="n">pfft</span><span class="o">.</span><span class="n">Flags</span><span class="o">.</span><span class="n">PFFT_EXHAUSTIVE</span><span class="p">,</span>
+            <span class="p">}</span> <span class="p">[</span><span class="n">plan_method</span><span class="p">]</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">forward</span> <span class="o">=</span> <span class="n">pfft</span><span class="o">.</span><span class="n">Plan</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">partition</span><span class="p">,</span> <span class="n">pfft</span><span class="o">.</span><span class="n">Direction</span><span class="o">.</span><span class="n">PFFT_FORWARD</span><span class="p">,</span>
+                <span class="n">bufferin</span><span class="p">,</span> <span class="n">bufferout</span><span class="p">,</span> <span class="n">forward</span><span class="p">,</span>
+                <span class="n">plan_method</span> <span class="o">|</span> <span class="n">pfft</span><span class="o">.</span><span class="n">Flags</span><span class="o">.</span><span class="n">PFFT_TRANSPOSED_OUT</span> <span class="o">|</span> <span class="n">pfft</span><span class="o">.</span><span class="n">Flags</span><span class="o">.</span><span class="n">PFFT_TUNE</span> <span class="o">|</span> <span class="n">pfft</span><span class="o">.</span><span class="n">Flags</span><span class="o">.</span><span class="n">PFFT_PADDED_R2C</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">backward</span> <span class="o">=</span> <span class="n">pfft</span><span class="o">.</span><span class="n">Plan</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">partition</span><span class="p">,</span> <span class="n">pfft</span><span class="o">.</span><span class="n">Direction</span><span class="o">.</span><span class="n">PFFT_BACKWARD</span><span class="p">,</span>
+                <span class="n">bufferout</span><span class="p">,</span> <span class="n">bufferin</span><span class="p">,</span> <span class="n">backward</span><span class="p">,</span> 
+                <span class="n">plan_method</span> <span class="o">|</span> <span class="n">pfft</span><span class="o">.</span><span class="n">Flags</span><span class="o">.</span><span class="n">PFFT_TRANSPOSED_IN</span> <span class="o">|</span> <span class="n">pfft</span><span class="o">.</span><span class="n">Flags</span><span class="o">.</span><span class="n">PFFT_TUNE</span> <span class="o">|</span> <span class="n">pfft</span><span class="o">.</span><span class="n">Flags</span><span class="o">.</span><span class="n">PFFT_PADDED_C2R</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">ipforward</span> <span class="o">=</span> <span class="n">pfft</span><span class="o">.</span><span class="n">Plan</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">partition</span><span class="p">,</span> <span class="n">pfft</span><span class="o">.</span><span class="n">Direction</span><span class="o">.</span><span class="n">PFFT_FORWARD</span><span class="p">,</span>
+                <span class="n">bufferin</span><span class="p">,</span> <span class="n">bufferin</span><span class="p">,</span> <span class="n">forward</span><span class="p">,</span>
+                <span class="n">plan_method</span> <span class="o">|</span> <span class="n">pfft</span><span class="o">.</span><span class="n">Flags</span><span class="o">.</span><span class="n">PFFT_TRANSPOSED_OUT</span> <span class="o">|</span> <span class="n">pfft</span><span class="o">.</span><span class="n">Flags</span><span class="o">.</span><span class="n">PFFT_TUNE</span> <span class="o">|</span> <span class="n">pfft</span><span class="o">.</span><span class="n">Flags</span><span class="o">.</span><span class="n">PFFT_PADDED_R2C</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ipbackward</span> <span class="o">=</span> <span class="n">pfft</span><span class="o">.</span><span class="n">Plan</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">partition</span><span class="p">,</span> <span class="n">pfft</span><span class="o">.</span><span class="n">Direction</span><span class="o">.</span><span class="n">PFFT_BACKWARD</span><span class="p">,</span>
+                <span class="n">bufferout</span><span class="p">,</span> <span class="n">bufferout</span><span class="p">,</span> <span class="n">backward</span><span class="p">,</span> 
+                <span class="n">plan_method</span> <span class="o">|</span> <span class="n">pfft</span><span class="o">.</span><span class="n">Flags</span><span class="o">.</span><span class="n">PFFT_TRANSPOSED_IN</span> <span class="o">|</span> <span class="n">pfft</span><span class="o">.</span><span class="n">Flags</span><span class="o">.</span><span class="n">PFFT_TUNE</span> <span class="o">|</span> <span class="n">pfft</span><span class="o">.</span><span class="n">Flags</span><span class="o">.</span><span class="n">PFFT_PADDED_C2R</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">domain</span> <span class="o">=</span> <span class="n">domain</span><span class="o">.</span><span class="n">GridND</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">partition</span><span class="o">.</span><span class="n">i_edges</span><span class="p">,</span> <span class="n">comm</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">comm</span><span class="p">)</span>
+
+        <span class="n">k</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">w</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">r</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">o_ind</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">i_ind</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">partition</span><span class="o">.</span><span class="n">ndim</span><span class="p">):</span>
+            <span class="n">t</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">partition</span><span class="o">.</span><span class="n">ndim</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="s1">&#39;intp&#39;</span><span class="p">)</span>
+            <span class="n">s</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">partition</span><span class="o">.</span><span class="n">ndim</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="s1">&#39;intp&#39;</span><span class="p">)</span>
+            <span class="n">t</span><span class="p">[</span><span class="n">d</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">partition</span><span class="o">.</span><span class="n">local_i_shape</span><span class="p">[</span><span class="n">d</span><span class="p">]</span>
+            <span class="n">s</span><span class="p">[</span><span class="n">d</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">partition</span><span class="o">.</span><span class="n">local_o_shape</span><span class="p">[</span><span class="n">d</span><span class="p">]</span>
+
+            <span class="n">i_indi</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">t</span><span class="p">[</span><span class="n">d</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="s1">&#39;intp&#39;</span><span class="p">)</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">partition</span><span class="o">.</span><span class="n">local_i_start</span><span class="p">[</span><span class="n">d</span><span class="p">]</span>
+            <span class="n">o_indi</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">s</span><span class="p">[</span><span class="n">d</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="s1">&#39;intp&#39;</span><span class="p">)</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">partition</span><span class="o">.</span><span class="n">local_o_start</span><span class="p">[</span><span class="n">d</span><span class="p">]</span>
+
+            <span class="n">wi</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">s</span><span class="p">[</span><span class="n">d</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="s1">&#39;f4&#39;</span><span class="p">)</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">partition</span><span class="o">.</span><span class="n">local_o_start</span><span class="p">[</span><span class="n">d</span><span class="p">]</span> 
+            <span class="n">ri</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">t</span><span class="p">[</span><span class="n">d</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="s1">&#39;f4&#39;</span><span class="p">)</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">partition</span><span class="o">.</span><span class="n">local_i_start</span><span class="p">[</span><span class="n">d</span><span class="p">]</span> 
+
+            <span class="n">wi</span><span class="p">[</span><span class="n">wi</span> <span class="o">&gt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">Nmesh</span><span class="p">[</span><span class="n">d</span><span class="p">]</span> <span class="o">//</span> <span class="mi">2</span><span class="p">]</span> <span class="o">-=</span> <span class="bp">self</span><span class="o">.</span><span class="n">Nmesh</span><span class="p">[</span><span class="n">d</span><span class="p">]</span>
+            <span class="n">ri</span><span class="p">[</span><span class="n">ri</span> <span class="o">&gt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">Nmesh</span><span class="p">[</span><span class="n">d</span><span class="p">]</span> <span class="o">//</span> <span class="mi">2</span><span class="p">]</span> <span class="o">-=</span> <span class="bp">self</span><span class="o">.</span><span class="n">Nmesh</span><span class="p">[</span><span class="n">d</span><span class="p">]</span>
+
+            <span class="n">wi</span> <span class="o">*=</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">numpy</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">Nmesh</span><span class="p">[</span><span class="n">d</span><span class="p">])</span>
+            <span class="n">ki</span> <span class="o">=</span> <span class="n">wi</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">Nmesh</span><span class="p">[</span><span class="n">d</span><span class="p">]</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">BoxSize</span><span class="p">[</span><span class="n">d</span><span class="p">]</span>
+            <span class="n">xi</span> <span class="o">=</span> <span class="n">ri</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">BoxSize</span><span class="p">[</span><span class="n">d</span><span class="p">]</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">Nmesh</span><span class="p">[</span><span class="n">d</span><span class="p">]</span>
+
+            <span class="n">o_ind</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">o_indi</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">s</span><span class="p">))</span>
+            <span class="n">i_ind</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">i_indi</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">t</span><span class="p">))</span>
+            <span class="n">w</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">wi</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">s</span><span class="p">))</span>
+            <span class="n">r</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ri</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">t</span><span class="p">))</span>
+            <span class="n">k</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ki</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">s</span><span class="p">))</span>
+            <span class="n">x</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">xi</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">t</span><span class="p">))</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">i_ind</span> <span class="o">=</span> <span class="n">i_ind</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">o_ind</span> <span class="o">=</span> <span class="n">o_ind</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">w</span> <span class="o">=</span> <span class="n">w</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">r</span> <span class="o">=</span> <span class="n">r</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">k</span> <span class="o">=</span> <span class="n">k</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">x</span> <span class="o">=</span> <span class="n">x</span>
+
+        <span class="c1"># Transform from simulation unit to local grid unit.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">affine</span> <span class="o">=</span> <span class="n">window</span><span class="o">.</span><span class="n">Affine</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">partition</span><span class="o">.</span><span class="n">ndim</span><span class="p">,</span>
+                    <span class="n">translate</span><span class="o">=-</span><span class="bp">self</span><span class="o">.</span><span class="n">partition</span><span class="o">.</span><span class="n">local_i_start</span><span class="p">,</span>
+                    <span class="n">scale</span><span class="o">=</span><span class="mf">1.0</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">Nmesh</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">BoxSize</span><span class="p">,</span>
+                    <span class="n">period</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">Nmesh</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">method</span> <span class="ow">in</span> <span class="n">window</span><span class="o">.</span><span class="n">methods</span><span class="p">:</span>
+            <span class="n">method</span> <span class="o">=</span> <span class="n">window</span><span class="o">.</span><span class="n">methods</span><span class="p">[</span><span class="n">method</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">method</span> <span class="o">=</span> <span class="n">method</span>
+
+<div class="viewcode-block" id="ParticleMesh.create"><a class="viewcode-back" href="../../pmesh.pm.html#pmesh.pm.ParticleMesh.create">[docs]</a>    <span class="k">def</span> <span class="nf">create</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mode</span><span class="p">,</span> <span class="n">base</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">zeros</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">            Create a field object.</span>
+
+<span class="sd">            Parameters</span>
+<span class="sd">            ----------</span>
+<span class="sd">            mode : string</span>
+<span class="sd">                &#39;real&#39; or &#39;complex&#39;.</span>
+
+<span class="sd">            base : object, None</span>
+<span class="sd">                Reusing the base attribute (physical memory) of an existing field</span>
+<span class="sd">                object. Provide the attribute, not the field object.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="n">mode</span> <span class="o">==</span> <span class="s1">&#39;real&#39;</span><span class="p">:</span>
+            <span class="n">r</span> <span class="o">=</span> <span class="n">RealField</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">base</span><span class="o">=</span><span class="n">base</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">mode</span> <span class="o">==</span> <span class="s1">&#39;complex&#39;</span><span class="p">:</span>
+            <span class="n">r</span> <span class="o">=</span> <span class="n">ComplexField</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">base</span><span class="o">=</span><span class="n">base</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;mode must be real or complex&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">zeros</span><span class="p">:</span>
+            <span class="n">r</span><span class="p">[</span><span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">return</span> <span class="n">r</span></div>
+
+<div class="viewcode-block" id="ParticleMesh.generate_whitenoise"><a class="viewcode-back" href="../../pmesh.pm.html#pmesh.pm.ParticleMesh.generate_whitenoise">[docs]</a>    <span class="k">def</span> <span class="nf">generate_whitenoise</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">seed</span><span class="p">,</span> <span class="n">unitary</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;complex&#39;</span><span class="p">,</span> <span class="n">base</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Generate white noise to the field with the given seed.</span>
+
+<span class="sd">            The scheme is supposed to be compatible with Gadget when the field is three-dimensional.</span>
+
+<span class="sd">            Parameters</span>
+<span class="sd">            ----------</span>
+<span class="sd">            seed : int</span>
+<span class="sd">                The random seed</span>
+<span class="sd">            unitary : bool</span>
+<span class="sd">                True to generate a unitary white noise where the amplitude is fixed to 1 and</span>
+<span class="sd">                only the phase is random.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="kn">from</span> <span class="nn">.whitenoise</span> <span class="k">import</span> <span class="n">generate</span>
+        <span class="nb">complex</span> <span class="o">=</span> <span class="n">ComplexField</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">base</span><span class="o">=</span><span class="n">base</span><span class="p">)</span>
+        <span class="n">generate</span><span class="p">(</span><span class="nb">complex</span><span class="o">.</span><span class="n">value</span><span class="p">,</span> <span class="nb">complex</span><span class="o">.</span><span class="n">start</span><span class="p">,</span> <span class="nb">complex</span><span class="o">.</span><span class="n">Nmesh</span><span class="p">,</span> <span class="n">seed</span><span class="p">,</span> <span class="nb">bool</span><span class="p">(</span><span class="n">unitary</span><span class="p">))</span>
+
+        <span class="k">if</span> <span class="n">mode</span> <span class="o">==</span> <span class="s1">&#39;complex&#39;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="nb">complex</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="nb">complex</span><span class="o">.</span><span class="n">c2r</span><span class="p">(</span><span class="n">out</span><span class="o">=</span><span class="bp">Ellipsis</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="ParticleMesh.decompose"><a class="viewcode-back" href="../../pmesh.pm.html#pmesh.pm.ParticleMesh.decompose">[docs]</a>    <span class="k">def</span> <span class="nf">decompose</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pos</span><span class="p">,</span> <span class="n">smoothing</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; </span>
+<span class="sd">        Create a domain decompose layout for particles at given</span>
+<span class="sd">        coordinates.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        pos    : array_like (, ndim)</span>
+<span class="sd">            position of particles in simulation  unit</span>
+
+<span class="sd">        smoothing : None, float, array_like, string, or ResampleWindow</span>
+<span class="sd">            if given as a string or ResampleWindow, use 0.5 * support.</span>
+<span class="sd">            This is the size of the buffer region around a domain.</span>
+<span class="sd">            Default: None, use self.method</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        layout  : :py:class:domain.Layout</span>
+<span class="sd">            layout that can be used to migrate particles and images</span>
+<span class="sd">        to the correct MPI ranks that hosts the PM local mesh</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">smoothing</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">smoothing</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">method</span>
+
+        <span class="k">if</span> <span class="n">smoothing</span> <span class="ow">in</span> <span class="n">window</span><span class="o">.</span><span class="n">methods</span><span class="p">:</span>
+            <span class="n">smoothing</span> <span class="o">=</span> <span class="n">window</span><span class="o">.</span><span class="n">methods</span><span class="p">[</span><span class="n">smoothing</span><span class="p">]</span>
+
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">smoothing</span><span class="p">,</span> <span class="n">window</span><span class="o">.</span><span class="n">ResampleWindow</span><span class="p">):</span>
+            <span class="n">smoothing</span> <span class="o">=</span> <span class="n">smoothing</span><span class="o">.</span><span class="n">support</span> <span class="o">*</span> <span class="mf">0.5</span>
+
+        <span class="c1"># Transform from simulation unit to global grid unit.</span>
+        <span class="k">def</span> <span class="nf">transform0</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">affine</span><span class="o">.</span><span class="n">scale</span> <span class="o">*</span> <span class="n">x</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">domain</span><span class="o">.</span><span class="n">decompose</span><span class="p">(</span><span class="n">pos</span><span class="p">,</span> <span class="n">smoothing</span><span class="o">=</span><span class="n">smoothing</span><span class="p">,</span>
+                <span class="n">transform</span><span class="o">=</span><span class="n">transform0</span><span class="p">)</span></div></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">PyPM 0.1 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../index.html" >Module code</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2015, Yu Feng.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.5.1.
+    </div>
+  </body>
+</html>

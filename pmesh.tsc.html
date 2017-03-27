@@ -1,0 +1,161 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pmesh.tsc module &#8212; PyPM 0.1 documentation</title>
+    
+    <link rel="stylesheet" href="_static/nature.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="pmesh.version module" href="pmesh.version.html" />
+    <link rel="prev" title="pmesh.transfer module" href="pmesh.transfer.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="pmesh.version.html" title="pmesh.version module"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="pmesh.transfer.html" title="pmesh.transfer module"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">PyPM 0.1 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="modules.html" >pmesh</a> &#187;</li>
+          <li class="nav-item nav-item-2"><a href="pmesh.html" accesskey="U">pmesh package</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="module-pmesh.tsc">
+<span id="pmesh-tsc-module"></span><h1>pmesh.tsc module<a class="headerlink" href="#module-pmesh.tsc" title="Permalink to this headline">¶</a></h1>
+<dl class="function">
+<dt id="pmesh.tsc.driver">
+<code class="descclassname">pmesh.tsc.</code><code class="descname">driver</code><span class="sig-paren">(</span><em>pos</em>, <em>mesh</em>, <em>weights</em>, <em>mode</em>, <em>period</em>, <em>transform</em>, <em>callback</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pmesh/tsc.html#driver"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pmesh.tsc.driver" title="Permalink to this definition">¶</a></dt>
+<dd><p>TSC approximation, painting points to Nmesh,
+each point has a weight given by weights.
+This does not give density.
+pos is supposed to be row vectors. aka for 3d input
+pos.shape is (?, 3).</p>
+<p>pos[:, i] should have been normalized in the range of [ 0,  mesh.shape[i] )</p>
+<p>thus z is the fast moving index</p>
+<dl class="docutils">
+<dt>mode can be :</dt>
+<dd><dl class="first docutils">
+<dt>&#8220;raise&#8221;</dt>
+ <span class="classifier-delimiter">:</span> <span class="classifier">raise exceptions if a particle is painted</span><dd>outside the mesh</dd>
+</dl>
+<p class="last">&#8220;ignore&#8221;: ignore particle contribution outside of the mesh</p>
+</dd>
+</dl>
+<p>period can be a scalar or of length len(mesh.shape). if period is given
+the particles are wrapped by the period.</p>
+<p>transform is a function that transforms pos to mesh units:
+transform(pos[:, 3]) -&gt; meshpos[:, 3]</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="pmesh.tsc.paint">
+<code class="descclassname">pmesh.tsc.</code><code class="descname">paint</code><span class="sig-paren">(</span><em>pos</em>, <em>mesh</em>, <em>weights=1.0</em>, <em>mode='raise'</em>, <em>period=None</em>, <em>transform=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pmesh/tsc.html#paint"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pmesh.tsc.paint" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="pmesh.tsc.paint_some">
+<code class="descclassname">pmesh.tsc.</code><code class="descname">paint_some</code><a class="reference internal" href="_modules/pmesh/tsc.html#paint_some"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pmesh.tsc.paint_some" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="pmesh.tsc.readout">
+<code class="descclassname">pmesh.tsc.</code><code class="descname">readout</code><span class="sig-paren">(</span><em>mesh</em>, <em>pos</em>, <em>mode='raise'</em>, <em>period=None</em>, <em>transform=None</em>, <em>out=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pmesh/tsc.html#readout"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pmesh.tsc.readout" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="pmesh.transfer.html"
+                        title="previous chapter">pmesh.transfer module</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="pmesh.version.html"
+                        title="next chapter">pmesh.version module</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/pmesh.tsc.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="pmesh.version.html" title="pmesh.version module"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="pmesh.transfer.html" title="pmesh.transfer module"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">PyPM 0.1 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="modules.html" >pmesh</a> &#187;</li>
+          <li class="nav-item nav-item-2"><a href="pmesh.html" >pmesh package</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2015, Yu Feng.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.5.1.
+    </div>
+  </body>
+</html>

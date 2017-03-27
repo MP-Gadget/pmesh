@@ -1,0 +1,22 @@
+pmesh.tests package
+===================
+
+Submodules
+----------
+
+.. toctree::
+
+   pmesh.tests.test-particlemesh
+   pmesh.tests.test_domain
+   pmesh.tests.test_gradient
+   pmesh.tests.test_pm
+   pmesh.tests.test_whitenoise
+   pmesh.tests.test_window
+
+Module contents
+---------------
+
+.. automodule:: pmesh.tests
+    :members:
+    :undoc-members:
+    :show-inheritance:

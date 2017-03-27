@@ -1,7 +1,0 @@
-pypm.domain module
-==================
-
-.. automodule:: pypm.domain
-    :members:
-    :undoc-members:
-    :show-inheritance:

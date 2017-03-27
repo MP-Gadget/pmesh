@@ -16,14 +16,21 @@ class slab(numpy.ndarray):
 class slabiter(object):
     def __init__(self, field):
         # we iterate over the slowest axis to gain locality.
-        axissort = numpy.argsort(field.value.strides)[::-1]
-        axis = axissort[0]
+        if field.ndim == 2:
+            axis = 2
+            self.optimized_view = field.value[None, ...]
+            self.nslabs = 1
+            self.optx = [xx[None, ...] for xx in field.x]
+            self.opti = [ii[None, ...] for ii in field.i]
+        else:
+            axissort = numpy.argsort(field.value.strides)[::-1]
+            axis = axissort[0]
 
-        self.optimized_view = field.value.transpose(axissort)
-        self.nslabs = field.shape[axis]
+            self.optimized_view = field.value.transpose(axissort)
+            self.nslabs = field.shape[axis]
 
-        self.optx = [xx.transpose(axissort) for xx in field.x]
-        self.opti = [ii.transpose(axissort) for ii in field.i]
+            self.optx = [xx.transpose(axissort) for xx in field.x]
+            self.opti = [ii.transpose(axissort) for ii in field.i]
         self.x = xslabiter(axis, self.nslabs, self.optx)
         self.i = xslabiter(axis, self.nslabs, self.opti)
         self.axis = axis

@@ -1,13 +1,6 @@
 pmesh package
 =============
 
-Subpackages
------------
-
-.. toctree::
-
-    pmesh.tests
-
 Submodules
 ----------
 

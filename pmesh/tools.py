@@ -1,3 +1,7 @@
+"""
+.. deprecated:: 0.1
+
+"""
 import warnings
 warnings.warn("tools.py is deprecated", DeprecationWarning)
 from mpi4py import MPI

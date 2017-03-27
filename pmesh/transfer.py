@@ -1,3 +1,8 @@
+"""
+.. deprecated:: 0.1
+
+"""
+
 import warnings
 warnings.warn("transfer.py is deprecated. Directly operate over slabiter.", DeprecationWarning)
 

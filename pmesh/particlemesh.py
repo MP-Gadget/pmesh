@@ -1,6 +1,8 @@
 """
 PyPM: A Particle Mesh code in Python
 
+.. deprecated:: 0.1
+
 """
 import warnings
 warnings.warn("particlemesh.ParticleMesh is deprecated; switch to pm.ParticleMesh", DeprecationWarning)

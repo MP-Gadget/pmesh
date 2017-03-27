@@ -1,3 +1,7 @@
+"""
+.. deprecated:: 0.1
+
+"""
 import warnings
 warnings.warn("tsc.py is deprecated; switch to window.TSC", DeprecationWarning)
 # numba version of the tsc.

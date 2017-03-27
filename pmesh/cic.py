@@ -1,3 +1,7 @@
+"""
+.. deprecated:: 0.1
+
+"""
 # cloud in cell painting
 #
 import warnings

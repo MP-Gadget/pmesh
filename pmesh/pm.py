@@ -695,7 +695,7 @@ class RealField(Field):
                 'index' means [0, Nmesh )
         """
         if out is None:
-            out = self.copy()
+            out = self.pm.create(mode='real')
         if is_inplace(out):
             out = self
 
@@ -876,7 +876,7 @@ class ComplexField(Field):
                 'index' means [0, Nmesh )
         """
         if out is None:
-            out = self.copy()
+            out = self.pm.create(mode='complex')
         if is_inplace(out):
             out = self
 

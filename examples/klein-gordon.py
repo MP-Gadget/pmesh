@@ -73,13 +73,14 @@ def kgsolver(steps, u_0, du_0, F=lambda u : -1 * u ** 3, monitor=None):
             factor = (1 / dt ** 2 - 1 / 4.0 * (-k2) + 1 / 4.0)
             return 1.0 / factor * v
 
-        nonlin = u_n_1.apply(lambda x, v: F(v))
-
-        u_n = (nonlin.r2c(out=Ellipsis)
-            - u_n_1.r2c().apply(transfer_n_1, out=Ellipsis)
-            - u_n_2.r2c().apply(transfer_n_2, out=Ellipsis))\
-            .apply(transfer_n, out=Ellipsis) \
-            .c2r(out=Ellipsis)
+        u_n = ( u_n_1.apply(lambda x, v: F(v))
+                     .r2c(out=Ellipsis)
+              - u_n_1.r2c()
+                     .apply(transfer_n_1, out=Ellipsis)
+              - u_n_2.r2c()
+                     .apply(transfer_n_2, out=Ellipsis)
+              ).apply(transfer_n, out=Ellipsis) \
+               .c2r(out=Ellipsis)
 
         if monitor:
             monitor(t, dt, u_n_1, (u_n - u_n_1) / dt)

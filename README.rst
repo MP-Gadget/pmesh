@@ -16,29 +16,39 @@ API Reference
 -------------
 Refer to http://rainwoodman.github.io/pmesh for a full API reference.
 
-
 Description
 -----------
 
-The domain decomposition is 2-d (pencil/stencils). [pmesh.domain]
-FFT is supported by pfft-python. 
-Currently the conversion between particle and mesh we only implement
-the linear window function (Cloud-in-Cell). Plans are to implement
-other windows, e.g. truncated lanczos or some wavelet motivated windows
-that acts as an apodization filter to suppress aliasing effect.
+pmesh includes a few software components for building particle mesh simulations
+with Python. It consists
 
-Currently, a particle mesh gravity solver is in utils/gravpm.py . 
-We have compared that the force output at first time step agrees with 
-the long range force calculation in MP-Gadget3.
+- pmesh.domain : a cubinoid domain decomposition scheme in n dimensions. 
 
-We also provide a simple (long range) gravitational strain calculator in utils/strain.py .
-The calculator have been used to calculate the strain tensor for the RunPB dark matter simulations 
-(2048^3 particles in a 1380 Mpc/h box), on 576 MPI ranks at Edison.
+- pmesh.pm : a Particle Mesh solver engine, with real-to-complex, complex-to-real
+transforms, transfer functions in real and complex fields, and particle-mesh conversions
+(paint and readout) operations. In order to interface with a higher level differentiable
+modelling package (e.g. abopt[3]), the back-propagation gradient operators are also implemented.
 
-There is a power-spectrum calculator in utils/powerspectrum.py
+- pmesh.window : a variety of resampling windows for converting data representation
+between particle and mesh:
+polynomial windows up to cubic. Cloud-In-Cell is the same as the linear window;
+lanczos windows of order 2 and 3; a few wavelet motivated windows (ref needed) that
+perserves the power spectrum to high frequency.
 
-If there are issues starting up a large size MPI job, consult 
+- pmesh.whitenoise : a resolution-invariant whitenoise generator for 2d and 3d fields.
+
+The FFT backend is PFFT, provided by the pfft-python binding.
+We use MPI to provide parallism (inherited from PFFT). 
+
+Downstream products that uses pmesh includes nbodykit[1] and fastpm-python[2].
+
+If there are issues starting up a large size MPI job, consult
    http://github.com/rainwoodman/python-mpi-bcast
 
 
-Yu Feng
+- Yu Feng
+
+[1] https://github.com/bccp/nbodykit
+[2] https://github.com/rainwoodman/fastpm-python
+[3] https://github.com/bccp/abopt
+

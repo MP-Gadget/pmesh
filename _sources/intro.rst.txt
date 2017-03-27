@@ -3,68 +3,61 @@
 Introduction
 ============
 
-PyPM provides a :py:class:`pypm.particlemesh.ParticleMesh` object for solving forces with the particle mesh
+pmesh provides a :py:class:`pmesh.pm.ParticleMesh` object for solving forces with the particle mesh / spectrum
 method.
 
-ParticleMesh object is a state machine. 
+We represent the fields as :py:class:`pmesh.pm.ComplexField` and :py:class:`pmesh.pm.RealField`.
 
 The typical routine for calculating force is
 
-1. Move particles to the correct domain via :py:meth:`pypm.particlemesh.ParticleMesh.decompose`. In this step,
-   mirror particles (ghosts) are created automatically.
-2. Clear the canvas via :py:meth:`pypm.particlemesh.ParticleMesh.clear`.
-3. Paint particles via :py:meth:`pypm.particlemesh.ParticleMesh.paint` . This step uses the Cloud-in-cell approximation implemented in
-   :py:mod:`pypm.cic`. If it is nessesary, the paint method can be called several times.
-4. Real to Complex transform via :py:meth:`pypm.particlemesh.ParticleMesh.r2c`
+1. Distrubte particles to the correct domain via :py:meth:`pmesh.pm.ParticleMesh.decompose`. In this step,
+   ghost particles are created automatically. The result is a :py:meth:`pmesh.domain.Layout` object.
 
-.. note::
+2. Create a :py:class:`pmesh.pm.RealField` object and paint particles via :py:meth:`pmesh.pm.RealField.paint`;
+   supply the domain decomposition layout as an argument to take care of the ghosts.
 
-    Step 2, 3, 4 can be combined via a single call to :py:meth:`pypm.particlemesh.ParticleMesh.r2c`, with the particle positions
-    as an input parameter.
+3. Transform to spectrum space via a real-to-complex :py:meth:`pmesh.pm.RealField.r2c`, the result is a :py:class:`pmesh.pm.ComplexField`. The operation
+   can be made in-place by setting `out` argument to `Ellipsis`.
 
-5. Complex to Real transform via :py:meth:`pypm.particlemesh.ParticleMesh.c2r`, applying transfer functions. (Refer to :py:class:`pypm.transfer.TransferFunction`)
-6. Read out force values     via :py:meth:`pypm.particlemesh.ParticleMesh.readout`. This step uses the trilinear interpolation implemented in
-   :py:mod:`pypm.cic`
-7. Add back the force values due to ghosts via :py:meth:`pypm.particlemesh.ParticleMesh.gather`.
-8. go back to 3, for other force components (eg, x, y, z)
+5. Apply transfer functions to obtain the force, via :py:meth:`pmesh.pm.ComplexField.apply`. Provide transfer function as `function((kx, ky, kz), original_value)`.
+
+6. Transform to configuration space via a complex-to-real :py:meth:`pmesh.pm.ComplexField.c2r`.
+
+6. Readout force values via :py:meth:`pmesh.pm.RealField.readout`.
+   supply the domain decomposition layout as an argument to take care of the ghosts.
 
 This is a fairly convoluted process; but it truthfully represents the level of complexity of distributed computation introduces.
 We may provide a higher level interface in the future.
 
-We provide an example to illustrate the process. Suppose pm is a :py:class:`pypm.particlemesh.ParticleMesh` object 
+We provide an example to illustrate the process. Suppose pm is a :py:class:`pmesh.pm.ParticleMesh` object 
 and position of particles is stored in :code:`P['Position']` .
-Here is an example for calculating gravity:
+
+Here is an example for calculating linear order displacement from perturbative growth of large scale structure:
 
 .. code-block:: python
 
-        pm = ParticleMesh(BoxSize, Nmesh)
+        pm = ParticleMesh(BoxSize, Nmesh=[Nmesh, Nmesh, Nmesh])
 
         smoothing = 1.0 * pm.Nmesh / pm.BoxSize
 
         # lets get the correct mass distribution with particles on the edge mirrored
         layout = pm.decompose(P['Position'])
-        tpos = layout.exchange(P['Position'])
 
-        pm.r2c(tpos, P['Mass'])
+        density = pm.create(mode='real')
+        density.paint(P['Position'], weight=P['Mass'], layout=layout)
 
-        # calculate potential in k-space
-        pm.transfer( [
-                TransferFunction.RemoveDC,
-                TransferFunction.Trilinear,
-                TransferFunction.Gaussian(1.25 * smoothing), 
-                TransferFunction.Poisson, 
-                TransferFunction.Constant(4 * numpy.pi * QPM.G),
-                TransferFunction.Constant(pm.Nmesh ** -2 * pm.BoxSize ** 2),
-                ])
+        def potential_transfer_function(k, v):
+            k2 = sum(ki**2 for ki in k)
+            return v / (k2)
+
+        pot_k = density.r2c(out=Ellipsis)\
+                       .apply(potential_transfer_function, out=Ellipsis)
 
         for d in range(3):
-            pm.c2r( [
-                TransferFunction.SuperLanzcos(d), 
-                # watch out negative for gravity *pulls*!
-                TransferFunction.Constant(- pm.Nmesh ** 1 * pm.BoxSize ** -1),
-                TransferFunction.Trilinear,
-                ])
-            tmp = pm.readout(tpos)
-            tmp = layout.gather(tmp, mode='sum')
-            P['Accel'][:, d] = tmp
-    
+            def force_transfer_function(k, v, d=d):
+                return ki[d] * 1j * v
+
+            force_d = pot_k.apply(force_transfer_function) \
+                 .c2r(out=Ellipsis)
+
+            P['Accel'][:, d] = force_d.readout(P['Position'], layout=layout)

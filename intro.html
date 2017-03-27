@@ -56,65 +56,56 @@
             
   <div class="section" id="introduction">
 <span id="id1"></span><h1>Introduction<a class="headerlink" href="#introduction" title="Permalink to this headline">¶</a></h1>
-<p>PyPM provides a <code class="xref py py-class docutils literal"><span class="pre">pypm.particlemesh.ParticleMesh</span></code> object for solving forces with the particle mesh
+<p>pmesh provides a <a class="reference internal" href="pmesh.pm.html#pmesh.pm.ParticleMesh" title="pmesh.pm.ParticleMesh"><code class="xref py py-class docutils literal"><span class="pre">pmesh.pm.ParticleMesh</span></code></a> object for solving forces with the particle mesh / spectrum
 method.</p>
-<p>ParticleMesh object is a state machine.</p>
+<p>We represent the fields as <a class="reference internal" href="pmesh.pm.html#pmesh.pm.ComplexField" title="pmesh.pm.ComplexField"><code class="xref py py-class docutils literal"><span class="pre">pmesh.pm.ComplexField</span></code></a> and <a class="reference internal" href="pmesh.pm.html#pmesh.pm.RealField" title="pmesh.pm.RealField"><code class="xref py py-class docutils literal"><span class="pre">pmesh.pm.RealField</span></code></a>.</p>
 <p>The typical routine for calculating force is</p>
 <ol class="arabic simple">
-<li>Move particles to the correct domain via <code class="xref py py-meth docutils literal"><span class="pre">pypm.particlemesh.ParticleMesh.decompose()</span></code>. In this step,
-mirror particles (ghosts) are created automatically.</li>
-<li>Clear the canvas via <code class="xref py py-meth docutils literal"><span class="pre">pypm.particlemesh.ParticleMesh.clear()</span></code>.</li>
-<li>Paint particles via <code class="xref py py-meth docutils literal"><span class="pre">pypm.particlemesh.ParticleMesh.paint()</span></code> . This step uses the Cloud-in-cell approximation implemented in
-<code class="xref py py-mod docutils literal"><span class="pre">pypm.cic</span></code>. If it is nessesary, the paint method can be called several times.</li>
-<li>Real to Complex transform via <code class="xref py py-meth docutils literal"><span class="pre">pypm.particlemesh.ParticleMesh.r2c()</span></code></li>
+<li>Distrubte particles to the correct domain via <a class="reference internal" href="pmesh.pm.html#pmesh.pm.ParticleMesh.decompose" title="pmesh.pm.ParticleMesh.decompose"><code class="xref py py-meth docutils literal"><span class="pre">pmesh.pm.ParticleMesh.decompose()</span></code></a>. In this step,
+ghost particles are created automatically. The result is a <a class="reference internal" href="pmesh.domain.html#pmesh.domain.Layout" title="pmesh.domain.Layout"><code class="xref py py-meth docutils literal"><span class="pre">pmesh.domain.Layout()</span></code></a> object.</li>
+<li>Create a <a class="reference internal" href="pmesh.pm.html#pmesh.pm.RealField" title="pmesh.pm.RealField"><code class="xref py py-class docutils literal"><span class="pre">pmesh.pm.RealField</span></code></a> object and paint particles via <a class="reference internal" href="pmesh.pm.html#pmesh.pm.RealField.paint" title="pmesh.pm.RealField.paint"><code class="xref py py-meth docutils literal"><span class="pre">pmesh.pm.RealField.paint()</span></code></a>;
+supply the domain decomposition layout as an argument to take care of the ghosts.</li>
+<li>Transform to spectrum space via a real-to-complex <a class="reference internal" href="pmesh.pm.html#pmesh.pm.RealField.r2c" title="pmesh.pm.RealField.r2c"><code class="xref py py-meth docutils literal"><span class="pre">pmesh.pm.RealField.r2c()</span></code></a>, the result is a <a class="reference internal" href="pmesh.pm.html#pmesh.pm.ComplexField" title="pmesh.pm.ComplexField"><code class="xref py py-class docutils literal"><span class="pre">pmesh.pm.ComplexField</span></code></a>. The operation
+can be made in-place by setting <cite>out</cite> argument to <cite>Ellipsis</cite>.</li>
 </ol>
-<div class="admonition note">
-<p class="first admonition-title">Note</p>
-<p class="last">Step 2, 3, 4 can be combined via a single call to <code class="xref py py-meth docutils literal"><span class="pre">pypm.particlemesh.ParticleMesh.r2c()</span></code>, with the particle positions
-as an input parameter.</p>
-</div>
 <ol class="arabic simple" start="5">
-<li>Complex to Real transform via <code class="xref py py-meth docutils literal"><span class="pre">pypm.particlemesh.ParticleMesh.c2r()</span></code>, applying transfer functions. (Refer to <code class="xref py py-class docutils literal"><span class="pre">pypm.transfer.TransferFunction</span></code>)</li>
-<li>Read out force values     via <code class="xref py py-meth docutils literal"><span class="pre">pypm.particlemesh.ParticleMesh.readout()</span></code>. This step uses the trilinear interpolation implemented in
-<code class="xref py py-mod docutils literal"><span class="pre">pypm.cic</span></code></li>
-<li>Add back the force values due to ghosts via <code class="xref py py-meth docutils literal"><span class="pre">pypm.particlemesh.ParticleMesh.gather()</span></code>.</li>
-<li>go back to 3, for other force components (eg, x, y, z)</li>
+<li>Apply transfer functions to obtain the force, via <a class="reference internal" href="pmesh.pm.html#pmesh.pm.ComplexField.apply" title="pmesh.pm.ComplexField.apply"><code class="xref py py-meth docutils literal"><span class="pre">pmesh.pm.ComplexField.apply()</span></code></a>. Provide transfer function as <cite>function((kx, ky, kz), original_value)</cite>.</li>
+<li>Transform to configuration space via a complex-to-real <a class="reference internal" href="pmesh.pm.html#pmesh.pm.ComplexField.c2r" title="pmesh.pm.ComplexField.c2r"><code class="xref py py-meth docutils literal"><span class="pre">pmesh.pm.ComplexField.c2r()</span></code></a>.</li>
+</ol>
+<ol class="arabic simple" start="6">
+<li>Readout force values via <a class="reference internal" href="pmesh.pm.html#pmesh.pm.RealField.readout" title="pmesh.pm.RealField.readout"><code class="xref py py-meth docutils literal"><span class="pre">pmesh.pm.RealField.readout()</span></code></a>.
+supply the domain decomposition layout as an argument to take care of the ghosts.</li>
 </ol>
 <p>This is a fairly convoluted process; but it truthfully represents the level of complexity of distributed computation introduces.
 We may provide a higher level interface in the future.</p>
-<p>We provide an example to illustrate the process. Suppose pm is a <code class="xref py py-class docutils literal"><span class="pre">pypm.particlemesh.ParticleMesh</span></code> object
-and position of particles is stored in <code class="code docutils literal"><span class="pre">P['Position']</span></code> .
-Here is an example for calculating gravity:</p>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">pm</span> <span class="o">=</span> <span class="n">ParticleMesh</span><span class="p">(</span><span class="n">BoxSize</span><span class="p">,</span> <span class="n">Nmesh</span><span class="p">)</span>
+<p>We provide an example to illustrate the process. Suppose pm is a <a class="reference internal" href="pmesh.pm.html#pmesh.pm.ParticleMesh" title="pmesh.pm.ParticleMesh"><code class="xref py py-class docutils literal"><span class="pre">pmesh.pm.ParticleMesh</span></code></a> object
+and position of particles is stored in <code class="code docutils literal"><span class="pre">P['Position']</span></code> .</p>
+<p>Here is an example for calculating linear order displacement from perturbative growth of large scale structure:</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">pm</span> <span class="o">=</span> <span class="n">ParticleMesh</span><span class="p">(</span><span class="n">BoxSize</span><span class="p">,</span> <span class="n">Nmesh</span><span class="o">=</span><span class="p">[</span><span class="n">Nmesh</span><span class="p">,</span> <span class="n">Nmesh</span><span class="p">,</span> <span class="n">Nmesh</span><span class="p">])</span>
 
 <span class="n">smoothing</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">*</span> <span class="n">pm</span><span class="o">.</span><span class="n">Nmesh</span> <span class="o">/</span> <span class="n">pm</span><span class="o">.</span><span class="n">BoxSize</span>
 
 <span class="c1"># lets get the correct mass distribution with particles on the edge mirrored</span>
 <span class="n">layout</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">decompose</span><span class="p">(</span><span class="n">P</span><span class="p">[</span><span class="s1">&#39;Position&#39;</span><span class="p">])</span>
-<span class="n">tpos</span> <span class="o">=</span> <span class="n">layout</span><span class="o">.</span><span class="n">exchange</span><span class="p">(</span><span class="n">P</span><span class="p">[</span><span class="s1">&#39;Position&#39;</span><span class="p">])</span>
 
-<span class="n">pm</span><span class="o">.</span><span class="n">r2c</span><span class="p">(</span><span class="n">tpos</span><span class="p">,</span> <span class="n">P</span><span class="p">[</span><span class="s1">&#39;Mass&#39;</span><span class="p">])</span>
+<span class="n">density</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s1">&#39;real&#39;</span><span class="p">)</span>
+<span class="n">density</span><span class="o">.</span><span class="n">paint</span><span class="p">(</span><span class="n">P</span><span class="p">[</span><span class="s1">&#39;Position&#39;</span><span class="p">],</span> <span class="n">weight</span><span class="o">=</span><span class="n">P</span><span class="p">[</span><span class="s1">&#39;Mass&#39;</span><span class="p">],</span> <span class="n">layout</span><span class="o">=</span><span class="n">layout</span><span class="p">)</span>
 
-<span class="c1"># calculate potential in k-space</span>
-<span class="n">pm</span><span class="o">.</span><span class="n">transfer</span><span class="p">(</span> <span class="p">[</span>
-        <span class="n">TransferFunction</span><span class="o">.</span><span class="n">RemoveDC</span><span class="p">,</span>
-        <span class="n">TransferFunction</span><span class="o">.</span><span class="n">Trilinear</span><span class="p">,</span>
-        <span class="n">TransferFunction</span><span class="o">.</span><span class="n">Gaussian</span><span class="p">(</span><span class="mf">1.25</span> <span class="o">*</span> <span class="n">smoothing</span><span class="p">),</span>
-        <span class="n">TransferFunction</span><span class="o">.</span><span class="n">Poisson</span><span class="p">,</span>
-        <span class="n">TransferFunction</span><span class="o">.</span><span class="n">Constant</span><span class="p">(</span><span class="mi">4</span> <span class="o">*</span> <span class="n">numpy</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="n">QPM</span><span class="o">.</span><span class="n">G</span><span class="p">),</span>
-        <span class="n">TransferFunction</span><span class="o">.</span><span class="n">Constant</span><span class="p">(</span><span class="n">pm</span><span class="o">.</span><span class="n">Nmesh</span> <span class="o">**</span> <span class="o">-</span><span class="mi">2</span> <span class="o">*</span> <span class="n">pm</span><span class="o">.</span><span class="n">BoxSize</span> <span class="o">**</span> <span class="mi">2</span><span class="p">),</span>
-        <span class="p">])</span>
+<span class="k">def</span> <span class="nf">potential_transfer_function</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">v</span><span class="p">):</span>
+    <span class="n">k2</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">ki</span><span class="o">**</span><span class="mi">2</span> <span class="k">for</span> <span class="n">ki</span> <span class="ow">in</span> <span class="n">k</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">v</span> <span class="o">/</span> <span class="p">(</span><span class="n">k2</span><span class="p">)</span>
+
+<span class="n">pot_k</span> <span class="o">=</span> <span class="n">density</span><span class="o">.</span><span class="n">r2c</span><span class="p">(</span><span class="n">out</span><span class="o">=</span><span class="bp">Ellipsis</span><span class="p">)</span>\
+               <span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="n">potential_transfer_function</span><span class="p">,</span> <span class="n">out</span><span class="o">=</span><span class="bp">Ellipsis</span><span class="p">)</span>
 
 <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">3</span><span class="p">):</span>
-    <span class="n">pm</span><span class="o">.</span><span class="n">c2r</span><span class="p">(</span> <span class="p">[</span>
-        <span class="n">TransferFunction</span><span class="o">.</span><span class="n">SuperLanzcos</span><span class="p">(</span><span class="n">d</span><span class="p">),</span>
-        <span class="c1"># watch out negative for gravity *pulls*!</span>
-        <span class="n">TransferFunction</span><span class="o">.</span><span class="n">Constant</span><span class="p">(</span><span class="o">-</span> <span class="n">pm</span><span class="o">.</span><span class="n">Nmesh</span> <span class="o">**</span> <span class="mi">1</span> <span class="o">*</span> <span class="n">pm</span><span class="o">.</span><span class="n">BoxSize</span> <span class="o">**</span> <span class="o">-</span><span class="mi">1</span><span class="p">),</span>
-        <span class="n">TransferFunction</span><span class="o">.</span><span class="n">Trilinear</span><span class="p">,</span>
-        <span class="p">])</span>
-    <span class="n">tmp</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">readout</span><span class="p">(</span><span class="n">tpos</span><span class="p">)</span>
-    <span class="n">tmp</span> <span class="o">=</span> <span class="n">layout</span><span class="o">.</span><span class="n">gather</span><span class="p">(</span><span class="n">tmp</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;sum&#39;</span><span class="p">)</span>
-    <span class="n">P</span><span class="p">[</span><span class="s1">&#39;Accel&#39;</span><span class="p">][:,</span> <span class="n">d</span><span class="p">]</span> <span class="o">=</span> <span class="n">tmp</span>
+    <span class="k">def</span> <span class="nf">force_transfer_function</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">d</span><span class="o">=</span><span class="n">d</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">ki</span><span class="p">[</span><span class="n">d</span><span class="p">]</span> <span class="o">*</span> <span class="mi">1j</span> <span class="o">*</span> <span class="n">v</span>
+
+    <span class="n">force_d</span> <span class="o">=</span> <span class="n">pot_k</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="n">force_transfer_function</span><span class="p">)</span> \
+         <span class="o">.</span><span class="n">c2r</span><span class="p">(</span><span class="n">out</span><span class="o">=</span><span class="bp">Ellipsis</span><span class="p">)</span>
+
+    <span class="n">P</span><span class="p">[</span><span class="s1">&#39;Accel&#39;</span><span class="p">][:,</span> <span class="n">d</span><span class="p">]</span> <span class="o">=</span> <span class="n">force_d</span><span class="o">.</span><span class="n">readout</span><span class="p">(</span><span class="n">P</span><span class="p">[</span><span class="s1">&#39;Position&#39;</span><span class="p">],</span> <span class="n">layout</span><span class="o">=</span><span class="n">layout</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>

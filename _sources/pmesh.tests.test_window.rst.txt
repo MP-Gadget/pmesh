@@ -1,7 +1,0 @@
-pmesh.tests.test_window module
-==============================
-
-.. automodule:: pmesh.tests.test_window
-    :members:
-    :undoc-members:
-    :show-inheritance:

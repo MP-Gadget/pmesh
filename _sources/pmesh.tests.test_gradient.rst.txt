@@ -1,7 +1,0 @@
-pmesh.tests.test_gradient module
-================================
-
-.. automodule:: pmesh.tests.test_gradient
-    :members:
-    :undoc-members:
-    :show-inheritance:

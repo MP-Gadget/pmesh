@@ -1,7 +1,0 @@
-pmesh.tests.test_whitenoise module
-==================================
-
-.. automodule:: pmesh.tests.test_whitenoise
-    :members:
-    :undoc-members:
-    :show-inheritance:

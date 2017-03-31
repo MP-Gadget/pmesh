@@ -27,7 +27,7 @@ install:
     - python setup.py install
 
 script: 
-    - pip install mpi4py_test
+    - pip install runtests
     - python runtests.py --mpirun="mpirun -np 9"
     - bash check_tag.sh pmesh/version.py
 

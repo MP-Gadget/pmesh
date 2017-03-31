@@ -27,7 +27,7 @@ install:
     - python setup.py install
 
 script: 
-    - pip install runtests
+    - pip install https://github.com/rainwoodman/runtests/archive/master.zip
     - python runtests.py --mpirun="mpirun -np 9"
     - bash check_tag.sh pmesh/version.py
 

@@ -1,4 +1,4 @@
-from mpi4py_test import MPITest
+from runtests.mpi import MPITest
 
 import numpy
 from pmesh import domain

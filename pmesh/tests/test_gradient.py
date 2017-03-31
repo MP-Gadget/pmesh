@@ -1,4 +1,4 @@
-from mpi4py_test import MPITest
+from runtests.mpi import MPITest
 from numpy.testing import assert_array_equal
 from numpy.testing import assert_allclose
 from numpy.testing import assert_almost_equal

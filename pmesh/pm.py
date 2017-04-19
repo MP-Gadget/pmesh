@@ -257,8 +257,6 @@ class Field(object):
             -----
             Set `out` to or Ellisps self.value for an 'inplace' sort.
         """
-        ind = numpy.ravel_multi_index(numpy.mgrid[self.slices], self.cshape)
-
         if out is None:
             out = numpy.empty_like(self.value)
 
@@ -270,8 +268,13 @@ class Field(object):
 
         assert isinstance(out, numpy.flatiter)
         assert len(out) == self.size
-
-        return mpsort.sort(self.flat, orderby=ind.flat, comm=self.pm.comm, out=out)
+        if self.pm.comm.size > 1:
+            ind = numpy.ravel_multi_index(numpy.mgrid[self.slices], self.cshape)
+            return mpsort.sort(self.flat, orderby=ind.flat, comm=self.pm.comm, out=out)
+        else:
+            # optimize for a single rank -- directly copy the result
+            out[...] = self.flat
+            return out
 
     def unsort(self, flatiter):
         """ Unsort c-ordered field values to the field.
@@ -290,8 +293,12 @@ class Field(object):
         assert isinstance(flatiter, numpy.flatiter)
         assert len(flatiter) == self.size
 
-        ind = numpy.ravel_multi_index(numpy.mgrid[self.slices], self.cshape)
-        mpsort.permute(flatiter, argindex=ind.flat, comm=self.pm.comm, out=self.flat)
+        if self.pm.comm.size > 1:
+            ind = numpy.ravel_multi_index(numpy.mgrid[self.slices], self.cshape)
+            mpsort.permute(flatiter, argindex=ind.flat, comm=self.pm.comm, out=self.flat)
+        else:
+            # optimize for a single rank -- directly copy the result
+            self.flat[...] = flatiter
 
     def resample(self, out):
         """ Resample the Field by filling 0 or truncating modes.

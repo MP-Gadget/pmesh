@@ -482,4 +482,6 @@ def test_grid(comm):
     pm = ParticleMesh(BoxSize=8.0, Nmesh=[4, 4], comm=comm, dtype='f8')
     grid = pm.generate_uniform_particle_grid(shift=0.5)
     assert_array_equal(pm.comm.allreduce(grid.shape[0]), pm.Nmesh.prod())
-
+    real = pm.create(mode='real')
+    real.paint(grid)
+    assert_array_equal(real, 1.0)

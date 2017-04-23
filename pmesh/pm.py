@@ -1159,6 +1159,26 @@ class ParticleMesh(object):
         else:
             return complex.c2r(out=Ellipsis)
 
+    def generate_uniform_particle_grid(self, shift=0.5, dtype=None):
+        """
+            create uniform grid of particles, one per grid point on the basepm mesh
+            this shall go to pmesh.
+        """
+        if dtype is None: dtype == self.dtype
+        real = RealField(self)
+
+        _shift = numpy.zeros(self.ndim, dtype)
+        _shift[:] = shift
+        # one particle per base mesh point
+        source = numpy.zeros((real.size, self.ndim), dtype=dtype)
+
+        for d in range(len(real.shape)):
+            real[...] = 0
+            for xi, slab in zip(real.slabs.i, real.slabs):
+                slab[...] = (xi[d] + 1.0 * _shift[d]) * (real.BoxSize[d] / real.Nmesh[d])
+            source[..., d] = real.value.flat
+        return source
+
     def decompose(self, pos, smoothing=None):
         """ 
         Create a domain decompose layout for particles at given

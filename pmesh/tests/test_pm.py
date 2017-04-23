@@ -476,3 +476,10 @@ def test_preview(comm):
     assert_allclose(preview5, previewsum5)
 
     preview6 = comp1.preview(Nmesh=8, axes=(0,))
+
+@MPITest(commsize=(1))
+def test_grid(comm):
+    pm = ParticleMesh(BoxSize=8.0, Nmesh=[4, 4], comm=comm, dtype='f8')
+    grid = pm.generate_uniform_particle_grid(shift=0.5)
+    assert_array_equal(pm.comm.allreduce(grid.shape[0]), pm.Nmesh.prod())
+

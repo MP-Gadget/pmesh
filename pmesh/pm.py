@@ -92,6 +92,33 @@ class Field(object):
         r[...] *= other
         return r
 
+    def __div__(self, other):
+        r = self.copy()
+        r[...] /= other
+        return r
+
+    __truediv__ = __div__
+    def __rdiv__(self, other):
+        r = self.copy()
+        r[...] = other / self[...]
+        return r
+    __rtruediv__ = __rdiv__
+
+    def __abs__(self):
+        r = self.copy()
+        r[...] = abs(self[...])
+        return r
+
+    def __pow__(self, other):
+        r = self.copy()
+        r[...] = self[...] ** other
+        return r
+
+    def __neg__(self):
+        r = self.copy()
+        r[...] = abs(self[...])
+        return r
+
     def __eq__(self, other):
         return self[...] == other[...]
 

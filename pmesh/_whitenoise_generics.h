@@ -113,6 +113,8 @@ mkname(_generic_fill)(PMeshWhiteNoiseGenerator * self, void * delta_k, int seed)
                    (self->Nmesh[2] - iabs[2]) % self->Nmesh[2] == iabs[2]) {
                     /* The mode is self conjuguate, thus imaginary mode must be zero */
                     ((FLOAT*) (delta_k + ip))[1] = 0;
+                    if(self->unitary)  /* real part must be 1 then*/
+                        ((FLOAT*) (delta_k + ip))[0] = 1;
                 }
             }
         }

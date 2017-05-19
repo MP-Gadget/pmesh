@@ -141,8 +141,8 @@ def FindWindow(window):
     return window
 
 windows = dict(
-    CIC = ResampleWindow(kind="linear"),
-    TUNEDCIC = ResampleWindow(kind="tunedcic"),
+    LINEAR = ResampleWindow(kind="linear"),
+    CIC = ResampleWindow(kind="tunedcic"),
     TSC = ResampleWindow(kind="quadratic"),
     CUBIC = ResampleWindow(kind="cubic"),
     LANCZOS2 = ResampleWindow(kind="lanczos2"),

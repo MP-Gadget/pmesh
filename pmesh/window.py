@@ -133,7 +133,7 @@ class ResampleWindow(_ResampleWindow):
 
         return out
 
-def FindWindow(window):
+def FindResampler(window):
     if window in windows:
         window = windows[window]
     if not isinstance(window, ResampleWindow):

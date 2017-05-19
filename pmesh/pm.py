@@ -2,10 +2,11 @@ import numpy
 import pfft
 import mpsort
 from . import domain
-from .window import FindWindow, Affine
+from .window import FindResampler, Affine
 from mpi4py import MPI
 
 import numbers # for testing Numbers
+import warnings
 
 def is_inplace(out):
     return out is Ellipsis
@@ -267,7 +268,15 @@ class Field(object):
         return slabiter(self)
 
     def sort(self, out=None):
-        """ Sort the field to 'C'-order, partitioned by MPI ranks. Save the
+        warnings.warn("Use ravel instead of sort", DeprecationWarning)
+        return self.ravel(out)
+
+    def unsort(self, flatiter):
+        warnings.warn("Use unravel instead of unsort", DeprecationWarning)
+        return self.unravel(flatiter)
+
+    def ravel(self, out=None):
+        """ Ravel the field to 'C'-order, partitioned by MPI ranks. Save the
             result to flatiter.
 
             Parameters
@@ -282,7 +291,7 @@ class Field(object):
 
             Notes
             -----
-            Set `out` to or Ellisps self.value for an 'inplace' sort.
+            Set `out` to or Ellisps self.value for an 'inplace' ravel.
         """
         if out is None:
             out = numpy.empty_like(self.value)
@@ -303,7 +312,7 @@ class Field(object):
             out[...] = self.flat
             return out
 
-    def unsort(self, flatiter):
+    def unravel(self, flatiter):
         """ Unsort c-ordered field values to the field.
 
             Parameters
@@ -363,7 +372,7 @@ class Field(object):
 
         tmp = numpy.empty_like(self.value)
 
-        self.sort(out=tmp)
+        self.ravel(out=tmp)
 
         # indtable stores the index in pmsrc for the mode in pmdest
         # since pmdest < pmsrc, all items are alright.
@@ -495,7 +504,7 @@ class RealField(Field):
         """ Collective mean. Mean of the entire mesh. (Must be called collectively)"""
         return self.csum() / self.csize
 
-    def paint(self, pos, mass=1.0, method=None, transform=None, hold=False, gradient=None, layout=None):
+    def paint(self, pos, mass=1.0, resampler=None, transform=None, hold=False, gradient=None, layout=None):
         """ 
         Paint particles into the internal real canvas. 
 
@@ -524,8 +533,8 @@ class RealField(Field):
             Direction to take the gradient of the window. The affine transformation
             is properly applied.
 
-        method: None or string
-            type of window. Default : None, use self.pm.method
+        resampler: None or string
+            type of window. Default : None, use self.pm.resampler
 
         layout : Layout
             domain decomposition to use for the readout. The position is first
@@ -540,16 +549,16 @@ class RealField(Field):
         if not transform:
             transform = self.pm.affine
 
-        if method is None:
-            method = self.pm.method
+        if resampler is None:
+            resampler = self.pm.resampler
 
-        method = FindWindow(method)
+        resampler = FindResampler(resampler)
 
         if not hold:
             self.value[...] = 0
 
         if layout is None:
-            return method.paint(self.value, pos, mass, transform=transform, diffdir=gradient)
+            return resampler.paint(self.value, pos, mass, transform=transform, diffdir=gradient)
         else:
             localpos = layout.exchange(pos)
             if numpy.isscalar(mass):
@@ -559,13 +568,13 @@ class RealField(Field):
             else:
                 localmass = mass
             return self.paint(localpos, localmass,
-                    method=method,
+                    resampler=resampler,
                     transform=transform,
                     hold=hold,
                     gradient=gradient,
                     layout=None)
 
-    def readout(self, pos, out=None, method=None, transform=None, gradient=None, layout=None):
+    def readout(self, pos, out=None, resampler=None, transform=None, gradient=None, layout=None):
         """ 
         Read out from real field at positions
 
@@ -576,8 +585,8 @@ class RealField(Field):
         gradient : None or integer
             Direction to take the gradient of the window. The affine transformation
             is properly applied.
-        method : None or string
-            type of window, default to self.pm.method
+        resampler : None or string
+            type of window, default to self.pm.resampler
         layout : Layout
             domain decomposition to use for the readout. The position is first
             routed to the target ranks and the result is reduced
@@ -591,22 +600,22 @@ class RealField(Field):
         if not transform:
             transform = self.pm.affine
 
-        if method is None:
-            method = self.pm.method
+        if resampler is None:
+            resampler = self.pm.resampler
 
-        method = FindWindow(method)
+        resampler = FindResampler(resampler)
 
         if layout is None:
-            return method.readout(self.value, pos, out=out, transform=transform, diffdir=gradient)
+            return resampler.readout(self.value, pos, out=out, transform=transform, diffdir=gradient)
         else:
             localpos = layout.exchange(pos)
-            localresult = self.readout(localpos, method=method,
+            localresult = self.readout(localpos, resampler=resampler,
                     transform=transform,
                     gradient=gradient,
                     out=None, layout=None)
             return layout.gather(localresult, out=out)
 
-    def readout_gradient(self, pos, btgrad, method=None, transform=None, gradient=None,
+    def readout_gradient(self, pos, btgrad, resampler=None, transform=None, gradient=None,
             out_self=None, out_pos=None, layout=None):
         """ back-propagate the gradient of readout.
 
@@ -645,7 +654,7 @@ class RealField(Field):
                 # need to create a copy of pos because we use it later.
                 pos = pos.copy()
             for d in range(pos.shape[1]):
-                self.readout(pos, out=out_pos[:, d], method=method, transform=transform, gradient=d, layout=layout)
+                self.readout(pos, out=out_pos[:, d], resampler=resampler, transform=transform, gradient=d, layout=layout)
                 out_pos[:, d] *= btgrad
 
         if out_self is not False:
@@ -655,11 +664,11 @@ class RealField(Field):
                 out_self = self
 
             # watch out: do this after using self, because out_self can be self.
-            out_self.paint(pos, mass=btgrad, method=method, transform=transform, gradient=gradient, hold=False, layout=layout)
+            out_self.paint(pos, mass=btgrad, resampler=resampler, transform=transform, gradient=gradient, hold=False, layout=layout)
 
         return out_self, out_pos
 
-    def paint_gradient(btgrad, pos, mass=1.0, method=None, transform=None, gradient=None,
+    def paint_gradient(btgrad, pos, mass=1.0, resampler=None, transform=None, gradient=None,
             out_pos=None, out_mass=None, layout=None):
         """ back-propagate the gradient of paint from self. self contains
             the current gradient.
@@ -695,14 +704,14 @@ class RealField(Field):
                 pos = pos.copy()
 
             for d in range(pos.shape[1]):
-                btgrad.readout(pos, out=out_pos[:, d], method=method, transform=transform, gradient=d, layout=layout)
+                btgrad.readout(pos, out=out_pos[:, d], resampler=resampler, transform=transform, gradient=d, layout=layout)
 
         if out_mass is not False:
             if out_mass is None:
                 out_mass = numpy.zeros_like(mass)
             if is_inplace(out_mass):
                 out_mass = mass
-            btgrad.readout(pos, out=out_mass, method=method, transform=transform, gradient=gradient, layout=layout)
+            btgrad.readout(pos, out=out_mass, resampler=resampler, transform=transform, gradient=gradient, layout=layout)
 
         return out_pos, out_mass
 
@@ -1026,7 +1035,7 @@ class ParticleMesh(object):
 
     """
 
-    def __init__(self, Nmesh, BoxSize=1.0, comm=None, np=None, dtype='f8', plan_method='estimate', method='cic'):
+    def __init__(self, Nmesh, BoxSize=1.0, comm=None, np=None, dtype='f8', plan_method='estimate', resampler='cic'):
         """ create a PM object.  """
         if comm is None:
             comm = MPI.COMM_WORLD
@@ -1134,7 +1143,7 @@ class ParticleMesh(object):
                     scale=1.0 * self.Nmesh / self.BoxSize,
                     period = self.Nmesh)
 
-        self.method = FindWindow(method)
+        self.resampler = FindResampler(resampler)
 
     def create(self, mode, base=None, zeros=False):
         """
@@ -1215,7 +1224,7 @@ class ParticleMesh(object):
         smoothing : None, float, array_like, string, or ResampleWindow
             if given as a string or ResampleWindow, use 0.5 * support.
             This is the size of the buffer region around a domain.
-            Default: None, use self.method
+            Default: None, use self.resampler
 
         Returns
         -------
@@ -1224,10 +1233,10 @@ class ParticleMesh(object):
         to the correct MPI ranks that hosts the PM local mesh
         """
         if smoothing is None:
-            smoothing = self.method
+            smoothing = self.resampler
 
         try:
-            smoothing = FindWindow(smoothing)
+            smoothing = FindResampler(smoothing)
             smoothing = smoothing.support * 0.5
         except TypeError:
             pass

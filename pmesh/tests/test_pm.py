@@ -94,24 +94,24 @@ def test_decompose(comm):
 
     pos = 8.0 * (numpy.random.uniform(size=(Npar, 3)))
 
-    for method in ['cic', 'tsc', 'db12']:
-        def test(method):
+    for resampler in ['cic', 'tsc', 'db12']:
+        def test(resampler):
             truth = numpy.zeros(pm.Nmesh, dtype='f8')
             affine = window.Affine(ndim=3, period=8)
-            window.methods[method].paint(truth, pos, transform=affine)
+            window.FindResampler(resampler).paint(truth, pos, transform=affine)
             truth = comm.bcast(truth)
-            layout = pm.decompose(pos, smoothing=method)
+            layout = pm.decompose(pos, smoothing=resampler)
             npos = layout.exchange(pos)
             real = RealField(pm)
             real[...] = 0
-            real.paint(npos, method=method)
+            real.paint(npos, resampler=resampler)
 
             full = numpy.zeros(pm.Nmesh, dtype='f8')
             full[real.slices] = real
             full = comm.allreduce(full)
             assert_almost_equal(full, truth)
         # can't yield!
-        test(method)
+        test(resampler)
 
 @MPITest(commsize=(1))
 def test_indices(comm):
@@ -178,13 +178,13 @@ def test_sort(comm):
     conjecture = numpy.concatenate(comm.allgather(real.value.ravel()))
     assert_array_equal(conjecture, truth)
 
-    real.unsort(real)
+    real.unravel(real)
     assert_array_equal(real, unsorted)
 
     complex = ComplexField(pm)
     truth = numpy.arange(8 * 4)
     complex[...] = truth.reshape(8, 4)[complex.slices]
-    complex.sort(out=Ellipsis)
+    complex.ravel(out=Ellipsis)
     conjecture = numpy.concatenate(comm.allgather(complex.value.ravel()))
     assert_array_equal(conjecture, truth)
 

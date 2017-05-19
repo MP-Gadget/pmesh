@@ -73,7 +73,7 @@ def test_c2r_gradient(comm):
 
 @MPITest([1, 2])
 def test_readout_gradient(comm):
-    pm = ParticleMesh(BoxSize=8.0, Nmesh=[4, 4, 4], comm=comm, dtype='f8', method='cic')
+    pm = ParticleMesh(BoxSize=8.0, Nmesh=[4, 4, 4], comm=comm, dtype='f8', resampler='cic')
 
     real = pm.generate_whitenoise(1234, mode='real')
 

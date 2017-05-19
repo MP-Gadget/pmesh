@@ -198,41 +198,41 @@ mkname(_tsc_tuned_readout) (PMeshPainter * painter, double pos[])
     FILL_TSC;
 
     double value = 0;
-    value += mkname(_Red)(canvas, IJK0[0], IJK0[1], IJK0[2], V0[0]*V0[1]*V0[2], painter);
-    value += mkname(_Red)(canvas, IJK0[0], IJK0[1], IJK1[2], V0[0]*V0[1]*V1[2], painter);
-    value += mkname(_Red)(canvas, IJK0[0], IJK0[1], IJK2[2], V0[0]*V0[1]*V2[2], painter);
+    value += mkname(_REd)(canvas, IJK0[0], IJK0[1], IJK0[2], V0[0]*V0[1]*V0[2], painter);
+    value += mkname(_REd)(canvas, IJK0[0], IJK0[1], IJK1[2], V0[0]*V0[1]*V1[2], painter);
+    value += mkname(_REd)(canvas, IJK0[0], IJK0[1], IJK2[2], V0[0]*V0[1]*V2[2], painter);
 
-    value += mkname(_Red)(canvas, IJK0[0], IJK1[1], IJK0[2], V0[0]*V1[1]*V0[2], painter);
-    value += mkname(_Red)(canvas, IJK0[0], IJK1[1], IJK1[2], V0[0]*V1[1]*V1[2], painter);
-    value += mkname(_Red)(canvas, IJK0[0], IJK1[1], IJK2[2], V0[0]*V1[1]*V2[2], painter);
+    value += mkname(_REd)(canvas, IJK0[0], IJK1[1], IJK0[2], V0[0]*V1[1]*V0[2], painter);
+    value += mkname(_REd)(canvas, IJK0[0], IJK1[1], IJK1[2], V0[0]*V1[1]*V1[2], painter);
+    value += mkname(_REd)(canvas, IJK0[0], IJK1[1], IJK2[2], V0[0]*V1[1]*V2[2], painter);
 
-    value += mkname(_Red)(canvas, IJK0[0], IJK2[1], IJK0[2], V0[0]*V2[1]*V0[2], painter);
-    value += mkname(_Red)(canvas, IJK0[0], IJK2[1], IJK1[2], V0[0]*V2[1]*V1[2], painter);
-    value += mkname(_Red)(canvas, IJK0[0], IJK2[1], IJK2[2], V0[0]*V2[1]*V2[2], painter);
+    value += mkname(_REd)(canvas, IJK0[0], IJK2[1], IJK0[2], V0[0]*V2[1]*V0[2], painter);
+    value += mkname(_REd)(canvas, IJK0[0], IJK2[1], IJK1[2], V0[0]*V2[1]*V1[2], painter);
+    value += mkname(_REd)(canvas, IJK0[0], IJK2[1], IJK2[2], V0[0]*V2[1]*V2[2], painter);
 
-    value += mkname(_Red)(canvas, IJK1[0], IJK0[1], IJK0[2], V1[0]*V0[1]*V0[2], painter);
-    value += mkname(_Red)(canvas, IJK1[0], IJK0[1], IJK1[2], V1[0]*V0[1]*V1[2], painter);
-    value += mkname(_Red)(canvas, IJK1[0], IJK0[1], IJK2[2], V1[0]*V0[1]*V2[2], painter);
+    value += mkname(_REd)(canvas, IJK1[0], IJK0[1], IJK0[2], V1[0]*V0[1]*V0[2], painter);
+    value += mkname(_REd)(canvas, IJK1[0], IJK0[1], IJK1[2], V1[0]*V0[1]*V1[2], painter);
+    value += mkname(_REd)(canvas, IJK1[0], IJK0[1], IJK2[2], V1[0]*V0[1]*V2[2], painter);
 
-    value += mkname(_Red)(canvas, IJK1[0], IJK0[1], IJK0[2], V1[0]*V1[1]*V0[2], painter);
-    value += mkname(_Red)(canvas, IJK1[0], IJK0[1], IJK1[2], V1[0]*V1[1]*V1[2], painter);
-    value += mkname(_Red)(canvas, IJK1[0], IJK0[1], IJK2[2], V1[0]*V1[1]*V2[2], painter);
+    value += mkname(_REd)(canvas, IJK1[0], IJK0[1], IJK0[2], V1[0]*V1[1]*V0[2], painter);
+    value += mkname(_REd)(canvas, IJK1[0], IJK0[1], IJK1[2], V1[0]*V1[1]*V1[2], painter);
+    value += mkname(_REd)(canvas, IJK1[0], IJK0[1], IJK2[2], V1[0]*V1[1]*V2[2], painter);
 
-    value += mkname(_Red)(canvas, IJK1[0], IJK0[1], IJK0[2], V2[0]*V2[1]*V0[2], painter);
-    value += mkname(_Red)(canvas, IJK1[0], IJK0[1], IJK1[2], V2[0]*V2[1]*V1[2], painter);
-    value += mkname(_Red)(canvas, IJK1[0], IJK0[1], IJK2[2], V2[0]*V2[1]*V2[2], painter);
+    value += mkname(_REd)(canvas, IJK1[0], IJK0[1], IJK0[2], V2[0]*V2[1]*V0[2], painter);
+    value += mkname(_REd)(canvas, IJK1[0], IJK0[1], IJK1[2], V2[0]*V2[1]*V1[2], painter);
+    value += mkname(_REd)(canvas, IJK1[0], IJK0[1], IJK2[2], V2[0]*V2[1]*V2[2], painter);
 
-    value += mkname(_Red)(canvas, IJK2[0], IJK0[1], IJK0[2], V2[0]*V0[1]*V0[2], painter);
-    value += mkname(_Red)(canvas, IJK2[0], IJK0[1], IJK1[2], V2[0]*V0[1]*V1[2], painter);
-    value += mkname(_Red)(canvas, IJK2[0], IJK0[1], IJK2[2], V2[0]*V0[1]*V2[2], painter);
+    value += mkname(_REd)(canvas, IJK2[0], IJK0[1], IJK0[2], V2[0]*V0[1]*V0[2], painter);
+    value += mkname(_REd)(canvas, IJK2[0], IJK0[1], IJK1[2], V2[0]*V0[1]*V1[2], painter);
+    value += mkname(_REd)(canvas, IJK2[0], IJK0[1], IJK2[2], V2[0]*V0[1]*V2[2], painter);
 
-    value += mkname(_Red)(canvas, IJK2[0], IJK0[1], IJK0[2], V2[0]*V1[1]*V0[2], painter);
-    value += mkname(_Red)(canvas, IJK2[0], IJK0[1], IJK1[2], V2[0]*V1[1]*V1[2], painter);
-    value += mkname(_Red)(canvas, IJK2[0], IJK0[1], IJK2[2], V2[0]*V1[1]*V2[2], painter);
+    value += mkname(_REd)(canvas, IJK2[0], IJK0[1], IJK0[2], V2[0]*V1[1]*V0[2], painter);
+    value += mkname(_REd)(canvas, IJK2[0], IJK0[1], IJK1[2], V2[0]*V1[1]*V1[2], painter);
+    value += mkname(_REd)(canvas, IJK2[0], IJK0[1], IJK2[2], V2[0]*V1[1]*V2[2], painter);
 
-    value += mkname(_Red)(canvas, IJK2[0], IJK0[1], IJK0[2], V2[0]*V2[1]*V0[2], painter);
-    value += mkname(_Red)(canvas, IJK2[0], IJK0[1], IJK1[2], V2[0]*V2[1]*V1[2], painter);
-    value += mkname(_Red)(canvas, IJK2[0], IJK0[1], IJK2[2], V2[0]*V2[1]*V2[2], painter);
+    value += mkname(_REd)(canvas, IJK2[0], IJK0[1], IJK0[2], V2[0]*V2[1]*V0[2], painter);
+    value += mkname(_REd)(canvas, IJK2[0], IJK0[1], IJK1[2], V2[0]*V2[1]*V1[2], painter);
+    value += mkname(_REd)(canvas, IJK2[0], IJK0[1], IJK2[2], V2[0]*V2[1]*V2[2], painter);
     return value;
 }
 #undef FILL_TSC

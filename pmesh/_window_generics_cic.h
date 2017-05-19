@@ -38,8 +38,8 @@ mkname(_cic_tuned_paint) (PMeshPainter * painter, double pos[], double weight)
     double XYZ[3];
     int IJK0[3];
     int IJK1[3];
-    double D[3];
-    double T[3];
+    double V1[3];
+    double V0[3];
 
     FLOAT * canvas = painter->canvas;
 
@@ -52,11 +52,11 @@ mkname(_cic_tuned_paint) (PMeshPainter * painter, double pos[], double weight)
 
     for(d = 0; d < 3; d ++) {
         if(painter->order[d] == 0) {
-            D[d] = XYZ[d] - IJK0[d];
-            T[d] = 1. - D[d];
+            V1[d] = XYZ[d] - IJK0[d];
+            V0[d] = 1. - V1[d];
         } else {
-            D[d] = painter->scale[d];
-            T[d] = - painter->scale[d];
+            V1[d] = painter->scale[d];
+            V0[d] = - painter->scale[d];
         }
     }
 
@@ -70,17 +70,17 @@ mkname(_cic_tuned_paint) (PMeshPainter * painter, double pos[], double weight)
         while(UNLIKELY(IJK1[d] >= painter->Nmesh[d])) IJK1[d] -= painter->Nmesh[d];
     }
 
-    D[1] *= weight;
-    T[1] *= weight;
+    V1[1] *= weight;
+    V0[1] *= weight;
 
-    mkname(_WRtPlus)(canvas, IJK0[0], IJK0[1], IJK0[2], T[2]*T[0]*T[1], painter);
-    mkname(_WRtPlus)(canvas, IJK0[0], IJK0[1], IJK1[2], D[2]*T[0]*T[1], painter);
-    mkname(_WRtPlus)(canvas, IJK0[0], IJK1[1], IJK0[2], T[2]*T[0]*D[1], painter);
-    mkname(_WRtPlus)(canvas, IJK0[0], IJK1[1], IJK1[2], D[2]*T[0]*D[1], painter);
-    mkname(_WRtPlus)(canvas, IJK1[0], IJK0[1], IJK0[2], T[2]*D[0]*T[1], painter);
-    mkname(_WRtPlus)(canvas, IJK1[0], IJK0[1], IJK1[2], D[2]*D[0]*T[1], painter);
-    mkname(_WRtPlus)(canvas, IJK1[0], IJK1[1], IJK0[2], T[2]*D[0]*D[1], painter);
-    mkname(_WRtPlus)(canvas, IJK1[0], IJK1[1], IJK1[2], D[2]*D[0]*D[1], painter);
+    mkname(_WRtPlus)(canvas, IJK0[0], IJK0[1], IJK0[2], V0[0]*V0[1]*V0[2], painter);
+    mkname(_WRtPlus)(canvas, IJK0[0], IJK0[1], IJK1[2], V0[0]*V0[1]*V1[2], painter);
+    mkname(_WRtPlus)(canvas, IJK0[0], IJK1[1], IJK0[2], V0[0]*V1[1]*V0[2], painter);
+    mkname(_WRtPlus)(canvas, IJK0[0], IJK1[1], IJK1[2], V0[0]*V1[1]*V1[2], painter);
+    mkname(_WRtPlus)(canvas, IJK1[0], IJK0[1], IJK0[2], V1[0]*V0[1]*V0[2], painter);
+    mkname(_WRtPlus)(canvas, IJK1[0], IJK0[1], IJK1[2], V1[0]*V0[1]*V1[2], painter);
+    mkname(_WRtPlus)(canvas, IJK1[0], IJK1[1], IJK0[2], V1[0]*V1[1]*V0[2], painter);
+    mkname(_WRtPlus)(canvas, IJK1[0], IJK1[1], IJK1[2], V1[0]*V1[1]*V1[2], painter);
 }
 
 static double
@@ -91,8 +91,8 @@ mkname(_cic_tuned_readout) (PMeshPainter * painter, double pos[])
     double XYZ[3];
     int IJK0[3];
     int IJK1[3];
-    double D[3];
-    double T[3];
+    double V1[3];
+    double V0[3];
 
     FLOAT * canvas = painter->canvas;
 
@@ -105,11 +105,11 @@ mkname(_cic_tuned_readout) (PMeshPainter * painter, double pos[])
 
     for(d = 0; d < 3; d ++) {
         if(painter->order[d] == 0) {
-            D[d] = XYZ[d] - IJK0[d];
-            T[d] = 1. - D[d];
+            V1[d] = XYZ[d] - IJK0[d];
+            V0[d] = 1. - V1[d];
         } else {
-            D[d] = painter->scale[d];
-            T[d] = - painter->scale[d];
+            V1[d] = painter->scale[d];
+            V0[d] = - painter->scale[d];
         }
     }
 
@@ -125,13 +125,13 @@ mkname(_cic_tuned_readout) (PMeshPainter * painter, double pos[])
 
     double value = 0;
 
-    value += mkname(_REd)(canvas, IJK0[0], IJK0[1], IJK0[2], T[2]*T[0]*T[1], painter);
-    value += mkname(_REd)(canvas, IJK0[0], IJK0[1], IJK1[2], D[2]*T[0]*T[1], painter);
-    value += mkname(_REd)(canvas, IJK0[0], IJK1[1], IJK0[2], T[2]*T[0]*D[1], painter);
-    value += mkname(_REd)(canvas, IJK0[0], IJK1[1], IJK1[2], D[2]*T[0]*D[1], painter);
-    value += mkname(_REd)(canvas, IJK1[0], IJK0[1], IJK0[2], T[2]*D[0]*T[1], painter);
-    value += mkname(_REd)(canvas, IJK1[0], IJK0[1], IJK1[2], D[2]*D[0]*T[1], painter);
-    value += mkname(_REd)(canvas, IJK1[0], IJK1[1], IJK0[2], T[2]*D[0]*D[1], painter);
-    value += mkname(_REd)(canvas, IJK1[0], IJK1[1], IJK1[2], D[2]*D[0]*D[1], painter);
+    value += mkname(_REd)(canvas, IJK0[0], IJK0[1], IJK0[2], V0[0]*V0[1]*V0[2], painter);
+    value += mkname(_REd)(canvas, IJK0[0], IJK0[1], IJK1[2], V0[0]*V0[1]*V1[2], painter);
+    value += mkname(_REd)(canvas, IJK0[0], IJK1[1], IJK0[2], V0[0]*V1[1]*V0[2], painter);
+    value += mkname(_REd)(canvas, IJK0[0], IJK1[1], IJK1[2], V0[0]*V1[1]*V1[2], painter);
+    value += mkname(_REd)(canvas, IJK1[0], IJK0[1], IJK0[2], V1[0]*V0[1]*V0[2], painter);
+    value += mkname(_REd)(canvas, IJK1[0], IJK0[1], IJK1[2], V1[0]*V0[1]*V1[2], painter);
+    value += mkname(_REd)(canvas, IJK1[0], IJK1[1], IJK0[2], V1[0]*V1[1]*V0[2], painter);
+    value += mkname(_REd)(canvas, IJK1[0], IJK1[1], IJK1[2], V1[0]*V1[1]*V1[2], painter);
     return value;
 }

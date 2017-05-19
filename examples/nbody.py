@@ -189,7 +189,7 @@ class Result(object): pass
 def force(pm, Q, S):
     rho1 = pm.create('real')
     X = S + Q
-    layout = pm.decompose(X, smoothing=1.0 * pm.method.support)
+    layout = pm.decompose(X, smoothing=1.0 * pm.resampler.support)
     rho1.paint(X, layout=layout, hold=False)
 
     N = pm.comm.allreduce(len(X))
@@ -210,7 +210,7 @@ def force(pm, Q, S):
 def energy(pm, Q, S, V, a):
     rho1 = pm.create('real')
     X = S + Q
-    layout = pm.decompose(X, smoothing=1.0 * pm.method.support)
+    layout = pm.decompose(X, smoothing=1.0 * pm.resampler.support)
     rho1.paint(X, layout=layout, hold=False)
 
     N = pm.comm.allreduce(len(X))
@@ -264,7 +264,7 @@ def simulate(comm, ns):
     V = S * a0 ** 2 * pt.f1(a0) * pt.E(a0)
     state = State(Q, S, V)
 
-    fpm = ParticleMesh(BoxSize=pm.BoxSize, Nmesh=pm.Nmesh * ns.boost, method='tsc', dtype='f8')
+    fpm = ParticleMesh(BoxSize=pm.BoxSize, Nmesh=pm.Nmesh * ns.boost, resampler='tsc', dtype='f8')
 
     ns.scheme(fpm, state, time_steps, ns.factors)
         

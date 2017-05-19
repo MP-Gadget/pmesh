@@ -156,6 +156,17 @@ _cubic_diff(double x) {
     return 0;
 }
 
+static int
+_compatible_with_tuned_cic(PMeshPainter * painter)
+{
+    if(painter->type != PMESH_PAINTER_TUNED_CIC) return 0;
+    if(painter->ndim != 3) return 0;
+    if(painter->order[0] != 0) return 0;
+    if(painter->order[1] != 0) return 0;
+    if(painter->order[2] != 0) return 0;
+    if(painter->support != 2 && painter->support > 0) return 0;
+    return 1;
+}
 
 void
 pmesh_painter_init(PMeshPainter * painter)
@@ -224,7 +235,22 @@ pmesh_painter_init(PMeshPainter * painter)
             painter->diff = _sym20_diff;
             painter->nativesupport = _sym20_nativesupport;
         break;
+        case PMESH_PAINTER_TUNED_CIC:
+            /* handled later. */
+        break;
     }
+    /* override the painter set up if tuned CIC code can be used. */
+    if(_compatible_with_tuned_cic(painter)) {
+        if(painter->canvas_dtype_elsize == 8) {
+            painter->paint = _cic_tuned_paint_double;
+            painter->readout = _cic_tuned_readout_double;
+        } else {
+            painter->paint = _cic_tuned_paint_float;
+            painter->readout = _cic_tuned_readout_float;
+        }
+        painter->nativesupport = 2;
+    }
+
     if(painter->support <= 0) {
         painter->support = painter->nativesupport;
     }

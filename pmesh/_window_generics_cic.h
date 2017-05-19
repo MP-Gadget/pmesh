@@ -10,7 +10,9 @@ mkname (_WRtPlus) (FLOAT * canvas,
         const int i, const int j, const int k, const double f, ptrdiff_t strides[3])
 {
     ptrdiff_t ind = k * strides[2] + j * strides[1] + i * strides[0];
+#ifdef _OPENMP
 #pragma omp atomic
+#endif
     canvas[ind] += f;
     return;
 }
@@ -23,7 +25,7 @@ mkname (_REd) (FLOAT const * const canvas, const int i, const int j, const int k
 }
 
 static void
-mkname(_cic_normal_paint) (PMeshPainter * painter, double pos[], double weight)
+mkname(_cic_tuned_paint) (PMeshPainter * painter, double pos[], double weight)
 {
     int d;
 
@@ -62,36 +64,36 @@ mkname(_cic_normal_paint) (PMeshPainter * painter, double pos[], double weight)
     if(LIKELY(0 <= IJK[0] && IJK[0] < painter->size[0])) {
         if(LIKELY(0 <= IJK[1] && IJK[1] < painter->size[1])) {
             if(LIKELY(0 <= IJK[2] && IJK[2] < painter->size[2]))
-                mkname(_WRtPlus)(canvas, IJK[0], IJK[1],  IJK[2],  T[2]*T[0]*T[1], painter);
+                mkname(_WRtPlus)(canvas, IJK[0], IJK[1],  IJK[2],  T[2]*T[0]*T[1], painter->strides);
             if(LIKELY(0 <= IJK1[2] && IJK1[2] < painter->size[2]))
-                mkname(_WRtPlus)(canvas, IJK[0], IJK[1],  IJK1[2], D[2]*T[0]*T[1], painter);
+                mkname(_WRtPlus)(canvas, IJK[0], IJK[1],  IJK1[2], D[2]*T[0]*T[1], painter->strides);
         }
         if(LIKELY(0 <= IJK1[1] && IJK1[1] < painter->size[1])) {
             if(LIKELY(0 <= IJK[2] && IJK[2] < painter->size[2]))
-                mkname(_WRtPlus)(canvas, IJK[0], IJK1[1], IJK[2],  T[2]*T[0]*D[1], painter);
+                mkname(_WRtPlus)(canvas, IJK[0], IJK1[1], IJK[2],  T[2]*T[0]*D[1], painter->strides);
             if(LIKELY(0 <= IJK1[2] && IJK1[2] < painter->size[2]))
-                mkname(_WRtPlus)(canvas, IJK[0], IJK1[1], IJK1[2], D[2]*T[0]*D[1], painter);
+                mkname(_WRtPlus)(canvas, IJK[0], IJK1[1], IJK1[2], D[2]*T[0]*D[1], painter->strides);
         }
     }
 
     if(LIKELY(0 <= IJK1[0] && IJK1[0] < painter->size[0])) {
         if(LIKELY(0 <= IJK[1] && IJK[1] < painter->size[1])) {
             if(LIKELY(0 <= IJK[2] && IJK[2] < painter->size[2]))
-                mkname(_WRtPlus)(canvas, IJK1[0], IJK[1],  IJK[2],  T[2]*D[0]*T[1], painter);
+                mkname(_WRtPlus)(canvas, IJK1[0], IJK[1],  IJK[2],  T[2]*D[0]*T[1], painter->strides);
             if(LIKELY(0 <= IJK1[2] && IJK1[2] < painter->size[2]))
-                mkname(_WRtPlus)(canvas, IJK1[0], IJK[1],  IJK1[2], D[2]*D[0]*T[1], painter);
+                mkname(_WRtPlus)(canvas, IJK1[0], IJK[1],  IJK1[2], D[2]*D[0]*T[1], painter->strides);
         }
         if(LIKELY(0 <= IJK1[1] && IJK1[1] < painter->size[1])) {
             if(LIKELY(0 <= IJK[2] && IJK[2] < painter->size[2]))
-                mkname(_WRtPlus)(canvas, IJK1[0], IJK1[1], IJK[2],  T[2]*D[0]*D[1], painter);
+                mkname(_WRtPlus)(canvas, IJK1[0], IJK1[1], IJK[2],  T[2]*D[0]*D[1], painter->strides);
             if(LIKELY(0 <= IJK1[2] && IJK1[2] < painter->size[2]))
-                mkname(_WRtPlus)(canvas, IJK1[0], IJK1[1], IJK1[2], D[2]*D[0]*D[1], painter);
+                mkname(_WRtPlus)(canvas, IJK1[0], IJK1[1], IJK1[2], D[2]*D[0]*D[1], painter->strides);
         }
     }
 }
 
 static double
-mkname(_generic_normal_readout) (PMeshPainter * painter, double pos[])
+mkname(_cic_tuned_readout) (PMeshPainter * painter, double pos[])
 {
     int d;
 
@@ -129,30 +131,30 @@ mkname(_generic_normal_readout) (PMeshPainter * painter, double pos[])
     if(LIKELY(0 <= IJK[0] && IJK[0] < painter->size[0])) {
         if(LIKELY(0 <= IJK[1] && IJK[1] < painter->size[1])) {
             if(LIKELY(0 <= IJK[2] && IJK[2] < painter->size[2]))
-                value += mkname(_REd)(canvas, IJK[0], IJK[1],  IJK[2],  T[2]*T[0]*T[1], painter);
+                value += mkname(_REd)(canvas, IJK[0], IJK[1],  IJK[2],  T[2]*T[0]*T[1], painter->strides);
             if(LIKELY(0 <= IJK1[2] && IJK1[2] < painter->size[2]))
-                value += mkname(_REd)(canvas, IJK[0], IJK[1],  IJK1[2], D[2]*T[0]*T[1], painter);
+                value += mkname(_REd)(canvas, IJK[0], IJK[1],  IJK1[2], D[2]*T[0]*T[1], painter->strides);
         }
         if(LIKELY(0 <= IJK1[1] && IJK1[1] < painter->size[1])) {
             if(LIKELY(0 <= IJK[2] && IJK[2] < painter->size[2]))
-                value += mkname(_REd)(canvas, IJK[0], IJK1[1], IJK[2],  T[2]*T[0]*D[1], painter);
+                value += mkname(_REd)(canvas, IJK[0], IJK1[1], IJK[2],  T[2]*T[0]*D[1], painter->strides);
             if(LIKELY(0 <= IJK1[2] && IJK1[2] < painter->size[2]))
-                value += mkname(_REd)(canvas, IJK[0], IJK1[1], IJK1[2], D[2]*T[0]*D[1], painter);
+                value += mkname(_REd)(canvas, IJK[0], IJK1[1], IJK1[2], D[2]*T[0]*D[1], painter->strides);
         }
     }
 
     if(LIKELY(0 <= IJK1[0] && IJK1[0] < painter->size[0])) {
         if(LIKELY(0 <= IJK[1] && IJK[1] < painter->size[1])) {
             if(LIKELY(0 <= IJK[2] && IJK[2] < painter->size[2]))
-                value += mkname(_REd)(canvas, IJK1[0], IJK[1],  IJK[2],  T[2]*D[0]*T[1], painter);
+                value += mkname(_REd)(canvas, IJK1[0], IJK[1],  IJK[2],  T[2]*D[0]*T[1], painter->strides);
             if(LIKELY(0 <= IJK1[2] && IJK1[2] < painter->size[2]))
-                value += mkname(_REd)(canvas, IJK1[0], IJK[1],  IJK1[2], D[2]*D[0]*T[1], painter);
+                value += mkname(_REd)(canvas, IJK1[0], IJK[1],  IJK1[2], D[2]*D[0]*T[1], painter->strides);
         }
         if(LIKELY(0 <= IJK1[1] && IJK1[1] < painter->size[1])) {
             if(LIKELY(0 <= IJK[2] && IJK[2] < painter->size[2]))
-                value += mkname(_REd)(canvas, IJK1[0], IJK1[1], IJK[2],  T[2]*D[0]*D[1], painter);
+                value += mkname(_REd)(canvas, IJK1[0], IJK1[1], IJK[2],  T[2]*D[0]*D[1], painter->strides);
             if(LIKELY(0 <= IJK1[2] && IJK1[2] < painter->size[2]))
-                value += mkname(_REd)(canvas, IJK1[0], IJK1[1], IJK1[2], D[2]*D[0]*D[1], painter);
+                value += mkname(_REd)(canvas, IJK1[0], IJK1[1], IJK1[2], D[2]*D[0]*D[1], painter->strides);
         }
     }
     return value;

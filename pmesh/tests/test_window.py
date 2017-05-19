@@ -1,8 +1,9 @@
-from pmesh.window import ResampleWindow, Affine, CIC, LANCZOS2, TSC, CUBIC, DB12, DB20
+from pmesh.window import ResampleWindow, Affine, CIC, LANCZOS2, TSC, CUBIC, DB12, DB20, TUNEDCIC
 
 import numpy
 from numpy.testing import assert_array_equal, assert_allclose, assert_almost_equal
 from numpy.testing.decorators import skipif
+
 def test_unweighted():
     real = numpy.zeros((4, 4))
     pos = [
@@ -240,3 +241,16 @@ def test_db20():
         -7.4218390e-02,   1.0433001e-01,  -7.1827390e-02,  -1.6736320e-01,
          8.4381209e-01,   3.1778939e-01,   2.0722960e-02,   1.5644000e-04,
          0.0000000e+00])
+
+def test_cic_tuned():
+    real = numpy.zeros((4, 4, 4))
+    pos = [
+        [1.1, 1.3, 2.5],
+    ]
+    CIC.paint(real, pos)
+
+    real2 = numpy.zeros((4, 4, 4))
+    TUNEDCIC.paint(real2, pos)
+
+    assert_array_equal(real, real2)
+

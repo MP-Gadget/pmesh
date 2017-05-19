@@ -13,7 +13,7 @@ mkname (_WRtPlus) (FLOAT * canvas,
 #ifdef _OPENMP
 #pragma omp atomic
 #endif
-    canvas[ind] += f;
+    * (FLOAT*) ((char*) canvas + ind) += f;
     return;
 }
 
@@ -21,7 +21,7 @@ static inline double
 mkname (_REd) (FLOAT const * const canvas, const int i, const int j, const int k, const double w, ptrdiff_t strides[3])
 {
     ptrdiff_t ind = k * strides[2] + j * strides[1] + i * strides[0];
-    return canvas[ind] * w;
+    return (* (FLOAT*) ((char*) canvas + ind)) * w;
 }
 
 static void
@@ -52,6 +52,7 @@ mkname(_cic_tuned_paint) (PMeshPainter * painter, double pos[], double weight)
     // Do periodic wrapup in all directions. 
     // Buffer particles are copied from adjacent nodes
     for(d = 0; d < 3; d ++) {
+        if(painter->Nmesh[d] == 0) continue;
         while(UNLIKELY(IJK[d] < 0)) IJK[d] += painter->Nmesh[d];
         while(UNLIKELY(IJK[d] >= painter->Nmesh[d])) IJK[d] -= painter->Nmesh[d];
         while(UNLIKELY(IJK1[d] < 0)) IJK1[d] += painter->Nmesh[d];
@@ -120,6 +121,7 @@ mkname(_cic_tuned_readout) (PMeshPainter * painter, double pos[])
     // Do periodic wrapup in all directions. 
     // Buffer particles are copied from adjacent nodes
     for(d = 0; d < 3; d ++) {
+        if(painter->Nmesh[d] == 0) continue;
         while(UNLIKELY(IJK[d] < 0)) IJK[d] += painter->Nmesh[d];
         while(UNLIKELY(IJK[d] >= painter->Nmesh[d])) IJK[d] -= painter->Nmesh[d];
         while(UNLIKELY(IJK1[d] < 0)) IJK1[d] += painter->Nmesh[d];

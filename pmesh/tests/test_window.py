@@ -243,6 +243,8 @@ def test_db20():
          0.0000000e+00])
 
 def test_cic_tuned():
+    assert CIC.support == 2
+    assert TUNEDCIC.support == 2
     real = numpy.zeros((4, 4, 4))
     pos = [
         [1.1, 1.3, 2.5],

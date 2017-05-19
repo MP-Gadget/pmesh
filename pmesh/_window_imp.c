@@ -236,24 +236,28 @@ pmesh_painter_init(PMeshPainter * painter)
             painter->nativesupport = _sym20_nativesupport;
         break;
         case PMESH_PAINTER_TUNED_CIC:
-            /* handled later. */
+            if(_compatible_with_tuned_cic(painter)) {
+                if(painter->canvas_dtype_elsize == 8) {
+                    painter->paint = _cic_tuned_paint_double;
+                    painter->readout = _cic_tuned_readout_double;
+                } else {
+                    painter->paint = _cic_tuned_paint_float;
+                    painter->readout = _cic_tuned_readout_float;
+                }
+            } else {
+                painter->kernel = _linear_kernel;
+                painter->diff = _linear_diff;
+                painter->nativesupport = 2;
+            }
+
+            painter->nativesupport = 2;
         break;
-    }
-    /* override the painter set up if tuned CIC code can be used. */
-    if(_compatible_with_tuned_cic(painter)) {
-        if(painter->canvas_dtype_elsize == 8) {
-            painter->paint = _cic_tuned_paint_double;
-            painter->readout = _cic_tuned_readout_double;
-        } else {
-            painter->paint = _cic_tuned_paint_float;
-            painter->readout = _cic_tuned_readout_float;
-        }
-        painter->nativesupport = 2;
     }
 
     if(painter->support <= 0) {
         painter->support = painter->nativesupport;
     }
+
     painter->left = (painter->support - 1) / 2;
     if (painter->support % 2 == 0){
         painter->shift = 0;

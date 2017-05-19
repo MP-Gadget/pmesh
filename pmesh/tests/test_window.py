@@ -1,8 +1,9 @@
-from pmesh.window import ResampleWindow, Affine, CIC, LANCZOS2, TSC, CUBIC, DB12, DB20
+from pmesh.window import ResampleWindow, Affine, CIC, LANCZOS2, TSC, QUADRATIC, CUBIC, DB12, DB20, LINEAR
 
 import numpy
 from numpy.testing import assert_array_equal, assert_allclose, assert_almost_equal
 from numpy.testing.decorators import skipif
+
 def test_unweighted():
     real = numpy.zeros((4, 4))
     pos = [
@@ -240,3 +241,45 @@ def test_db20():
         -7.4218390e-02,   1.0433001e-01,  -7.1827390e-02,  -1.6736320e-01,
          8.4381209e-01,   3.1778939e-01,   2.0722960e-02,   1.5644000e-04,
          0.0000000e+00])
+
+def test_cic_tuned():
+    assert CIC.support == 2
+    assert LINEAR.support == 2
+    real = numpy.zeros((4, 4, 4))
+    pos = [
+        [1.1, 1.3, 2.5],
+    ]
+    CIC.paint(real, pos)
+
+    real2 = numpy.zeros((4, 4, 4))
+    LINEAR.paint(real2, pos)
+
+    assert_array_equal(real, real2)
+
+    for d in range(3):
+        d1 = numpy.zeros((4, 4, 4))
+        d2 = numpy.zeros((4, 4, 4))
+        CIC.paint(d1, pos, diffdir=d)
+        LINEAR.paint(d2, pos, diffdir=d)
+        assert_array_equal(d1, d2)
+
+def test_tsc_tuned():
+    assert TSC.support == 3
+    assert QUADRATIC.support == 3
+    real = numpy.zeros((4, 4, 4))
+    pos = [
+        [1.1, 1.3, 2.5],
+    ]
+    TSC.paint(real, pos)
+
+    real2 = numpy.zeros((4, 4, 4))
+    QUADRATIC.paint(real2, pos)
+
+    assert_array_equal(real, real2)
+
+    for d in range(3):
+        d1 = numpy.zeros((4, 4, 4))
+        d2 = numpy.zeros((4, 4, 4))
+        TSC.paint(d1, pos, diffdir=d)
+        QUADRATIC.paint(d2, pos, diffdir=d)
+        assert_array_equal(d1, d2)

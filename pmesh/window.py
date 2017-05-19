@@ -133,9 +133,18 @@ class ResampleWindow(_ResampleWindow):
 
         return out
 
-methods = dict(
-    CIC = ResampleWindow(kind="linear"),
-    TSC = ResampleWindow(kind="quadratic"),
+def FindWindow(window):
+    if window in windows:
+        window = windows[window]
+    if not isinstance(window, ResampleWindow):
+        raise TypeError("argument is not a ResampleWindow name or a ResampleWindow object")
+    return window
+
+windows = dict(
+    LINEAR = ResampleWindow(kind="linear"),
+    CIC = ResampleWindow(kind="tunedcic"),
+    TSC = ResampleWindow(kind="tunedtsc"),
+    QUADRATIC = ResampleWindow(kind="quadratic"),
     CUBIC = ResampleWindow(kind="cubic"),
     LANCZOS2 = ResampleWindow(kind="lanczos2"),
     LANCZOS3 = ResampleWindow(kind="lanczos3"),
@@ -146,8 +155,10 @@ methods = dict(
     SYM12 = ResampleWindow(kind="sym12"),
     SYM20 = ResampleWindow(kind="sym20"),
 )
-for m, p in list(methods.items()):
-    methods[m.lower()] = p
+for m, p in list(windows.items()):
+    windows[m.lower()] = p
     globals()[m] = p
 
+# compatible.
+methods = windows
 del m, p

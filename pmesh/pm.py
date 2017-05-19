@@ -2,7 +2,7 @@ import numpy
 import pfft
 import mpsort
 from . import domain
-from . import window
+from .window import FindWindow, Affine
 from mpi4py import MPI
 
 import numbers # for testing Numbers
@@ -543,8 +543,7 @@ class RealField(Field):
         if method is None:
             method = self.pm.method
 
-        if method in window.methods:
-            method = window.methods[method]
+        method = FindWindow(method)
 
         if not hold:
             self.value[...] = 0
@@ -595,8 +594,7 @@ class RealField(Field):
         if method is None:
             method = self.pm.method
 
-        if method in window.methods:
-            method = window.methods[method]
+        method = FindWindow(method)
 
         if layout is None:
             return method.readout(self.value, pos, out=out, transform=transform, diffdir=gradient)
@@ -1131,14 +1129,12 @@ class ParticleMesh(object):
         self.x = x
 
         # Transform from simulation unit to local grid unit.
-        self.affine = window.Affine(self.partition.ndim,
+        self.affine = Affine(self.partition.ndim,
                     translate=-self.partition.local_i_start,
                     scale=1.0 * self.Nmesh / self.BoxSize,
                     period = self.Nmesh)
 
-        if method in window.methods:
-            method = window.methods[method]
-        self.method = method
+        self.method = FindWindow(method)
 
     def create(self, mode, base=None, zeros=False):
         """
@@ -1230,11 +1226,11 @@ class ParticleMesh(object):
         if smoothing is None:
             smoothing = self.method
 
-        if smoothing in window.methods:
-            smoothing = window.methods[smoothing]
-
-        if isinstance(smoothing, window.ResampleWindow):
+        try:
+            smoothing = FindWindow(smoothing)
             smoothing = smoothing.support * 0.5
+        except TypeError:
+            pass
 
         # Transform from simulation unit to global grid unit.
         def transform0(x):

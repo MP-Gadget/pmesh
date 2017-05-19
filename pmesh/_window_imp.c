@@ -45,11 +45,13 @@ _fill_k(PMeshPainter * painter, double pos[], int ipos[], double k[][64])
 #define FLOAT float
 #define mkname(a) a ## _ ## float
 #include "_window_generics.h"
+#include "_window_generics_cic.h"
 #undef FLOAT
 #undef mkname
 #define mkname(a) a ## _ ## double
 #define FLOAT double
 #include "_window_generics.h"
+#include "_window_generics_cic.h"
 #undef FLOAT
 #undef mkname
 
@@ -154,6 +156,29 @@ _cubic_diff(double x) {
     return 0;
 }
 
+static int
+_compatible_with_tuned_cic(PMeshPainter * painter)
+{
+    if(painter->type != PMESH_PAINTER_TUNED_CIC) return 0;
+    if(painter->ndim != 3) return 0;
+    if(painter->order[0] > 1) return 0;
+    if(painter->order[1] > 1) return 0;
+    if(painter->order[2] > 1) return 0;
+    if(painter->support != 2 && painter->support > 0) return 0;
+    return 1;
+}
+
+static int
+_compatible_with_tuned_tsc(PMeshPainter * painter)
+{
+    if(painter->type != PMESH_PAINTER_TUNED_TSC) return 0;
+    if(painter->ndim != 3) return 0;
+    if(painter->order[0] > 1) return 0;
+    if(painter->order[1] > 1) return 0;
+    if(painter->order[2] > 1) return 0;
+    if(painter->support != 3 && painter->support > 0) return 0;
+    return 1;
+}
 
 void
 pmesh_painter_init(PMeshPainter * painter)
@@ -222,10 +247,46 @@ pmesh_painter_init(PMeshPainter * painter)
             painter->diff = _sym20_diff;
             painter->nativesupport = _sym20_nativesupport;
         break;
+        case PMESH_PAINTER_TUNED_CIC:
+            if(!_compatible_with_tuned_cic(painter)) {
+                /* fall back to use linear kernel */
+                painter->kernel = _linear_kernel;
+                painter->diff = _linear_diff;
+                painter->nativesupport = 2;
+                break;
+            }
+            if(painter->canvas_dtype_elsize == 8) {
+                painter->paint = _cic_tuned_paint_double;
+                painter->readout = _cic_tuned_readout_double;
+            } else {
+                painter->paint = _cic_tuned_paint_float;
+                painter->readout = _cic_tuned_readout_float;
+            }
+            painter->nativesupport = 2;
+        break;
+        case PMESH_PAINTER_TUNED_TSC:
+            if(!_compatible_with_tuned_tsc(painter)) {
+                /* fall back to use quad kernel */
+                painter->kernel = _quadratic_kernel;
+                painter->diff = _quadratic_diff;
+                painter->nativesupport = 3;
+                break;
+            }
+            if(painter->canvas_dtype_elsize == 8) {
+                painter->paint = _tsc_tuned_paint_double;
+                painter->readout = _tsc_tuned_readout_double;
+            } else {
+                painter->paint = _tsc_tuned_paint_float;
+                painter->readout = _tsc_tuned_readout_float;
+            }
+            painter->nativesupport = 3;
+        break;
     }
+
     if(painter->support <= 0) {
         painter->support = painter->nativesupport;
     }
+
     painter->left = (painter->support - 1) / 2;
     if (painter->support % 2 == 0){
         painter->shift = 0;

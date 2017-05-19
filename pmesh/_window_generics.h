@@ -36,7 +36,9 @@ mkname(_generic_paint) (PMeshPainter * painter, double pos[], double weight)
                 goto outside;
             ind += painter->strides[d] * targetpos;
         }
+#ifdef _OPENMP
 #pragma omp atomic
+#endif
         * (FLOAT*) (canvas + ind) += weight * kernel;
 
     outside:

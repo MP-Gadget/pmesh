@@ -133,8 +133,9 @@ class ResampleWindow(_ResampleWindow):
 
         return out
 
-methods = dict(
+windows = dict(
     CIC = ResampleWindow(kind="linear"),
+    TUNEDCIC = ResampleWindow(kind="tunedcic"),
     TSC = ResampleWindow(kind="quadratic"),
     CUBIC = ResampleWindow(kind="cubic"),
     LANCZOS2 = ResampleWindow(kind="lanczos2"),
@@ -146,8 +147,10 @@ methods = dict(
     SYM12 = ResampleWindow(kind="sym12"),
     SYM20 = ResampleWindow(kind="sym20"),
 )
-for m, p in list(methods.items()):
-    methods[m.lower()] = p
+for m, p in list(windows.items()):
+    windows[m.lower()] = p
     globals()[m] = p
 
+# compatible.
+methods = windows
 del m, p

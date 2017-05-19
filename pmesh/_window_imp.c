@@ -45,11 +45,13 @@ _fill_k(PMeshPainter * painter, double pos[], int ipos[], double k[][64])
 #define FLOAT float
 #define mkname(a) a ## _ ## float
 #include "_window_generics.h"
+#include "_window_generics_cic.h"
 #undef FLOAT
 #undef mkname
 #define mkname(a) a ## _ ## double
 #define FLOAT double
 #include "_window_generics.h"
+#include "_window_generics_cic.h"
 #undef FLOAT
 #undef mkname
 

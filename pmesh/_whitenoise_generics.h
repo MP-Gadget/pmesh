@@ -96,11 +96,6 @@ mkname(_generic_fill)(PMeshWhiteNoiseGenerator * self, void * delta_k, int seed)
                 if(self->unitary)
                     ampl = 1.0;
 
-                if(iabs[0] == 0 && iabs[1] == 0 && iabs[2] == 0) {
-                    /* the mean is zero */
-                    ampl = 0;
-                }
-
                 ((FLOAT*) (delta_k + ip))[0] = ampl * cos(phase);
                 ((FLOAT*) (delta_k + ip))[1] = ampl * sin(phase);
 
@@ -116,6 +111,13 @@ mkname(_generic_fill)(PMeshWhiteNoiseGenerator * self, void * delta_k, int seed)
                     if(self->unitary)  /* real part must be 1 then*/
                         ((FLOAT*) (delta_k + ip))[0] = 1;
                 }
+
+                if(iabs[0] == 0 && iabs[1] == 0 && iabs[2] == 0) {
+                    /* the mean is zero */
+                    ((FLOAT*) (delta_k + ip))[0] = 0;
+                    ((FLOAT*) (delta_k + ip))[1] = 0;
+                }
+
             }
         }
         gsl_rng_free(lower_rng);

@@ -33,7 +33,7 @@ mkname (_REd) (FLOAT const * const canvas, const int i, const int j, const int k
 #define ACCESS(func, a, b, c) \
     mkname(func)(canvas, IJK ## a [0], IJK ## b [1], IJK ## c [2], V ## a [0] * V ## b [1] * V ## c [2], painter)
 
-#define FILL_CIC \
+#define SETUP_KERNEL_CIC \
     int d; \
     double XYZ[3]; \
     int IJK0[3], IJK1[3]; \
@@ -71,7 +71,7 @@ mkname(_cic_tuned_paint) (PMeshPainter * painter, double pos[], double weight)
 {
     FLOAT * canvas = painter->canvas;
 
-    FILL_CIC;
+    SETUP_KERNEL_CIC;
 
     V1[1] *= weight;
     V0[1] *= weight;
@@ -91,7 +91,7 @@ mkname(_cic_tuned_readout) (PMeshPainter * painter, double pos[])
 {
     FLOAT * canvas = painter->canvas;
 
-    FILL_CIC;
+    SETUP_KERNEL_CIC;
 
     double value = 0;
 
@@ -105,9 +105,9 @@ mkname(_cic_tuned_readout) (PMeshPainter * painter, double pos[])
     value += ACCESS(_REd, 1, 1, 1);
     return value;
 }
-#undef FILL_CIC
+#undef SETUP_KERNEL_CIC
 
-#define FILL_TSC \
+#define SETUP_KERNEL_TSC \
     int d; \
     double XYZ[3]; \
     int IJK0[3], IJK1[3], IJK2[3]; \
@@ -150,7 +150,7 @@ mkname(_tsc_tuned_paint) (PMeshPainter * painter, double pos[], double weight)
 {
     FLOAT * canvas = painter->canvas;
 
-    FILL_TSC;
+    SETUP_KERNEL_TSC;
 
     V0[1] *= weight;
     V1[1] *= weight;
@@ -190,7 +190,7 @@ mkname(_tsc_tuned_readout) (PMeshPainter * painter, double pos[])
 {
     FLOAT * canvas = painter->canvas;
 
-    FILL_TSC;
+    SETUP_KERNEL_TSC;
 
     double value = 0;
     value += ACCESS(_REd, 0, 0, 0);
@@ -222,5 +222,5 @@ mkname(_tsc_tuned_readout) (PMeshPainter * painter, double pos[])
     value += ACCESS(_REd, 2, 2, 2);
     return value;
 }
-#undef FILL_TSC
+#undef SETUP_KERNEL_TSC
 #undef ACCESS

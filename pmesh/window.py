@@ -143,7 +143,8 @@ def FindWindow(window):
 windows = dict(
     LINEAR = ResampleWindow(kind="linear"),
     CIC = ResampleWindow(kind="tunedcic"),
-    TSC = ResampleWindow(kind="quadratic"),
+    TSC = ResampleWindow(kind="tunedtsc"),
+    QUADRATIC = ResampleWindow(kind="quadratic"),
     CUBIC = ResampleWindow(kind="cubic"),
     LANCZOS2 = ResampleWindow(kind="lanczos2"),
     LANCZOS3 = ResampleWindow(kind="lanczos3"),

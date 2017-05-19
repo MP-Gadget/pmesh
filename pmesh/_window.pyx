@@ -26,6 +26,7 @@ cdef extern from "_window_imp.h":
         PMESH_PAINTER_SYM12
         PMESH_PAINTER_SYM20
         PMESH_PAINTER_TUNED_CIC
+        PMESH_PAINTER_TUNED_TSC
 
     ctypedef struct PMeshPainter:
         PMeshPainterType type
@@ -52,6 +53,7 @@ cdef class ResampleWindow(object):
     def __init__(self, kind, int support=-1):
         kinds = {
                 'tunedcic' : PMESH_PAINTER_TUNED_CIC,
+                'tunedtsc' : PMESH_PAINTER_TUNED_TSC,
                 'linear' : PMESH_PAINTER_LINEAR,
                 'cubic' : PMESH_PAINTER_CUBIC,
                 'quadratic' : PMESH_PAINTER_QUADRATIC,

@@ -169,25 +169,25 @@ mkname(_tsc_tuned_paint) (PMeshPainter * painter, double pos[], double weight)
     mkname(_WRtPlus)(canvas, IJK1[0], IJK0[1], IJK1[2], V1[0]*V0[1]*V1[2], painter);
     mkname(_WRtPlus)(canvas, IJK1[0], IJK0[1], IJK2[2], V1[0]*V0[1]*V2[2], painter);
 
-    mkname(_WRtPlus)(canvas, IJK1[0], IJK0[1], IJK0[2], V1[0]*V1[1]*V0[2], painter);
-    mkname(_WRtPlus)(canvas, IJK1[0], IJK0[1], IJK1[2], V1[0]*V1[1]*V1[2], painter);
-    mkname(_WRtPlus)(canvas, IJK1[0], IJK0[1], IJK2[2], V1[0]*V1[1]*V2[2], painter);
+    mkname(_WRtPlus)(canvas, IJK1[0], IJK1[1], IJK0[2], V1[0]*V1[1]*V0[2], painter);
+    mkname(_WRtPlus)(canvas, IJK1[0], IJK1[1], IJK1[2], V1[0]*V1[1]*V1[2], painter);
+    mkname(_WRtPlus)(canvas, IJK1[0], IJK1[1], IJK2[2], V1[0]*V1[1]*V2[2], painter);
 
-    mkname(_WRtPlus)(canvas, IJK1[0], IJK0[1], IJK0[2], V2[0]*V2[1]*V0[2], painter);
-    mkname(_WRtPlus)(canvas, IJK1[0], IJK0[1], IJK1[2], V2[0]*V2[1]*V1[2], painter);
-    mkname(_WRtPlus)(canvas, IJK1[0], IJK0[1], IJK2[2], V2[0]*V2[1]*V2[2], painter);
+    mkname(_WRtPlus)(canvas, IJK1[0], IJK2[1], IJK0[2], V1[0]*V2[1]*V0[2], painter);
+    mkname(_WRtPlus)(canvas, IJK1[0], IJK2[1], IJK1[2], V1[0]*V2[1]*V1[2], painter);
+    mkname(_WRtPlus)(canvas, IJK1[0], IJK2[1], IJK2[2], V1[0]*V2[1]*V2[2], painter);
 
     mkname(_WRtPlus)(canvas, IJK2[0], IJK0[1], IJK0[2], V2[0]*V0[1]*V0[2], painter);
     mkname(_WRtPlus)(canvas, IJK2[0], IJK0[1], IJK1[2], V2[0]*V0[1]*V1[2], painter);
     mkname(_WRtPlus)(canvas, IJK2[0], IJK0[1], IJK2[2], V2[0]*V0[1]*V2[2], painter);
 
-    mkname(_WRtPlus)(canvas, IJK2[0], IJK0[1], IJK0[2], V2[0]*V1[1]*V0[2], painter);
-    mkname(_WRtPlus)(canvas, IJK2[0], IJK0[1], IJK1[2], V2[0]*V1[1]*V1[2], painter);
-    mkname(_WRtPlus)(canvas, IJK2[0], IJK0[1], IJK2[2], V2[0]*V1[1]*V2[2], painter);
+    mkname(_WRtPlus)(canvas, IJK2[0], IJK1[1], IJK0[2], V2[0]*V1[1]*V0[2], painter);
+    mkname(_WRtPlus)(canvas, IJK2[0], IJK1[1], IJK1[2], V2[0]*V1[1]*V1[2], painter);
+    mkname(_WRtPlus)(canvas, IJK2[0], IJK1[1], IJK2[2], V2[0]*V1[1]*V2[2], painter);
 
-    mkname(_WRtPlus)(canvas, IJK2[0], IJK0[1], IJK0[2], V2[0]*V2[1]*V0[2], painter);
-    mkname(_WRtPlus)(canvas, IJK2[0], IJK0[1], IJK1[2], V2[0]*V2[1]*V1[2], painter);
-    mkname(_WRtPlus)(canvas, IJK2[0], IJK0[1], IJK2[2], V2[0]*V2[1]*V2[2], painter);
+    mkname(_WRtPlus)(canvas, IJK2[0], IJK2[1], IJK0[2], V2[0]*V2[1]*V0[2], painter);
+    mkname(_WRtPlus)(canvas, IJK2[0], IJK2[1], IJK1[2], V2[0]*V2[1]*V1[2], painter);
+    mkname(_WRtPlus)(canvas, IJK2[0], IJK2[1], IJK2[2], V2[0]*V2[1]*V2[2], painter);
 }
 
 static double
@@ -214,25 +214,25 @@ mkname(_tsc_tuned_readout) (PMeshPainter * painter, double pos[])
     value += mkname(_REd)(canvas, IJK1[0], IJK0[1], IJK1[2], V1[0]*V0[1]*V1[2], painter);
     value += mkname(_REd)(canvas, IJK1[0], IJK0[1], IJK2[2], V1[0]*V0[1]*V2[2], painter);
 
-    value += mkname(_REd)(canvas, IJK1[0], IJK0[1], IJK0[2], V1[0]*V1[1]*V0[2], painter);
-    value += mkname(_REd)(canvas, IJK1[0], IJK0[1], IJK1[2], V1[0]*V1[1]*V1[2], painter);
-    value += mkname(_REd)(canvas, IJK1[0], IJK0[1], IJK2[2], V1[0]*V1[1]*V2[2], painter);
+    value += mkname(_REd)(canvas, IJK1[0], IJK1[1], IJK0[2], V1[0]*V1[1]*V0[2], painter);
+    value += mkname(_REd)(canvas, IJK1[0], IJK1[1], IJK1[2], V1[0]*V1[1]*V1[2], painter);
+    value += mkname(_REd)(canvas, IJK1[0], IJK1[1], IJK2[2], V1[0]*V1[1]*V2[2], painter);
 
-    value += mkname(_REd)(canvas, IJK1[0], IJK0[1], IJK0[2], V2[0]*V2[1]*V0[2], painter);
-    value += mkname(_REd)(canvas, IJK1[0], IJK0[1], IJK1[2], V2[0]*V2[1]*V1[2], painter);
-    value += mkname(_REd)(canvas, IJK1[0], IJK0[1], IJK2[2], V2[0]*V2[1]*V2[2], painter);
+    value += mkname(_REd)(canvas, IJK1[0], IJK2[1], IJK0[2], V1[0]*V2[1]*V0[2], painter);
+    value += mkname(_REd)(canvas, IJK1[0], IJK2[1], IJK1[2], V1[0]*V2[1]*V1[2], painter);
+    value += mkname(_REd)(canvas, IJK1[0], IJK2[1], IJK2[2], V1[0]*V2[1]*V2[2], painter);
 
     value += mkname(_REd)(canvas, IJK2[0], IJK0[1], IJK0[2], V2[0]*V0[1]*V0[2], painter);
     value += mkname(_REd)(canvas, IJK2[0], IJK0[1], IJK1[2], V2[0]*V0[1]*V1[2], painter);
     value += mkname(_REd)(canvas, IJK2[0], IJK0[1], IJK2[2], V2[0]*V0[1]*V2[2], painter);
 
-    value += mkname(_REd)(canvas, IJK2[0], IJK0[1], IJK0[2], V2[0]*V1[1]*V0[2], painter);
-    value += mkname(_REd)(canvas, IJK2[0], IJK0[1], IJK1[2], V2[0]*V1[1]*V1[2], painter);
-    value += mkname(_REd)(canvas, IJK2[0], IJK0[1], IJK2[2], V2[0]*V1[1]*V2[2], painter);
+    value += mkname(_REd)(canvas, IJK2[0], IJK1[1], IJK0[2], V2[0]*V1[1]*V0[2], painter);
+    value += mkname(_REd)(canvas, IJK2[0], IJK1[1], IJK1[2], V2[0]*V1[1]*V1[2], painter);
+    value += mkname(_REd)(canvas, IJK2[0], IJK1[1], IJK2[2], V2[0]*V1[1]*V2[2], painter);
 
-    value += mkname(_REd)(canvas, IJK2[0], IJK0[1], IJK0[2], V2[0]*V2[1]*V0[2], painter);
-    value += mkname(_REd)(canvas, IJK2[0], IJK0[1], IJK1[2], V2[0]*V2[1]*V1[2], painter);
-    value += mkname(_REd)(canvas, IJK2[0], IJK0[1], IJK2[2], V2[0]*V2[1]*V2[2], painter);
+    value += mkname(_REd)(canvas, IJK2[0], IJK2[1], IJK0[2], V2[0]*V2[1]*V0[2], painter);
+    value += mkname(_REd)(canvas, IJK2[0], IJK2[1], IJK1[2], V2[0]*V2[1]*V1[2], painter);
+    value += mkname(_REd)(canvas, IJK2[0], IJK2[1], IJK2[2], V2[0]*V2[1]*V2[2], painter);
     return value;
 }
 #undef FILL_TSC

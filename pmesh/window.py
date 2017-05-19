@@ -133,6 +133,13 @@ class ResampleWindow(_ResampleWindow):
 
         return out
 
+def FindWindow(window):
+    if window in windows:
+        window = windows[window]
+    if not isinstance(window, ResampleWindow):
+        raise TypeError("argument is not a ResampleWindow name or a ResampleWindow object")
+    return window
+
 windows = dict(
     CIC = ResampleWindow(kind="linear"),
     TUNEDCIC = ResampleWindow(kind="tunedcic"),

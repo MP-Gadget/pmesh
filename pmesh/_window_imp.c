@@ -161,9 +161,9 @@ _compatible_with_tuned_cic(PMeshPainter * painter)
 {
     if(painter->type != PMESH_PAINTER_TUNED_CIC) return 0;
     if(painter->ndim != 3) return 0;
-    if(painter->order[0] != 0) return 0;
-    if(painter->order[1] != 0) return 0;
-    if(painter->order[2] != 0) return 0;
+    if(painter->order[0] > 1) return 0;
+    if(painter->order[1] > 1) return 0;
+    if(painter->order[2] > 1) return 0;
     if(painter->support != 2 && painter->support > 0) return 0;
     return 1;
 }

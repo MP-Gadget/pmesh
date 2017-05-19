@@ -45,8 +45,13 @@ mkname(_cic_tuned_paint) (PMeshPainter * painter, double pos[], double weight)
     };
 
     for(d = 0; d < 3; d ++) {
-        D[d] = XYZ[d] - IJK[d];
-        T[d] = 1. - D[d];
+        if(painter->order[d] == 0) {
+            D[d] = XYZ[d] - IJK[d];
+            T[d] = 1. - D[d];
+        } else {
+            D[d] = painter->scale[d];
+            T[d] = - painter->scale[d];
+        }
     }
 
     // Do periodic wrapup in all directions. 
@@ -114,8 +119,13 @@ mkname(_cic_tuned_readout) (PMeshPainter * painter, double pos[])
     };
 
     for(d = 0; d < 3; d ++) {
-        D[d] = XYZ[d] - IJK[d];
-        T[d] = 1. - D[d];
+        if(painter->order[d] == 0) {
+            D[d] = XYZ[d] - IJK[d];
+            T[d] = 1. - D[d];
+        } else {
+            D[d] = painter->scale[d];
+            T[d] = - painter->scale[d];
+        }
     }
 
     // Do periodic wrapup in all directions. 

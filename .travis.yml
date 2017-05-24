@@ -24,6 +24,7 @@ install:
     - conda install --yes numpy=$NUMPY_VERSION nose cython mpi4py numba
     - pip install pfft-python
     - pip install mpsort
+    - pip install abopt
     - python setup.py install
 
 script: 

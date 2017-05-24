@@ -39,5 +39,6 @@ setup(
     install_requires=['cython', 'numpy', 'mpi4py', 'mpsort', 'pfft-python'],
     license='GPL3',
     ext_modules = extensions,
+    extras_require={'full':['abopt'], 'abopt':['abopt']}
 )
 

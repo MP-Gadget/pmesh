@@ -264,22 +264,31 @@ def test_cic_tuned():
         assert_array_equal(d1, d2)
 
 def test_tsc_tuned():
+    affine = Affine(ndim=3, translate=[2, 1, 2], scale=[0.5, 2.0, 1.1], period=[8, 8, 8])
     assert TSC.support == 3
     assert QUADRATIC.support == 3
-    real = numpy.zeros((4, 4, 4))
-    pos = [
-        [1.1, 1.3, 2.5],
-    ]
-    TSC.paint(real, pos)
+    real = numpy.zeros((8, 8, 8))
+    real2 = numpy.zeros((8, 8, 8))
+    numpy.random.seed(1234)
+    field = numpy.random.uniform(size=real.shape)
 
-    real2 = numpy.zeros((4, 4, 4))
-    QUADRATIC.paint(real2, pos)
+    pos = [
+        [1.1, 1.3, 2.9],
+    ]
+    TSC.paint(real, pos, transform=affine)
+    QUADRATIC.paint(real2, pos, transform=affine)
+    v = TSC.readout(field, pos, transform=affine)
+    v2 = QUADRATIC.readout(field, pos, transform=affine)
 
     assert_array_equal(real, real2)
+    assert_array_equal(v, v2)
 
     for d in range(3):
-        d1 = numpy.zeros((4, 4, 4))
-        d2 = numpy.zeros((4, 4, 4))
-        TSC.paint(d1, pos, diffdir=d)
-        QUADRATIC.paint(d2, pos, diffdir=d)
+        d1 = numpy.zeros((8, 8, 8))
+        d2 = numpy.zeros((8, 8, 8))
+        TSC.paint(d1, pos, diffdir=d, transform=affine)
+        QUADRATIC.paint(d2, pos, diffdir=d, transform=affine)
+        v = TSC.readout(field, pos, transform=affine)
+        v2 = QUADRATIC.readout(field, pos, transform=affine)
         assert_array_equal(d1, d2)
+        assert_array_equal(v, v2)

@@ -212,13 +212,13 @@ mkname(_tsc_tuned_readout) (PMeshPainter * painter, double pos[])
     value += ACCESS(_REd, 1, 2, 1);
     value += ACCESS(_REd, 1, 2, 2);
     value += ACCESS(_REd, 2, 0, 0);
+    value += ACCESS(_REd, 2, 0, 1);
     value += ACCESS(_REd, 2, 0, 2);
-    value += ACCESS(_REd, 2, 0, 2);
+    value += ACCESS(_REd, 2, 1, 0);
+    value += ACCESS(_REd, 2, 1, 1);
+    value += ACCESS(_REd, 2, 1, 2);
     value += ACCESS(_REd, 2, 2, 0);
-    value += ACCESS(_REd, 2, 2, 2);
-    value += ACCESS(_REd, 2, 2, 2);
-    value += ACCESS(_REd, 2, 2, 0);
-    value += ACCESS(_REd, 2, 2, 2);
+    value += ACCESS(_REd, 2, 2, 1);
     value += ACCESS(_REd, 2, 2, 2);
     return value;
 }

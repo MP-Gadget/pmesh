@@ -28,6 +28,7 @@ def gridnd_fill(
     cdef int j
     cdef int jj
     cdef int k
+    cdef int kk
     cdef int t
     cdef int [::1] indices = None
     cdef int Nrank

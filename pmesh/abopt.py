@@ -198,7 +198,7 @@ class ParticleMeshEngine(Engine):
 
     @to_scalar.defvjp
     def _(engine, _y, _x, x):
-        _x[...] = (2 * _y) * x
+        _x[...] = x * (2 * _y)
 
 def check_grad(code, yname, xname, init, eps, rtol, verbose=False):
     from numpy.testing import assert_allclose

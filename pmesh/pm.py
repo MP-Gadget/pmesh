@@ -420,16 +420,17 @@ class Field(object):
 
         return out
 
-    def preview(self, Nmesh, axes=None):
+    def preview(self, Nmesh=None, axes=None):
         """ gathers the mesh into as a numpy array, with
             (reduced resolution). The result is broadcast to
             all ranks, so this uses Nmesh ** 3 per rank.
 
             Parameters
             ----------
-            Nmesh : int, array_like
+            Nmesh : int, array_like, None
                 The desired Nmesh of the result. Be aware this function
                 allocates memory to hold A full Nmesh on each rank.
+                None will not resample Nmesh.
             axes : list or None
                 list of axes to preserve.
 
@@ -443,18 +444,23 @@ class Field(object):
         if not hasattr(axes, '__iter__'): axes = (axes,)
         else: axes = list(axes)
 
-        _Nmesh = self.pm.Nmesh.copy()
-        _Nmesh[...] = Nmesh
+        if Nmesh is not None:
+            _Nmesh = self.pm.Nmesh.copy()
+            _Nmesh[...] = Nmesh
 
-        pm = ParticleMesh(BoxSize=self.BoxSize,
-                            Nmesh=_Nmesh,
-                            dtype=self.pm.dtype, comm=self.pm.comm)
+            pm = ParticleMesh(BoxSize=self.BoxSize,
+                                Nmesh=_Nmesh,
+                                dtype=self.pm.dtype, comm=self.pm.comm)
+
+        else:
+            pm = self.pm
 
         out = pm.create(mode='real')
+        self.resample(out)
+
         result = numpy.zeros([out.cshape[i] for i in axes], dtype=pm.dtype)
         local_slice = tuple([out.slices[i] for i in axes])
 
-        self.resample(out)
         if len(axes) != self.ndim:
             removeaxes = set(range(self.ndim)) - set(axes)
             all_axes = list(axes) + list(removeaxes)

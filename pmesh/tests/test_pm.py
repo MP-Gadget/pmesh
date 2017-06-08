@@ -450,6 +450,8 @@ def test_preview(comm):
 
     comp1 = pm.generate_whitenoise(1234, mode='real')
 
+    preview = comp1.preview(axes=(0, 1, 2))
+
     preview = comp1.preview(Nmesh=4, axes=(0, 1, 2))
 
     for ind1 in numpy.ndindex(*(list(comp1.cshape))):

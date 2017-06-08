@@ -64,6 +64,16 @@ class VTE:
             return 1.0 / (a * a * a * pt.E(a))
         return quad(func, ai, af)[0]
 
+class Naive:
+    def K(ai, af, ar):
+        def func(a):
+            return 1.0 / (a * a * pt.E(a))
+        return func(ar) * (af - ai)
+    def D(ai, af, ar):
+        def func(a):
+            return 1.0 / (a * a * a * pt.E(a))
+        return func(ar) * (af - ai)
+
 
 class State:
     def __init__(self, Q, S, V):
@@ -328,7 +338,7 @@ if __name__ == '__main__':
     ap.add_argument("--seed", type=int, default=120577)
     ap.add_argument("--boost", type=int, default=2)
     ap.add_argument("--scheme", choices=[symp2, symp1, symp3], default=symp2, type=lambda n: globals()[n])
-    ap.add_argument("--factors", choices=[FastPM, FastPM1, FastPM2, Quinn, VTE, TVE], default=FastPM,
+    ap.add_argument("--factors", choices=[FastPM, FastPM1, FastPM2, Quinn, VTE, TVE, Naive], default=FastPM,
             type=lambda n : globals()[n])
     ap.add_argument("output", type=str)
 

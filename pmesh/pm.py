@@ -1050,10 +1050,10 @@ class ParticleMesh(object):
         dtype = numpy.dtype(dtype)
         self.dtype = dtype
 
-        if dtype is numpy.dtype('f8'):
+        if dtype == numpy.dtype('f8'):
             forward = pfft.Type.PFFT_R2C
             backward = pfft.Type.PFFT_C2R
-        elif dtype is numpy.dtype('f4'):
+        elif dtype == numpy.dtype('f4'):
             forward = pfft.Type.PFFTF_R2C
             backward = pfft.Type.PFFTF_C2R
         else:

@@ -444,16 +444,7 @@ class Field(object):
         if not hasattr(axes, '__iter__'): axes = (axes,)
         else: axes = list(axes)
 
-        if Nmesh is not None:
-            _Nmesh = self.pm.Nmesh.copy()
-            _Nmesh[...] = Nmesh
-
-            pm = ParticleMesh(BoxSize=self.BoxSize,
-                                Nmesh=_Nmesh,
-                                dtype=self.pm.dtype, comm=self.pm.comm)
-
-        else:
-            pm = self.pm
+        pm = self.pm.resize(Nmesh)
 
         out = pm.create(mode='real')
         self.resample(out)
@@ -1150,6 +1141,29 @@ class ParticleMesh(object):
                     period = self.Nmesh)
 
         self.resampler = FindResampler(resampler)
+
+    def resize(self, Nmesh):
+        """
+            Create a resized ParticleMesh object, changing the resolution Nmesh.
+
+            Parameters
+            ----------
+            Nmesh : int or array_like or None
+                The new resolution
+
+            Returns
+            -------
+            A ParticleMesh of the given resolution. If Nmesh is None
+            or the same as ``self.Nmesh``, a reference of ``self`` is returned.
+        """
+        if Nmesh is None: Nmesh = self.Nmesh
+        Nmesh_ = self.Nmesh.copy()
+        Nmesh_[...] = Nmesh
+        if all(self.Nmesh == Nmesh_): return self
+
+        return ParticleMesh(BoxSize=self.BoxSize,
+                            Nmesh=Nmesh_,
+                            dtype=self.dtype, comm=self.comm)
 
     def create(self, mode, base=None, zeros=False):
         """

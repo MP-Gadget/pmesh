@@ -1,3 +1,5 @@
+from __future__ import absolute_import
+
 import numpy
 from abopt.vmad2 import ZERO, Engine, statement, programme, CodeSegment, Literal
 from pmesh.pm import ParticleMesh, RealField, ComplexField

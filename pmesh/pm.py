@@ -117,7 +117,7 @@ class Field(object):
 
     def __neg__(self):
         r = self.copy()
-        r[...] = abs(self[...])
+        r[...] = -self[...]
         return r
 
     def __eq__(self, other):

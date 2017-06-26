@@ -140,11 +140,11 @@ class Layout(object):
         data    :   array_like
             data for each received particles. 
             
-        mode    : string 'sum', 'any', 'mean', 'all', 'min'
+        mode    : string 'sum', 'any', 'mean', 'all', 'local', or any numpy ufunc.
             :code:`all` is to return all ghosts without any reduction
             :code:`sum` is to add the ghosts together
+            :code:`local` is to remove all nonlocal ghosts
             :code:`any` is to pick value of any ghosts
-            :code:`min` is to pick value of any ghosts
             :code:`mean` is to use the mean of all ghosts
 
         out : array_like or None
@@ -158,12 +158,27 @@ class Layout(object):
             all gathered particles (corresponding to self.indices) are returned.
         
         """
-        data = promote(data, self.comm)
         # lets check the data type first
+        data = promote(data, self.comm)
 
         if any(self.comm.allgather(len(data) != self.newlength)):
             raise ValueError(
             'the length of data does not match result of a domain.exchange')
+
+        dtype = numpy.dtype((data.dtype, data.shape[1:]))
+
+        if mode == 'local':
+            # drop all ghosts communication is not needed
+            if out is None:
+                out = numpy.empty(self.oldlength, dtype=dtype)
+            start = self.sendoffsets[self.comm.rank]
+            size = self.sendcounts[self.comm.rank]
+            end = start + size
+            ind = self.indices[start:end]
+            out[ind] = data[start:end]
+
+            self.comm.Barrier()
+            return out
 
         # build a dtype for communication
         # this is to avoid 2GB limit from bytes.
@@ -171,7 +186,6 @@ class Layout(object):
         itemsize = duplicity * data.dtype.itemsize
         dt = MPI.BYTE.Create_contiguous(itemsize)
         dt.Commit()
-        dtype = numpy.dtype((data.dtype, data.shape[1:]))
 
         recvbuffer = numpy.empty(len(self.indices), dtype=dtype, order='C')
         self.comm.Barrier()

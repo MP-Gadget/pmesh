@@ -146,6 +146,9 @@ def test_exchange_smooth(comm):
     mass_fmin = layout.gather(nmass, mode=numpy.fmin)
     assert_array_equal(mass_fmin, 1)
 
+    lpos = layout.gather(npos, mode='local')
+    assert_array_equal(lpos, pos)
+
     npos = comm.allgather(npos)
     assert_array_equal(npos[0], [[0, 0], [0, 1], [1, 0], [1, 1]])
     assert_array_equal(npos[1], [[0, 0], [0, 1], [1, 0], [1, 1]])

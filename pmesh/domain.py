@@ -168,16 +168,23 @@ class Layout(object):
         dtype = numpy.dtype((data.dtype, data.shape[1:]))
 
         if mode == 'local':
+            self.comm.Barrier()
             # drop all ghosts communication is not needed
             if out is None:
                 out = numpy.empty(self.oldlength, dtype=dtype)
-            start = self.sendoffsets[self.comm.rank]
-            size = self.sendcounts[self.comm.rank]
-            end = start + size
-            ind = self.indices[start:end]
-            out[ind] = data[start:end]
 
-            self.comm.Barrier()
+            # indices uses send offsets
+            start2 = self.sendoffsets[self.comm.rank]
+            size2 = self.sendcounts[self.comm.rank]
+            end2 = start2 + size2
+            ind = self.indices[start2:end2]
+
+            # data uses send offsets
+            start1 = self.recvoffsets[self.comm.rank]
+            size1 = self.recvcounts[self.comm.rank]
+            end1 = start1 + size1
+            out[ind] = data[start1:end1]
+
             return out
 
         # build a dtype for communication

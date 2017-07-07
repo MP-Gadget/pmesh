@@ -164,35 +164,22 @@ class ParticleMeshEngine(Engine):
     def _(engine, tf, complex_):
         complex_.apply(lambda k, v: nyquist_mask(tf(k), v) * v, out=Ellipsis)
 
-    @statement(aout=['r'], ain=['field'])
-    def norm(engine, field, r, metric=None):
-        if isinstance(field, ComplexField):
-            r[...] = field.cnorm(metric=metric)
-        else:
-            r[...] = field.cnorm()
-
-    @norm.defvjp
-    def _(engine, _field, _r, metric, field):
-        if isinstance(field, ComplexField):
-            _field[...] = field.cnorm_vjp(_r, metric=metric)
-        else:
-            _field[...] = field * (2 * _r)
-
-    # FIXME add norm.defjvp
-
     @statement(aout=['residual'], ain=['model'])
     def residual(engine, model, data, sigma, residual):
-        d = model - data
-        d[...] /= sigma
-        residual[...] = d
+        """
+            residual = (model - data) / sigma
+
+            J = 1 / sigma
+        """
+        residual[...] = (model - data) / sigma
 
     @residual.defvjp
     def _(engine, _model, _residual, data, sigma):
-        g = _residual.copy()
-        g[...] /= sigma
-        _model[...] = g
+        _model[...] = _residual / sigma
 
-    # FIXME add residual.defjvp
+    @residual.defjvp
+    def _(engine, model_, residual_, data, sigma):
+        residual_[...] = model_ / sigma
 
     @statement(ain=['attribute', 'value'], aout=['attribute'])
     def assign_component(engine, attribute, value, dim):
@@ -246,7 +233,12 @@ class ParticleMeshEngine(Engine):
 
     @statement(ain=['x'], aout=['y'])
     def to_scalar(engine, x, y):
-        y[...] = engine.pm.comm.allreduce((x[...] ** 2).sum(dtype='f8'))
+        if isinstance(x, RealField):
+            y[...] = x.cnorm()
+        elif isinstance(x, ComplexField):
+            raise TypeError("Computing the L-2 norm of complex is not a good idea, because the gradient propagation is ambiguous")
+        else:
+            y[...] = engine.pm.comm.allreduce((x[...] ** 2).sum(dtype='f8'))
 
     @to_scalar.defvjp
     def _(engine, _y, _x, x):
@@ -254,7 +246,7 @@ class ParticleMeshEngine(Engine):
 
     @to_scalar.defjvp
     def _(engine, y_, x_, x):
-        y_[...] = x_ * x
+        y_[...] = x * (2 * x_)
 
 def check_grad(code, yname, xname, init, eps, rtol, verbose=False):
     from numpy.testing import assert_allclose

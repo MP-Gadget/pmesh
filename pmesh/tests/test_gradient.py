@@ -187,7 +187,8 @@ def test_cnorm_grad(comm):
     def objective(comp1):
         return comp1.cnorm()
 
-    grad_comp1 = comp1.cnorm_vjp(1.0)
+    grad_comp1 = comp1 * 2
+    grad_comp1.decompress_vjp(grad_comp1)
 
     ng = []
     ag = []

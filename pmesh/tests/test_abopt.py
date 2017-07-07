@@ -27,7 +27,7 @@ def test_compute():
     code.r2c(real='r', complex='c')
     code.transfer(complex='c', tf=transfer)
     code.c2r(complex='c', real='r')
-    code.norm(field='r', r='sum', metric=None)
+    code.to_scalar(x='r', y='sum')
 
     field = pm.generate_whitenoise(seed=1234).c2r()
 

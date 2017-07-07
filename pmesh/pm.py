@@ -789,16 +789,6 @@ class ComplexField(Field):
                 .apply(filter, kind='index', out=Ellipsis)\
                 .plain.sum())
 
-    def cnorm_vjp(self, v, metric=None, out=None):
-        def filter2(k, y):
-            r = (2 * v) * y
-            if metric is not None:
-                k = sum([ki ** 2 for ki in k]) ** 0.5
-                r *= metric(k)
-            return r
-
-        return self.apply(filter2, out=out).decompress_vjp(out=Ellipsis)
-
     def cdot(self, other, metric=None):
         r""" Collective inner product between the independent modes of two Complex Fields.
 

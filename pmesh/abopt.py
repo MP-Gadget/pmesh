@@ -50,6 +50,10 @@ class ParticleMeshEngine(Engine):
     def _(engine, _real, _complex):
         _complex[...] = _real.c2r_gradient()
 
+    @c2r.defjvp
+    def _(engine, real_, complex_):
+        real_[...] = complex_.r2c()
+
     @statement(aout=['complex'], ain=['real'])
     def r2c(engine, complex, real):
         complex[...] = real.r2c()
@@ -58,6 +62,10 @@ class ParticleMeshEngine(Engine):
     def _(engine, _complex, _real):
         _real[...] = _complex.r2c_gradient()
 
+    @r2c.defjvp
+    def _(engine, complex_, real_):
+        complex_[...] = real_.r2c()
+
     @statement(aout=['complex'], ain=['complex'])
     def decompress(engine, complex):
         return
@@ -65,6 +73,10 @@ class ParticleMeshEngine(Engine):
     @decompress.defvjp
     def _(engine, _complex):
         _complex.decompress_gradient(out=Ellipsis)
+
+    @decompress.defjvp
+    def _(engine, complex_):
+        pass # XXX: is this correct?
 
     @staticmethod
     def _resample_filter(k, v, Neff):
@@ -84,6 +96,12 @@ class ParticleMeshEngine(Engine):
             lambda k, v: engine._resample_filter(k, v, Neff),
             out=Ellipsis).r2c_gradient(out=Ellipsis)
 
+    @resample.defjvp
+    def _(engine, mesh_, Neff):
+        mesh_.r2c().apply(
+            lambda k, v: engine._resample_filter(k, v, Neff),
+            out=Ellipsis).c2r(out=Ellipsis)
+
     @statement(aout=['layout'], ain=['s'])
     def decompose(engine, layout, s):
         x = engine.get_x(s)
@@ -93,6 +111,10 @@ class ParticleMeshEngine(Engine):
     @decompose.defvjp
     def _(engine, _layout, _s):
         _s[...] = ZERO
+
+    @decompose.defjvp
+    def _(engine, layout_, s_):
+        s_[...] = ZERO
 
     @statement(aout=['mesh'], ain=['s', 'layout'])
     def paint(engine, s, mesh, layout):
@@ -113,6 +135,8 @@ class ParticleMeshEngine(Engine):
         _s[...], junk = _mesh.paint_gradient(x, layout=layout, out_mass=False)
         _s[...][...] *= 1.0 * pm.Nmesh.prod() / N
 
+    # FIXME add paint.defjvp
+
     @statement(aout=['value'], ain=['s', 'mesh', 'layout'])
     def readout(engine, value, s, mesh, layout):
         pm = engine.pm
@@ -126,6 +150,8 @@ class ParticleMeshEngine(Engine):
         x = engine.get_x(s)
         _mesh[...], _s[...] = mesh.readout_gradient(x, _value, layout=layout)
 
+    # FIXME add readout.defjvp
+
     @statement(aout=['complex'], ain=['complex'])
     def transfer(engine, complex, tf):
         complex.apply(lambda k, v: nyquist_mask(tf(k), v) * v, out=Ellipsis)
@@ -133,6 +159,10 @@ class ParticleMeshEngine(Engine):
     @transfer.defvjp
     def _(engine, tf, _complex):
         _complex.apply(lambda k, v: nyquist_mask(numpy.conj(tf(k)), v) * v, out=Ellipsis)
+
+    @transfer.defjvp
+    def _(engine, tf, complex_):
+        complex_.apply(lambda k, v: nyquist_mask(tf(k), v) * v, out=Ellipsis)
 
     @statement(aout=['r'], ain=['field'])
     def norm(engine, field, r, metric=None):
@@ -148,6 +178,8 @@ class ParticleMeshEngine(Engine):
         else:
             _field[...] = field * (2 * _r)
 
+    # FIXME add norm.defjvp
+
     @statement(aout=['residual'], ain=['model'])
     def residual(engine, model, data, sigma, residual):
         d = model - data
@@ -160,6 +192,8 @@ class ParticleMeshEngine(Engine):
         g[...] /= sigma
         _model[...] = g
 
+    # FIXME add residual.defjvp
+
     @statement(ain=['attribute', 'value'], aout=['attribute'])
     def assign_component(engine, attribute, value, dim):
         attribute[..., dim] = value
@@ -168,6 +202,10 @@ class ParticleMeshEngine(Engine):
     def _(engine, _attribute, _value, dim):
         _value[...] = _attribute[..., dim]
 
+    @assign_component.defjvp
+    def _(engine, attribute_, value_, dim):
+        attribute_[..., dim] = value_
+
     @statement(ain=['x'], aout=['y'])
     def assign(engine, x, y):
         y[...] = x.copy()
@@ -175,6 +213,10 @@ class ParticleMeshEngine(Engine):
     @assign.defvjp
     def _(engine, _y, _x):
         _x[...] = _y
+
+    @assign.defjvp
+    def _(engine, y_, x_):
+        y_[...] = x_.copy()
 
     @statement(ain=['x1', 'x2'], aout=['y'])
     def add(engine, x1, x2, y):
@@ -185,6 +227,10 @@ class ParticleMeshEngine(Engine):
         _x1[...] = _y
         _x2[...] = _y
 
+    @add.defjvp
+    def _(engine, y_, x1_, x2_):
+        y_[...] = x1_ + x2_
+
     @statement(aout=['y'], ain=['x1', 'x2'])
     def multiply(engine, x1, x2, y):
         y[...] = x1 * x2
@@ -194,6 +240,10 @@ class ParticleMeshEngine(Engine):
         _x1[...] = _y * x2
         _x2[...] = _y * x1
 
+    @multiply.defjvp
+    def _(engine, x1_, x2_, y_, x1, x2):
+        y_[...] = x1_ * x2 + x1 * x2_
+
     @statement(ain=['x'], aout=['y'])
     def to_scalar(engine, x, y):
         y[...] = engine.pm.comm.allreduce((x[...] ** 2).sum(dtype='f8'))
@@ -201,6 +251,10 @@ class ParticleMeshEngine(Engine):
     @to_scalar.defvjp
     def _(engine, _y, _x, x):
         _x[...] = x * (2 * _y)
+
+    @to_scalar.defjvp
+    def _(engine, y_, x_, x):
+        y_[...] = x_ * x
 
 def check_grad(code, yname, xname, init, eps, rtol, verbose=False):
     from numpy.testing import assert_allclose
@@ -248,8 +302,9 @@ def check_grad(code, yname, xname, init, eps, rtol, verbose=False):
     code.to_scalar(x=yname, y='y')
 
     y, tape = code.compute('y', init=init, return_tape=True)
-    gradient = tape.gradient()
-    _x = gradient.compute('_' + xname, init={'_y' : 1.0})
+    vjp = tape.get_vjp()
+
+    _x = vjp.compute('_' + xname, init={'_y' : 1.0})
 
     center = init[xname]
     init2 = init.copy()

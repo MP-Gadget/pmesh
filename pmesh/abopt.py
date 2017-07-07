@@ -48,7 +48,7 @@ class ParticleMeshEngine(Engine):
 
     @c2r.defvjp
     def _(engine, _real, _complex):
-        _complex[...] = _real.c2r_gradient()
+        _complex[...] = _real.c2r_vjp()
 
     @c2r.defjvp
     def _(engine, real_, complex_):
@@ -60,7 +60,7 @@ class ParticleMeshEngine(Engine):
 
     @r2c.defvjp
     def _(engine, _complex, _real):
-        _real[...] = _complex.r2c_gradient()
+        _real[...] = _complex.r2c_vjp()
 
     @r2c.defjvp
     def _(engine, complex_, real_):
@@ -72,7 +72,7 @@ class ParticleMeshEngine(Engine):
 
     @decompress.defvjp
     def _(engine, _complex):
-        _complex.decompress_gradient(out=Ellipsis)
+        _complex.decompress_vjp(out=Ellipsis)
 
     @decompress.defjvp
     def _(engine, complex_):
@@ -92,9 +92,9 @@ class ParticleMeshEngine(Engine):
 
     @resample.defvjp
     def _(engine, _mesh, Neff):
-        _mesh.c2r_gradient().apply(
+        _mesh.c2r_vjp().apply(
             lambda k, v: engine._resample_filter(k, v, Neff),
-            out=Ellipsis).r2c_gradient(out=Ellipsis)
+            out=Ellipsis).r2c_vjp(out=Ellipsis)
 
     @resample.defjvp
     def _(engine, mesh_, Neff):
@@ -132,7 +132,7 @@ class ParticleMeshEngine(Engine):
         _layout[...] = ZERO
         x = engine.get_x(s)
         N = pm.comm.allreduce(len(x))
-        _s[...], junk = _mesh.paint_gradient(x, layout=layout, out_mass=False)
+        _s[...], junk = _mesh.paint_vjp(x, layout=layout, out_mass=False)
         _s[...][...] *= 1.0 * pm.Nmesh.prod() / N
 
     # FIXME add paint.defjvp
@@ -148,7 +148,7 @@ class ParticleMeshEngine(Engine):
     def _(engine, _value, _s, _mesh, s, layout, mesh):
         pm = engine.pm
         x = engine.get_x(s)
-        _mesh[...], _s[...] = mesh.readout_gradient(x, _value, layout=layout)
+        _mesh[...], _s[...] = mesh.readout_vjp(x, _value, layout=layout)
 
     # FIXME add readout.defjvp
 
@@ -174,7 +174,7 @@ class ParticleMeshEngine(Engine):
     @norm.defvjp
     def _(engine, _field, _r, metric, field):
         if isinstance(field, ComplexField):
-            _field[...] = field.cnorm_gradient(_r, metric=metric)
+            _field[...] = field.cnorm_vjp(_r, metric=metric)
         else:
             _field[...] = field * (2 * _r)
 

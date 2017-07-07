@@ -612,7 +612,7 @@ class RealField(Field):
                     out=None, layout=None)
             return layout.gather(localresult, out=out)
 
-    def readout_gradient(self, pos, btgrad, resampler=None, transform=None, gradient=None,
+    def readout_vjp(self, pos, btgrad, resampler=None, transform=None, gradient=None,
             out_self=None, out_pos=None, layout=None):
         """ back-propagate the gradient of readout.
 
@@ -665,7 +665,7 @@ class RealField(Field):
 
         return out_self, out_pos
 
-    def paint_gradient(btgrad, pos, mass=1.0, resampler=None, transform=None, gradient=None,
+    def paint_vjp(btgrad, pos, mass=1.0, resampler=None, transform=None, gradient=None,
             out_pos=None, out_mass=None, layout=None):
         """ back-propagate the gradient of paint from self. self contains
             the current gradient.
@@ -712,7 +712,7 @@ class RealField(Field):
 
         return out_pos, out_mass
 
-    def c2r_gradient(btgrad, out=None):
+    def c2r_vjp(btgrad, out=None):
         """ Back-propagate the gradient of c2r from self to out """
         out=btgrad.r2c(out)
         # PFFT normalization, same as FastPM
@@ -789,7 +789,7 @@ class ComplexField(Field):
                 .apply(filter, kind='index', out=Ellipsis)\
                 .plain.sum())
 
-    def cnorm_gradient(self, gcnorm, metric=None, out=None):
+    def cnorm_vjp(self, gcnorm, metric=None, out=None):
         def filter2(k, v):
             r = (2 * gcnorm) * v
             if metric is not None:
@@ -797,7 +797,7 @@ class ComplexField(Field):
                 r *= metric(k)
             return r
 
-        return self.apply(filter2, out=out).decompress_gradient(out=Ellipsis)
+        return self.apply(filter2, out=out).decompress_vjp(out=Ellipsis)
 
     def cdot(self, other, metric=None):
         r""" Collective inner product between the independent modes of two Complex Fields.
@@ -840,7 +840,7 @@ class ComplexField(Field):
 
         return self.pm.comm.allreduce(r.plain.sum(dtype=self.plain.dtype))
 
-    def cdot_gradient(self, gcdot, metric=None):
+    def cdot_vjp(self, gcdot, metric=None):
         """ backtrace gradient of cdot against other. This is a partial gradient.
         """
         r = self * gcdot
@@ -873,14 +873,14 @@ class ComplexField(Field):
 
         return out
 
-    def r2c_gradient(btgrad, out=None):
+    def r2c_vjp(btgrad, out=None):
         """ Back-propagate the gradient of r2c to self. """
         out = btgrad.c2r(out)
         # PFFT normalization, same as FastPM
         out.value[...] *= numpy.prod(out.pm.Nmesh ** -1.0)
         return out
 
-    def decompress_gradient(btgrad, out=None):
+    def decompress_vjp(btgrad, out=None):
         """ Back-propagate the gradient of decompress from self to out.
             If I change this mode in the .value array, how many modes are
             actually changed in order to maintain the hermitian?

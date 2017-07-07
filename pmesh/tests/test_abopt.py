@@ -35,7 +35,7 @@ def test_compute():
     assert_allclose(norm, field.cnorm() * 4)
 
 @skipif(not has_abopt)
-def test_gradient():
+def test_vjp():
     def transfer(k):
         k2 = sum(ki **2 for ki in k)
         k2[k2 == 0] = 1.0
@@ -51,11 +51,12 @@ def test_gradient():
 
     field = pm.generate_whitenoise(seed=1234).c2r()
 
-    norm = code.compute('sum', init={'r': field})
+    norm, tape = code.compute('sum', init={'r': field}, return_tape=True)
     assert_allclose(norm, field.cnorm() * 4 * 0.1 ** 2)
-    norm, _r = code.compute_with_gradient(('sum', '_r'), init={'r': field}, ginit={'_sum': 1.0})
-    assert_allclose(_r, field * 4 * 2 * 0.1 * 0.1)
 
+    vjp = tape.get_vjp()
+    _r = vjp.compute('_r', init={'_sum': 1.0})
+    assert_allclose(_r, field * 4 * 2 * 0.1 * 0.1)
 
 @skipif(not has_abopt)
 def test_paint():

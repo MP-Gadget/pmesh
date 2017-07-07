@@ -39,7 +39,7 @@ def get_pos(pos, ind, comm):
     return comm.allreduce(old)
 
 @MPITest([1, 4])
-def test_c2r_gradient(comm):
+def test_c2r_vjp(comm):
     pm = ParticleMesh(BoxSize=8.0, Nmesh=[4, 4], comm=comm, dtype='f8')
 
     real = pm.generate_whitenoise(1234, mode='real')
@@ -53,8 +53,8 @@ def test_c2r_gradient(comm):
     grad_real = RealField(pm)
     grad_real[...] = real[...] * 2
     grad_comp = ComplexField(pm)
-    grad_comp = grad_real.c2r_gradient(grad_real)
-    grad_comp.decompress_gradient(grad_comp)
+    grad_comp = grad_real.c2r_vjp(grad_real)
+    grad_comp.decompress_vjp(grad_comp)
 
     ng = []
     ag = []
@@ -72,7 +72,7 @@ def test_c2r_gradient(comm):
     assert_allclose(ng, ag, rtol=1e-5)
 
 @MPITest([1, 2])
-def test_readout_gradient(comm):
+def test_readout_vjp(comm):
     pm = ParticleMesh(BoxSize=8.0, Nmesh=[4, 4, 4], comm=comm, dtype='f8', resampler='cic')
 
     real = pm.generate_whitenoise(1234, mode='real')
@@ -94,7 +94,7 @@ def test_readout_gradient(comm):
     obj = objective(real, pos, layout)
     value = real.readout(pos, layout=layout)
     grad_value = value * 2
-    grad_real, grad_pos = real.readout_gradient(pos, btgrad=grad_value, layout=layout)
+    grad_real, grad_pos = real.readout_vjp(pos, btgrad=grad_value, layout=layout)
 
     ng = []
     ag = []
@@ -138,8 +138,8 @@ def test_cdot_grad(comm):
     def objective(comp1, comp2):
         return comp1.cdot(comp2)
 
-    grad_comp2 = comp1.cdot_gradient(gcdot=1.0)
-    grad_comp1 = comp2.cdot_gradient(gcdot=1.0)
+    grad_comp2 = comp1.cdot_vjp(gcdot=1.0)
+    grad_comp1 = comp2.cdot_vjp(gcdot=1.0)
 
     print("comp1")
     ng = []
@@ -187,7 +187,7 @@ def test_cnorm_grad(comm):
     def objective(comp1):
         return comp1.cnorm()
 
-    grad_comp1 = comp1.cnorm_gradient(gcnorm=1.0)
+    grad_comp1 = comp1.cnorm_vjp(gcnorm=1.0)
 
     ng = []
     ag = []

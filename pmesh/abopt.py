@@ -135,7 +135,12 @@ class ParticleMeshEngine(Engine):
         _s[...], junk = _mesh.paint_vjp(x, layout=layout, out_mass=False)
         _s[...][...] *= 1.0 * pm.Nmesh.prod() / N
 
-    # FIXME add paint.defjvp
+    @paint.defjvp
+    def _(engine, s_, mesh_, s, layout, layout_):
+        pm = engine.pm
+        x = engine.get_x(s)
+        mesh_[...] = pm.create('real')
+        mesh_[...].paint_jvp(x, v_pos=s_, layout=layout)
 
     @statement(aout=['value'], ain=['s', 'mesh', 'layout'])
     def readout(engine, value, s, mesh, layout):
@@ -150,7 +155,11 @@ class ParticleMeshEngine(Engine):
         x = engine.get_x(s)
         _mesh[...], _s[...] = mesh.readout_vjp(x, _value, layout=layout)
 
-    # FIXME add readout.defjvp
+    @readout.defjvp
+    def _(engine, value_, s_, mesh_, s, layout, mesh, layout_):
+        pm = engine.pm
+        x = engine.get_x(s)
+        value_[...] = mesh.readout_jvp(x, v_self=mesh_, v_pos=s_, layout=layout)
 
     @statement(aout=['complex'], ain=['complex'])
     def transfer(engine, complex, tf):

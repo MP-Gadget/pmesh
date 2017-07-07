@@ -665,6 +665,33 @@ class RealField(Field):
 
         return out_self, out_pos
 
+    def paint_jvp(jvp, pos, mass=1.0, v_pos=None, v_mass=None, resampler=None, transform=None, gradient=None, layout=None):
+        """ A_q = W_qi M_i """
+        assert gradient is None # second order is not supported yet
+        jvp[...] = 0
+        if v_pos is not None:
+            for d in range(pos.shape[1]):
+                jvp.paint(pos, mass=v_pos[..., d] * mass,
+                    resampler=resampler, transform=transform, gradient=d, hold=False, layout=layout)
+
+        if v_mass is not None:
+            for d in range(pos.shape[1]):
+                jvp.paint(pos, mass=vmass,
+                    resampler=resampler, transform=transform, gradient=None, hold=False, layout=layout)
+
+    def readout_jvp(self, pos, v_self=None, v_pos=None, resampler=None, transform=None, gradient=None, layout=None):
+        """ f_i = W_qi A_q """
+        jvp = numpy.zeros(len(pos))
+
+        if v_pos is not None:
+            for d in range(self.ndim):
+                jvp[...] += self.readout(pos, resampler=resampler, transform=transform, gradient=d, layout=layout) * v_pos[..., d]
+
+        if v_self is not None:
+            jvp[...] += v_self.readout(pos, resampler=resampler, transform=transform, gradient=None, layout=layout)
+
+        return jvp
+
     def paint_vjp(v, pos, mass=1.0, resampler=None, transform=None, gradient=None,
             out_pos=None, out_mass=None, layout=None):
         """ back-propagate the gradient of paint from self. self contains

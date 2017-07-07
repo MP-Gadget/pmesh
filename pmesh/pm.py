@@ -205,7 +205,7 @@ class Field(object):
 
         return self.pm.comm.allreduce(ret)
 
-    def csetitem(self, index, v):
+    def csetitem(self, index, y):
         """ get a value from absolute index collectively.
             maintains Hermitian conjugation.
             Returns the actually value that is set.
@@ -227,32 +227,32 @@ class Field(object):
             # real field, no dual
             duallocalindex = None
 
-        dualv = v
+        dualy = y
         if localindex is None:
-            v = 0
+            y = 0
         if duallocalindex is None:
-            dualv = 0
+            dualy = 0
 
         if len(index) == self.ndim + 1 and index[-1] == 1:
-            dualv = -dualv
+            dualy = -dualy
             if localindex is not None and duallocalindex is not None:
                 if localindex == duallocalindex:
                     # self dual and imag
-                    v = 0
-                    dualv = 0
+                    y = 0
+                    dualy = 0
         elif len(index) == self.ndim:
-            dualv = numpy.conjugate(dualv)
+            dualy = numpy.conjugate(dualy)
             if localindex is not None and duallocalindex is not None:
                 if localindex == duallocalindex:
                     # self conjugate
-                    dualv = dualv.real
-                    v = v.real
+                    dualy = dualy.real
+                    y = y.real
         if localindex is not None:
-            value[localindex] = v
+            value[localindex] = y
         if duallocalindex is not None:
-            value[duallocalindex] = dualv
+            value[duallocalindex] = dualy
 
-        return self.pm.comm.allreduce(v)
+        return self.pm.comm.allreduce(y)
 
     def __getitem__(self, index):
         return self.value.__getitem__(index)
@@ -612,7 +612,7 @@ class RealField(Field):
                     out=None, layout=None)
             return layout.gather(localresult, out=out)
 
-    def readout_vjp(self, pos, btgrad, resampler=None, transform=None, gradient=None,
+    def readout_vjp(self, pos, v, resampler=None, transform=None, gradient=None,
             out_self=None, out_pos=None, layout=None):
         """ back-propagate the gradient of readout.
 
@@ -621,7 +621,7 @@ class RealField(Field):
 
             Parameters
             ----------
-            btgrad : array
+            v: array
                 current gradient over the result of readout.
 
             layout : Layout
@@ -652,7 +652,7 @@ class RealField(Field):
                 pos = pos.copy()
             for d in range(pos.shape[1]):
                 self.readout(pos, out=out_pos[:, d], resampler=resampler, transform=transform, gradient=d, layout=layout)
-                out_pos[:, d] *= btgrad
+                out_pos[:, d] *= v
 
         if out_self is not False:
             if out_self is None:
@@ -661,11 +661,11 @@ class RealField(Field):
                 out_self = self
 
             # watch out: do this after using self, because out_self can be self.
-            out_self.paint(pos, mass=btgrad, resampler=resampler, transform=transform, gradient=gradient, hold=False, layout=layout)
+            out_self.paint(pos, mass=v, resampler=resampler, transform=transform, gradient=gradient, hold=False, layout=layout)
 
         return out_self, out_pos
 
-    def paint_vjp(btgrad, pos, mass=1.0, resampler=None, transform=None, gradient=None,
+    def paint_vjp(v, pos, mass=1.0, resampler=None, transform=None, gradient=None,
             out_pos=None, out_mass=None, layout=None):
         """ back-propagate the gradient of paint from self. self contains
             the current gradient.
@@ -701,20 +701,20 @@ class RealField(Field):
                 pos = pos.copy()
 
             for d in range(pos.shape[1]):
-                btgrad.readout(pos, out=out_pos[:, d], resampler=resampler, transform=transform, gradient=d, layout=layout)
+                v.readout(pos, out=out_pos[:, d], resampler=resampler, transform=transform, gradient=d, layout=layout)
 
         if out_mass is not False:
             if out_mass is None:
                 out_mass = numpy.zeros_like(mass)
             if is_inplace(out_mass):
                 out_mass = mass
-            btgrad.readout(pos, out=out_mass, resampler=resampler, transform=transform, gradient=gradient, layout=layout)
+            v.readout(pos, out=out_mass, resampler=resampler, transform=transform, gradient=gradient, layout=layout)
 
         return out_pos, out_mass
 
-    def c2r_vjp(btgrad, out=None):
+    def c2r_vjp(v, out=None):
         """ Back-propagate the gradient of c2r from self to out """
-        out=btgrad.r2c(out)
+        out = v.r2c(out)
         # PFFT normalization, same as FastPM
         out.value[...] *= numpy.prod(out.pm.Nmesh ** 1.0)
         return out
@@ -725,8 +725,8 @@ class RealField(Field):
             Parameters
             ----------
             func : callable
-                func(r, v) where r is a list of r values that broadcasts into a full array.
-                value of r depends on kind. v is the value of the field on the corresponding locations.
+                func(r, y) where r is a list of r values that broadcasts into a full array.
+                value of r depends on kind. y is the value of the field on the corresponding locations.
             kind : string
                 The kind of value in r.
                 'relative' means distance from [-0.5 Boxsize, 0.5 BoxSize).
@@ -767,31 +767,31 @@ class ComplexField(Field):
                             +   conjugate(self[m]) * other[m])
                              *  0.5  metric(k[m])
         """
-        def filter(i, v):
-            v = v.copy()
+        def filter(i, y):
+            y = y.copy()
             # if a conjugate is not stored and not self, increase the weight
             # because we shall add it.
             mask = (i[-1] != 0) & (i[-1] != self.Nmesh[-1] // 2)
-            v += mask * v
-            return v
+            y += mask * y
+            return y
 
-        def filter2(k, v):
-            v = v.copy()
-            v.real **= 2
-            v.imag **= 2
+        def filter2(k, y):
+            y = y.copy()
+            y.real **= 2
+            y.imag **= 2
             if metric is not None:
                 k = sum([ki ** 2 for ki in k]) ** 0.5
-                v *= metric(k)
-            return v
+                y *= metric(k)
+            return y
 
         return self.pm.comm.allreduce(self\
                 .apply(filter2)\
                 .apply(filter, kind='index', out=Ellipsis)\
                 .plain.sum())
 
-    def cnorm_vjp(self, gcnorm, metric=None, out=None):
-        def filter2(k, v):
-            r = (2 * gcnorm) * v
+    def cnorm_vjp(self, v, metric=None, out=None):
+        def filter2(k, y):
+            r = (2 * v) * y
             if metric is not None:
                 k = sum([ki ** 2 for ki in k]) ** 0.5
                 r *= metric(k)
@@ -820,39 +820,33 @@ class ComplexField(Field):
         r = self.copy()
         r.plain[...] *= other.plain
 
-        def filter(i, v):
-            v = v.copy()
-            mask = numpy.ones_like(v, '?')
+        def filter(i, y):
+            y = y.copy()
+            mask = numpy.ones_like(y, '?')
             # if a conjugate is stored and not self, reduce the weight
             # because we should have used only one of them (independent)
             mask &= (i[-1] == 0) | (i[-1] == self.Nmesh[-1] // 2)
-            mask1 = numpy.ones_like(v, '?')
+            mask1 = numpy.ones_like(y, '?')
             for ii, n in zip(i, self.Nmesh):
                 mask1 &= (n - ii) % n == ii
             mask &= ~mask1
-            v[mask] *= 0.5
-            return v
+            y[mask] *= 0.5
+            return y
 
         r.apply(filter, kind='index', out=Ellipsis)
 
         if metric is not None:
-            r.apply(lambda k, v: v * metric(sum(ki**2 for ki in k) ** 0.5), out=Ellipsis)
+            r.apply(lambda k, y: y * metric(sum(ki**2 for ki in k) ** 0.5), out=Ellipsis)
 
         return self.pm.comm.allreduce(r.plain.sum(dtype=self.plain.dtype))
 
-    def cdot_vjp(self, gcdot, metric=None):
+    def cdot_vjp(self, v, metric=None):
         """ backtrace gradient of cdot against other. This is a partial gradient.
         """
-        r = self * gcdot
-
-        def filter(i, v):
-            # changing any number results the same change on an independent mode.
-            return v
-
-        r.apply(filter, kind='index', out=Ellipsis)
+        r = self * v
 
         if metric is not None:
-            r.apply(lambda k, v: v * metric(sum(ki**2 for ki in k) ** 0.5), out=Ellipsis)
+            r.apply(lambda k, y: y * metric(sum(ki**2 for ki in k) ** 0.5), out=Ellipsis)
 
         return r
 
@@ -873,27 +867,27 @@ class ComplexField(Field):
 
         return out
 
-    def r2c_vjp(btgrad, out=None):
+    def r2c_vjp(v, out=None):
         """ Back-propagate the gradient of r2c to self. """
-        out = btgrad.c2r(out)
+        out = v.c2r(out)
         # PFFT normalization, same as FastPM
         out.value[...] *= numpy.prod(out.pm.Nmesh ** -1.0)
         return out
 
-    def decompress_vjp(btgrad, out=None):
+    def decompress_vjp(v, out=None):
         """ Back-propagate the gradient of decompress from self to out.
             If I change this mode in the .value array, how many modes are
             actually changed in order to maintain the hermitian?
         """
         if out is None:
-            out = ComplexField(btgrad.pm)
+            out = ComplexField(v.pm)
         if is_inplace(out):
-            out = btgrad
+            out = v
 
-        for i, a, b in zip(btgrad.slabs.i, out.slabs, btgrad.slabs):
+        for i, a, b in zip(out.slabs.i, out.slabs, v.slabs):
             # modes that are self conjugates do not gain a factor
             mask = numpy.ones(a.shape, '?')
-            for ii, n in zip(i, btgrad.Nmesh):
+            for ii, n in zip(i, out.Nmesh):
                mask &= (n - ii) % n == ii
             a[~mask] = 2 * b[~mask]
             a[mask] = b[mask]
@@ -905,8 +899,8 @@ class ComplexField(Field):
             Parameters
             ----------
             func : callable
-                func(k, v) where k is a list of k values that broadcasts into a full array.
-                value of k depends on kind. v is the corrsponding value of field.
+                func(k, y) where k is a list of k values that broadcasts into a full array.
+                value of k depends on kind. y is the corrsponding value of field.
             kind : string
                 The kind of value in k.
                 'wavenumber' means wavenumber from [- 2 pi / L * N / 2, 2 pi / L * N / 2).

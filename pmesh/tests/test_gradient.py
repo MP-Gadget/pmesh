@@ -94,7 +94,7 @@ def test_readout_vjp(comm):
     obj = objective(real, pos, layout)
     value = real.readout(pos, layout=layout)
     grad_value = value * 2
-    grad_real, grad_pos = real.readout_vjp(pos, btgrad=grad_value, layout=layout)
+    grad_real, grad_pos = real.readout_vjp(pos, v=grad_value, layout=layout)
 
     ng = []
     ag = []
@@ -138,8 +138,8 @@ def test_cdot_grad(comm):
     def objective(comp1, comp2):
         return comp1.cdot(comp2)
 
-    grad_comp2 = comp1.cdot_vjp(gcdot=1.0)
-    grad_comp1 = comp2.cdot_vjp(gcdot=1.0)
+    grad_comp2 = comp1.cdot_vjp(1.0)
+    grad_comp1 = comp2.cdot_vjp(1.0)
 
     print("comp1")
     ng = []
@@ -187,7 +187,7 @@ def test_cnorm_grad(comm):
     def objective(comp1):
         return comp1.cnorm()
 
-    grad_comp1 = comp1.cnorm_vjp(gcnorm=1.0)
+    grad_comp1 = comp1.cnorm_vjp(1.0)
 
     ng = []
     ag = []

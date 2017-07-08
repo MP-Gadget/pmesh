@@ -35,7 +35,6 @@ def test_1d(comm):
 @MPITest(commsize=(1,4))
 def test_fft(comm):
     pm = ParticleMesh(BoxSize=8.0, Nmesh=[8, 8], comm=comm, dtype='f8')
-    real = RealField(pm)
     numpy.random.seed(1234)
     if comm.rank == 0:
         Npar = 100
@@ -47,8 +46,8 @@ def test_fft(comm):
     layout = pm.decompose(pos)
 
     npos = layout.exchange(pos)
-    real[:] = 0
-    real.paint(npos)
+    real = pm.paint(npos)
+
     complex = real.r2c()
 
     real2 = complex.c2r()
@@ -70,8 +69,8 @@ def test_inplace_fft(comm):
     layout = pm.decompose(pos)
 
     npos = layout.exchange(pos)
-    real[:] = 0
-    real.paint(npos)
+
+    real = pm.paint(npos)
     complex = real.r2c()
     complex2 = real.r2c(out=Ellipsis)
 
@@ -102,9 +101,8 @@ def test_decompose(comm):
             truth = comm.bcast(truth)
             layout = pm.decompose(pos, smoothing=resampler)
             npos = layout.exchange(pos)
-            real = RealField(pm)
-            real[...] = 0
-            real.paint(npos, resampler=resampler)
+
+            real = pm.paint(npos, resampler=resampler)
 
             full = numpy.zeros(pm.Nmesh, dtype='f8')
             full[real.slices] = real
@@ -484,6 +482,5 @@ def test_grid(comm):
     pm = ParticleMesh(BoxSize=8.0, Nmesh=[4, 4, 4], comm=comm, dtype='f8')
     grid = pm.generate_uniform_particle_grid(shift=0.5)
     assert_array_equal(pm.comm.allreduce(grid.shape[0]), pm.Nmesh.prod())
-    real = pm.create(mode='real')
-    real.paint(grid)
+    real = pm.paint(grid)
     assert_array_equal(real, 1.0)

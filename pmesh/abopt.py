@@ -120,9 +120,8 @@ class ParticleMeshEngine(Engine):
     def paint(engine, s, mesh, layout):
         pm = engine.pm
         x = engine.get_x(s)
-        mesh[...] = pm.create(mode='real')
         N = pm.comm.allreduce(len(x))
-        mesh[...].paint(x, layout=layout, hold=False)
+        mesh[...] = pm.paint(x, layout=layout, hold=False)
         # to have 1 + \delta on the mesh
         mesh[...][...] *= 1.0 * pm.Nmesh.prod() / N
 
@@ -132,15 +131,14 @@ class ParticleMeshEngine(Engine):
         _layout[...] = ZERO
         x = engine.get_x(s)
         N = pm.comm.allreduce(len(x))
-        _s[...], junk = _mesh.paint_vjp(x, layout=layout, out_mass=False)
+        _s[...], junk = pm.paint_vjp(_mesh, x, layout=layout, out_mass=False)
         _s[...][...] *= 1.0 * pm.Nmesh.prod() / N
 
     @paint.defjvp
     def _(engine, s_, mesh_, s, layout, layout_):
         pm = engine.pm
         x = engine.get_x(s)
-        mesh_[...] = pm.create('real')
-        mesh_[...].paint_jvp(x, v_pos=s_, layout=layout)
+        mesh_[...] = pm.paint_jvp(x, v_pos=s_, layout=layout)
 
     @statement(aout=['value'], ain=['s', 'mesh', 'layout'])
     def readout(engine, value, s, mesh, layout):

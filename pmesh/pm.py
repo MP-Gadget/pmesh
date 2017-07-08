@@ -501,76 +501,6 @@ class RealField(Field):
         """ Collective mean. Mean of the entire mesh. (Must be called collectively)"""
         return self.csum() / self.csize
 
-    def paint(self, pos, mass=1.0, resampler=None, transform=None, hold=False, gradient=None, layout=None):
-        """ 
-        Paint particles into the internal real canvas. 
-
-        Transform the particle field given by pos and mass
-        to the overdensity field in fourier space and save
-        it in the internal storage. 
-        A multi-linear CIC approximation scheme is used.
-
-        The function can be called multiple times: 
-        the result is cummulative. In a multi-step simulation where
-        :py:class:`ParticleMesh` object is reused,  before calling 
-        :py:meth:`paint`, make sure the canvas is cleared with :py:meth:`clear`.
-
-        Parameters
-        ----------
-        pos    : array_like (, ndim)
-            position of particles in simulation unit
-
-        mass   : scalar or array_like (,)
-            mass of particles in simulation unit
-
-        hold   : bool
-            If true, do not clear the current value in the field.
-
-        gradient : None or integer
-            Direction to take the gradient of the window. The affine transformation
-            is properly applied.
-
-        resampler: None or string
-            type of window. Default : None, use self.pm.resampler
-
-        layout : Layout
-            domain decomposition to use for the readout. The position is first
-            routed to the target ranks and the result is reduced
-
-        Notes
-        -----
-        the painter operation conserves the total mass. It is not the density.
-
-        """
-        # Transform from simulation unit to local grid unit.
-        if not transform:
-            transform = self.pm.affine
-
-        if resampler is None:
-            resampler = self.pm.resampler
-
-        resampler = FindResampler(resampler)
-
-        if not hold:
-            self.value[...] = 0
-
-        if layout is None:
-            return resampler.paint(self.value, pos, mass, transform=transform, diffdir=gradient)
-        else:
-            localpos = layout.exchange(pos)
-            if numpy.isscalar(mass):
-                mass = numpy.array(mass)
-            if mass.ndim != 0:
-                localmass = layout.exchange(mass)
-            else:
-                localmass = mass
-            return self.paint(localpos, localmass,
-                    resampler=resampler,
-                    transform=transform,
-                    hold=hold,
-                    gradient=gradient,
-                    layout=None)
-
     def readout(self, pos, out=None, resampler=None, transform=None, gradient=None, layout=None):
         """ 
         Read out from real field at positions
@@ -665,18 +595,6 @@ class RealField(Field):
 
         return out_self, out_pos
 
-    def paint_jvp(jvp, pos, mass=1.0, v_pos=None, v_mass=None, resampler=None, transform=None, gradient=None, layout=None):
-        """ A_q = W_qi M_i """
-        assert gradient is None # second order is not supported yet
-        jvp[...] = 0
-        if v_pos is not None:
-            for d in range(pos.shape[1]):
-                jvp.paint(pos, mass=v_pos[..., d] * mass,
-                    resampler=resampler, transform=transform, gradient=d, hold=True, layout=layout)
-
-        if v_mass is not None:
-            jvp.paint(pos, mass=v_mass,
-                resampler=resampler, transform=transform, gradient=None, hold=True, layout=layout)
 
     def readout_jvp(self, pos, v_self=None, v_pos=None, resampler=None, transform=None, gradient=None, layout=None):
         """ f_i = W_qi A_q """
@@ -691,53 +609,9 @@ class RealField(Field):
 
         return jvp
 
-    def paint_vjp(v, pos, mass=1.0, resampler=None, transform=None, gradient=None,
-            out_pos=None, out_mass=None, layout=None):
-        """ back-propagate the gradient of paint from self. self contains
-            the current gradient.
-
-            Parameters
-            ----------
-            layout : Layout
-                domain decomposition to use for the readout. The position is first
-                routed to the target ranks and the result is reduced
-
-            out_mass: array , None, or False
-                stored the backtraced gradient against mass
-
-                if False, then the gradient against mass is not computed.
-                if None, a new RealField is created and returned
-
-            out_pos : array, None or False
-                store the backtraced graident against pos
-
-                if False, then the gradient against pos is not computed.
-                if None, a new array is created and returned
-
-        """
-        if out_pos is not False:
-            if gradient is not None:
-                raise ValueError("gradient of gradient is not yet supported")
-            if out_pos is None:
-                out_pos = numpy.zeros_like(pos)
-            if is_inplace(out_pos):
-                out_pos = pos
-
-            if out_pos is pos:
-                pos = pos.copy()
-
-            for d in range(pos.shape[1]):
-                v.readout(pos, out=out_pos[:, d], resampler=resampler, transform=transform, gradient=d, layout=layout)
-                out_pos[..., d] *= mass
-
-        if out_mass is not False:
-            if out_mass is None:
-                out_mass = numpy.zeros(len(pos))
-            if is_inplace(out_mass):
-                out_mass = mass
-            v.readout(pos, out=out_mass, resampler=resampler, transform=transform, gradient=gradient, layout=layout)
-
-        return out_pos, out_mass
+    def paint(self, pos, mass=1.0, resampler=None, transform=None, hold=False, gradient=None, layout=None):
+        warnings.warn("Use ParticleMesh.paint instead", DeprecationWarning)
+        self.pm.paint(pos, mass=mass, resampler=resampler, transform=transform, hold=hold, gradient=gradient, layout=layout, out=self)
 
     def c2r_vjp(v, out=None):
         """ Back-propagate the gradient of c2r from self to out """
@@ -1278,3 +1152,143 @@ class ParticleMesh(object):
 
         return self.domain.decompose(pos, smoothing=smoothing,
                 transform=transform0)
+
+    def paint(self, pos, mass=1.0, resampler=None, transform=None, hold=False, gradient=None, layout=None, out=None):
+        """ 
+        Paint particles into the internal real canvas. 
+
+        Transform the particle field given by pos and mass
+        to the overdensity field in fourier space and save
+        it in the internal storage. 
+        A multi-linear CIC approximation scheme is used.
+
+        The function can be called multiple times: 
+        the result is cummulative. In a multi-step simulation where
+        :py:class:`ParticleMesh` object is reused,  before calling 
+        :py:meth:`paint`, make sure the canvas is cleared with :py:meth:`clear`.
+
+        Parameters
+        ----------
+        pos    : array_like (, ndim)
+            position of particles in simulation unit
+
+        mass   : scalar or array_like (,)
+            mass of particles in simulation unit
+
+        hold   : bool
+            If true, do not clear the current value in the field.
+
+        gradient : None or integer
+            Direction to take the gradient of the window. The affine transformation
+            is properly applied.
+
+        resampler: None or string
+            type of window. Default : None, use self.pm.resampler
+
+        layout : Layout
+            domain decomposition to use for the readout. The position is first
+            routed to the target ranks and the result is reduced
+
+        Notes
+        -----
+        the painter operation conserves the total mass. It is not the density.
+
+        """
+        # Transform from simulation unit to local grid unit.
+        if not transform:
+            transform = self.affine
+
+        if resampler is None:
+            resampler = self.resampler
+
+        resampler = FindResampler(resampler)
+
+        if out is None:
+            out = self.create(mode='real')
+
+        if not hold:
+            out.value[...] = 0
+
+        if layout is None:
+            resampler.paint(out.value, pos, mass, transform=transform, diffdir=gradient)
+            return out
+        else:
+            localpos = layout.exchange(pos)
+            if numpy.isscalar(mass):
+                mass = numpy.array(mass)
+            if mass.ndim != 0:
+                localmass = layout.exchange(mass)
+            else:
+                localmass = mass
+            return self.paint(localpos, localmass,
+                    resampler=resampler,
+                    transform=transform,
+                    hold=hold,
+                    gradient=gradient,
+                    layout=None, out=out)
+
+
+    def paint_jvp(self, pos, mass=1.0, v_pos=None, v_mass=None, resampler=None, transform=None, gradient=None, layout=None, out=None):
+        """ A_q = W_qi M_i """
+        assert gradient is None # second order is not supported yet
+
+        if out is None:
+            out = self.create(mode='real')
+
+        out[...] = 0
+        if v_pos is not None:
+            for d in range(pos.shape[1]):
+                self.paint(pos, mass=v_pos[..., d] * mass,
+                    resampler=resampler, transform=transform, gradient=d, hold=True, layout=layout, out=out)
+
+        if v_mass is not None:
+            self.paint(pos, mass=v_mass,
+                resampler=resampler, transform=transform, gradient=None, hold=True, layout=layout, out=out)
+        return out
+
+    def paint_vjp(self, v, pos, mass=1.0, resampler=None, transform=None, gradient=None,
+            out_pos=None, out_mass=None, layout=None):
+        """ back-propagate the gradient of paint from v.
+
+            Parameters
+            ----------
+            layout : Layout
+                domain decomposition to use for the readout. The position is first
+                routed to the target ranks and the result is reduced
+
+            out_mass: array , None, or False
+                stored the backtraced gradient against mass
+
+                if False, then the gradient against mass is not computed.
+                if None, a new RealField is created and returned
+
+            out_pos : array, None or False
+                store the backtraced graident against pos
+
+                if False, then the gradient against pos is not computed.
+                if None, a new array is created and returned
+
+        """
+        if out_pos is not False:
+            if gradient is not None:
+                raise ValueError("gradient of gradient is not yet supported")
+            if out_pos is None:
+                out_pos = numpy.zeros_like(pos)
+            if is_inplace(out_pos):
+                out_pos = pos
+
+            if out_pos is pos:
+                pos = pos.copy()
+
+            for d in range(pos.shape[1]):
+                v.readout(pos, out=out_pos[:, d], resampler=resampler, transform=transform, gradient=d, layout=layout)
+                out_pos[..., d] *= mass
+
+        if out_mass is not False:
+            if out_mass is None:
+                out_mass = numpy.zeros(len(pos))
+            if is_inplace(out_mass):
+                out_mass = mass
+            v.readout(pos, out=out_mass, resampler=resampler, transform=transform, gradient=gradient, layout=layout)
+
+        return out_pos, out_mass

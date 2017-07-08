@@ -184,30 +184,25 @@ def test_paint_gradients(comm):
     real = pm.generate_whitenoise(1234, mode='real')
 
     def objective(pos, mass, layout):
-        real = pm.create('real')
-        real.paint(pos, mass=mass, layout=layout)
+        real = pm.paint(pos, mass=mass, layout=layout)
         obj = (real[...] ** 2).sum()
         return comm.allreduce(obj)
 
     def forward_gradient(pos, mass, layout, v_pos=None, v_mass=None):
-        real = pm.create('real')
-        real.paint(pos, mass=mass, layout=layout)
-        jvp = pm.create('real')
-        jvp.paint_jvp(pos, mass=mass, v_mass=v_mass, v_pos=v_pos, layout=layout)
+        real = pm.paint(pos, mass=mass, layout=layout)
+        jvp = pm.paint_jvp(pos, mass=mass, v_mass=v_mass, v_pos=v_pos, layout=layout)
         return comm.allreduce((jvp * real * 2)[...].sum())
 
     def backward_gradient(pos, mass, layout):
-        real = pm.create('real')
-        real.paint(pos, mass=mass, layout=layout)
-        return (real *2).paint_vjp(pos, mass=mass, layout=layout)
+        real = pm.paint(pos, mass=mass, layout=layout)
+        return pm.paint_vjp(real * 2, pos, mass=mass, layout=layout)
 
     pos = numpy.array(numpy.indices(real.shape), dtype='f8').reshape(real.value.ndim, -1).T
     pos += real.start
     numpy.random.seed(9999)
-    pos += (numpy.random.normal(size=pos.shape)) * pm.BoxSize / pm.Nmesh
     # avoid sitting at the pmesh points
     # cic gradient is zero on them, the numerical gradient fails.
-    pos += 0.5
+    pos += (numpy.random.uniform(size=pos.shape)) * 0.8 + 0.1
     pos *= pm.BoxSize / pm.Nmesh
     mass = numpy.ones(len(pos)) * 2
 

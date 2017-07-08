@@ -29,11 +29,38 @@ def perturb_pos(pos, ind, value, comm):
     diff = comm.allreduce(new - old)
 
     return diff, pos, comm.allreduce(coord)
+
 def get_pos(pos, ind, comm):
     start = sum(comm.allgather(pos.shape[0])[:comm.rank])
     end = sum(comm.allgather(pos.shape[0])[:comm.rank + 1])
     if ind[0] >= start and ind[0] < end:
         old = pos[ind[0] - start, ind[1]]
+    else:
+        old = 0
+    return comm.allreduce(old)
+
+def perturb_mass(mass, ind, value, comm):
+    mass = mass.copy()
+    start = sum(comm.allgather(mass.shape[0])[:comm.rank])
+    end = sum(comm.allgather(mass.shape[0])[:comm.rank + 1])
+    if ind >= start and ind < end:
+        old = mass[ind - start]
+        coord = mass[ind-start].copy()
+        mass[ind - start] = old + value
+        new = mass[ind - start]
+    else:
+        old = 0
+        new = 0
+        coord = 0
+    diff = comm.allreduce(new - old)
+
+    return diff, mass, comm.allreduce(coord)
+
+def get_mass(mass, ind, comm):
+    start = sum(comm.allgather(mass.shape[0])[:comm.rank])
+    end = sum(comm.allgather(mass.shape[0])[:comm.rank + 1])
+    if ind >= start and ind < end:
+        old = mass[ind - start]
     else:
         old = 0
     return comm.allreduce(old)
@@ -72,7 +99,7 @@ def test_c2r_vjp(comm):
     assert_allclose(ng, ag, rtol=1e-5)
 
 @MPITest([1, 2])
-def test_readout_vjp(comm):
+def test_readout_gradients(comm):
     pm = ParticleMesh(BoxSize=8.0, Nmesh=[4, 4, 4], comm=comm, dtype='f8', resampler='cic')
 
     real = pm.generate_whitenoise(1234, mode='real')
@@ -82,7 +109,16 @@ def test_readout_vjp(comm):
         obj = (value ** 2).sum()
         return comm.allreduce(obj)
 
-    pos = numpy.array(numpy.indices(real.shape), dtype='f4').reshape(real.value.ndim, -1).T
+    def forward_gradient(real, pos, layout, v_real=None, v_pos=None):
+        value = real.readout(pos, layout=layout)
+        v_value = real.readout_jvp(pos, v_self=v_real, v_pos=v_pos, layout=layout)
+        return comm.allreduce((v_value * value * 2).sum())
+
+    def backward_gradient(real, pos, layout):
+        value = real.readout(pos, layout=layout)
+        return real.readout_vjp(pos, v=value * 2, layout=layout)
+
+    pos = numpy.array(numpy.indices(real.shape), dtype='f8').reshape(real.value.ndim, -1).T
     pos += real.start
     # avoid sitting at the pmesh points
     # cic gradient is zero on them, the numerical gradient fails.
@@ -92,41 +128,140 @@ def test_readout_vjp(comm):
     layout = pm.decompose(pos)
 
     obj = objective(real, pos, layout)
-    value = real.readout(pos, layout=layout)
-    grad_value = value * 2
-    grad_real, grad_pos = real.readout_vjp(pos, v=grad_value, layout=layout)
+
+    grad_real, grad_pos = backward_gradient(real, pos, layout)
 
     ng = []
-    ag = []
+    fag = []
+    bag = []
     ind = []
-    dx = 1e-7
+    dx = 1e-6
     for ind1 in numpy.ndindex(*grad_real.cshape):
         dx1, r1 = perturb(real, ind1, dx)
-        ng1 = (objective(r1, pos, layout) - obj)/dx
-        ag1 = grad_real.cgetitem(ind1) * dx1 / dx
+        ng1 = (objective(r1, pos, layout) - obj)
+
+        bag1 = grad_real.cgetitem(ind1) * dx1
+        fag1 = forward_gradient(real, pos, layout, v_real=r1 - real)
+
         # print (dx1, dx, ind1, ag1, ng1)
         ng.append(ng1)
-        ag.append(ag1)
+        fag.append(fag1)
+        bag.append(bag1)
         ind.append(ind1)
 
-    assert_allclose(ng, ag, rtol=1e-5)
+    assert_allclose(bag, fag, rtol=1e-7)
+    assert_allclose(ng, bag, rtol=1e-4)
 
     # FIXME
     ng = []
-    ag = []
+    bag = []
+    fag = []
     ind = []
-    dx = 1e-7
+    dx = 1e-6
+
     for ind1 in numpy.ndindex((real.csize, real.ndim)):
         dx1, pos1, old = perturb_pos(pos, ind1, dx, comm)
         layout1 = pm.decompose(pos1)
-        ng1 = (objective(real, pos1, layout1) - obj)/dx
-        ag1 = get_pos(grad_pos, ind1, comm) * dx1 / dx
+
+        ng1 = (objective(real, pos1, layout1) - obj)
+        bag1 = get_pos(grad_pos, ind1, comm) * dx1
+
+        fag1 = forward_gradient(real, pos, layout, v_pos=pos1 - pos)
+
         # print ('pos', old, ind1, 'a', ag1, 'n', ng1)
         ng.append(ng1)
-        ag.append(ag1)
+        bag.append(bag1)
+        fag.append(fag1)
         ind.append(ind1)
 
-    assert_allclose(ng, ag, rtol=1e-5)
+    assert_allclose(bag, fag, rtol=1e-7)
+    assert_allclose(ng, bag, rtol=1e-4)
+
+@MPITest([1, 2])
+def test_paint_gradients(comm):
+    pm = ParticleMesh(BoxSize=8.0, Nmesh=[4, 4, 4], comm=comm, dtype='f8', resampler='cic')
+
+    real = pm.generate_whitenoise(1234, mode='real')
+
+    def objective(pos, mass, layout):
+        real = pm.create('real')
+        real.paint(pos, mass=mass, layout=layout)
+        obj = (real[...] ** 2).sum()
+        return comm.allreduce(obj)
+
+    def forward_gradient(pos, mass, layout, v_pos=None, v_mass=None):
+        real = pm.create('real')
+        real.paint(pos, mass=mass, layout=layout)
+        jvp = pm.create('real')
+        jvp.paint_jvp(pos, mass=mass, v_mass=v_mass, v_pos=v_pos, layout=layout)
+        return comm.allreduce((jvp * real * 2)[...].sum())
+
+    def backward_gradient(pos, mass, layout):
+        real = pm.create('real')
+        real.paint(pos, mass=mass, layout=layout)
+        return (real *2).paint_vjp(pos, mass=mass, layout=layout)
+
+    pos = numpy.array(numpy.indices(real.shape), dtype='f8').reshape(real.value.ndim, -1).T
+    pos += real.start
+    numpy.random.seed(9999)
+    pos += (numpy.random.normal(size=pos.shape)) * pm.BoxSize / pm.Nmesh
+    # avoid sitting at the pmesh points
+    # cic gradient is zero on them, the numerical gradient fails.
+    pos += 0.5
+    pos *= pm.BoxSize / pm.Nmesh
+    mass = numpy.ones(len(pos)) * 2
+
+    layout = pm.decompose(pos)
+
+    obj = objective(pos, mass, layout)
+
+    grad_pos, grad_mass = backward_gradient(pos, mass, layout)
+
+    ng = []
+    fag = []
+    bag = []
+    ind = []
+    dx = 1e-6
+    for ind1 in numpy.ndindex(real.csize):
+        dx1, mass1, old = perturb_mass(mass, ind1[0], dx, comm)
+        ng1 = (objective(pos, mass1, layout) - obj)
+
+        bag1 = get_mass(grad_mass, ind1[0], comm) * dx1
+        fag1 = forward_gradient(pos, mass, layout, v_mass=mass1 - mass)
+
+    #    print (dx1, dx, ind1, fag1, bag1, ng1)
+        ng.append(ng1)
+        fag.append(fag1)
+        bag.append(bag1)
+        ind.append(ind1)
+
+    assert_allclose(bag, fag, rtol=1e-7)
+    assert_allclose(ng, bag, rtol=1e-4)
+
+    # FIXME
+    ng = []
+    bag = []
+    fag = []
+    ind = []
+    dx = 1e-6
+
+    for ind1 in numpy.ndindex((real.csize, real.ndim)):
+        dx1, pos1, old = perturb_pos(pos, ind1, dx, comm)
+        layout1 = pm.decompose(pos1)
+
+        ng1 = (objective(pos1, mass, layout1) - obj)
+        bag1 = get_pos(grad_pos, ind1, comm) * dx1
+
+        fag1 = forward_gradient(pos, mass, layout, v_pos=pos1 - pos)
+
+    #    print ('pos', old, ind1, 'v_pos', (pos1 - pos)[ind1[0]], 'fag', fag1, 'bag', bag1, 'n', ng1)
+        ng.append(ng1)
+        bag.append(bag1)
+        fag.append(fag1)
+        ind.append(ind1)
+
+    assert_allclose(bag, fag, rtol=1e-7)
+    assert_allclose(ng, bag, rtol=1e-4)
 
 @MPITest([1, 4])
 def test_cdot_grad(comm):

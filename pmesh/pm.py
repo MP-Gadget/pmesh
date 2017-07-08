@@ -672,12 +672,11 @@ class RealField(Field):
         if v_pos is not None:
             for d in range(pos.shape[1]):
                 jvp.paint(pos, mass=v_pos[..., d] * mass,
-                    resampler=resampler, transform=transform, gradient=d, hold=False, layout=layout)
+                    resampler=resampler, transform=transform, gradient=d, hold=True, layout=layout)
 
         if v_mass is not None:
-            for d in range(pos.shape[1]):
-                jvp.paint(pos, mass=vmass,
-                    resampler=resampler, transform=transform, gradient=None, hold=False, layout=layout)
+            jvp.paint(pos, mass=v_mass,
+                resampler=resampler, transform=transform, gradient=None, hold=True, layout=layout)
 
     def readout_jvp(self, pos, v_self=None, v_pos=None, resampler=None, transform=None, gradient=None, layout=None):
         """ f_i = W_qi A_q """
@@ -729,10 +728,11 @@ class RealField(Field):
 
             for d in range(pos.shape[1]):
                 v.readout(pos, out=out_pos[:, d], resampler=resampler, transform=transform, gradient=d, layout=layout)
+                out_pos[..., d] *= mass
 
         if out_mass is not False:
             if out_mass is None:
-                out_mass = numpy.zeros_like(mass)
+                out_mass = numpy.zeros(len(pos))
             if is_inplace(out_mass):
                 out_mass = mass
             v.readout(pos, out=out_mass, resampler=resampler, transform=transform, gradient=gradient, layout=layout)

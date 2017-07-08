@@ -59,6 +59,15 @@ def test_vjp():
     assert_allclose(_r, field * 4 * 2 * 0.1 * 0.1)
 
 @skipif(not has_abopt)
+def test_to_scalar():
+    engine = ParticleMeshEngine(pm)
+    code = CodeSegment(engine)
+    numpy.random.seed(1234)
+    s = numpy.random.uniform(size=engine.q.shape) * 0.1
+
+    check_grad(code, 's', 's', init={'s': s}, eps=1e-4, rtol=1e-2)
+
+@skipif(not has_abopt)
 def test_paint():
     engine = ParticleMeshEngine(pm)
     code = CodeSegment(engine)

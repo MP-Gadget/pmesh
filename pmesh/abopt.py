@@ -114,7 +114,7 @@ class ParticleMeshEngine(Engine):
 
     @decompose.defjvp
     def _(engine, layout_, s_):
-        s_[...] = ZERO
+        layout_[...] = ZERO
 
     @statement(aout=['mesh'], ain=['s', 'layout'])
     def paint(engine, s, mesh, layout):
@@ -138,6 +138,7 @@ class ParticleMeshEngine(Engine):
     def _(engine, s_, mesh_, s, layout, layout_):
         pm = engine.pm
         x = engine.get_x(s)
+        if s_ is ZERO: s_ = None
         mesh_[...] = pm.paint_jvp(x, v_pos=s_, layout=layout)
 
     @statement(aout=['value'], ain=['s', 'mesh', 'layout'])
@@ -157,6 +158,8 @@ class ParticleMeshEngine(Engine):
     def _(engine, value_, s_, mesh_, s, layout, mesh, layout_):
         pm = engine.pm
         x = engine.get_x(s)
+        if mesh_ is ZERO: mesh_ = None
+        if s_ is ZERO: s_ = None
         value_[...] = mesh.readout_jvp(x, v_self=mesh_, v_pos=s_, layout=layout)
 
     @statement(aout=['complex'], ain=['complex'])
@@ -253,7 +256,12 @@ class ParticleMeshEngine(Engine):
 
     @to_scalar.defjvp
     def _(engine, y_, x_, x):
-        y_[...] = x * (2 * x_)
+        if isinstance(x, RealField):
+            y_[...] = x.cdot(x_) * 2
+        elif isinstance(x, ComplexField):
+            raise TypeError("Computing the L-2 norm of complex is not a good idea, because the gradient propagation is ambiguous")
+        else:
+            y_[...] = engine.pm.comm.allreduce((x * x_).sum(dtype='f8')) * 2
 
 def check_grad(code, yname, xname, init, eps, rtol, verbose=False):
     from numpy.testing import assert_allclose
@@ -302,12 +310,14 @@ def check_grad(code, yname, xname, init, eps, rtol, verbose=False):
 
     y, tape = code.compute('y', init=init, return_tape=True)
     vjp = tape.get_vjp()
+    jvp = tape.get_jvp()
 
     _x = vjp.compute('_' + xname, init={'_y' : 1.0})
 
     center = init[xname]
     init2 = init.copy()
-    poor = []
+    poor_ng_bg = []
+    poor_fg_bg = []
     for index in numpy.ndindex(*cshape):
         x1 = cperturb(center, index, eps)
         x0 = cperturb(center, index, -eps)
@@ -316,14 +326,25 @@ def check_grad(code, yname, xname, init, eps, rtol, verbose=False):
         y1 = code.compute('y', init2)
         init2[xname] = x0
         y0 = code.compute('y', init2)
+
+        base = (x1 - x0)
+        y_ = jvp.compute('y_', init={xname + '_': base})
+
         #logger.DEBUG("CHECKGRAD: %s" % (y1, y0, y1 - y0, get_pos(code.engine, _x, index) * 2 * eps))
         if verbose:
-            print(index, (x1 - x0)[...].max(), y1, y0, y, y1 - y0, cget(_x, index) * 2 * eps)
+            print(index, (x1 - x0)[...].max(), y, y1 - y0, y_, cget(_x, index) * 2 * eps)
+
+        if not numpy.allclose(y_, cget(_x, index) * 2 * eps, rtol=rtol):
+            poor_fg_bg.append([index, y_, cget(_x, index) * 2 * eps])
 
         if not numpy.allclose(y1 - y0, cget(_x, index) * 2 * eps, rtol=rtol):
-            poor.append([index, y1 - y0, cget(_x, index) * 2 * eps])
+            poor_ng_bg.append([index, y1 - y0, cget(_x, index) * 2 * eps])
 
-    if len(poor) != 0:
-        print('\n'.join(['%s' % a for a in poor]))
-        raise AssertionError("gradient of %d / %d parameters are bad." % (len(poor), numpy.prod(cshape)))
+    if len(poor_ng_bg) != 0:
+        print('\n'.join(['%s' % a for a in poor_ng_bg]))
+        raise AssertionError("gradient of %d / %d parameters are bad." % (len(poor_ng_bg), numpy.prod(cshape)))
+
+    if len(poor_fg_bg) != 0:
+        print('\n'.join(['%s' % a for a in poor_fg_bg]))
+        raise AssertionError("gradient of %d / %d parameters are bad." % (len(poor_fg_bg), numpy.prod(cshape)))
 

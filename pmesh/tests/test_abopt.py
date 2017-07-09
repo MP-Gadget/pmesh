@@ -7,7 +7,7 @@ import numpy
 import logging
 
 from pmesh.pm import ParticleMesh
-pm = ParticleMesh(BoxSize=1.0, Nmesh=(4, 4), dtype='f8', resampler='tsc')
+pm = ParticleMesh(BoxSize=1.0, Nmesh=(8, 8, 8), dtype='f8', resampler='cic')
 
 try:
     from abopt.vmad2 import CodeSegment, logger
@@ -65,33 +65,82 @@ def test_to_scalar():
     numpy.random.seed(1234)
     s = numpy.random.uniform(size=engine.q.shape) * 0.1
 
-    check_grad(code, 's', 's', init={'s': s}, eps=1e-4, rtol=1e-2)
+    check_grad(code, 's', 's', init={'s': s}, eps=1e-4, rtol=1e-8)
 
 @skipif(not has_abopt)
 def test_paint():
     engine = ParticleMeshEngine(pm)
     code = CodeSegment(engine)
-    numpy.random.seed(1234)
-    s = numpy.random.uniform(size=engine.q.shape) * 0.1
+    s = pm.BoxSize / pm.Nmesh * 0.001 + 0.99 * engine.q / pm.Nmesh # sample all positions.
 
     code.decompose(s='s', layout='layout')
     code.paint(s='s', mesh='density', layout='layout')
 
-    check_grad(code, 'density', 's', init={'s': s}, eps=1e-4, rtol=1e-2)
+    check_grad(code, 'density', 's', init={'s': s}, eps=1e-4, rtol=1e-8)
 
 @skipif(not has_abopt)
 def test_readout():
     engine = ParticleMeshEngine(pm)
     code = CodeSegment(engine)
-    numpy.random.seed(1234)
-    s = numpy.random.uniform(size=engine.q.shape) * 0.1
+    s = pm.BoxSize / pm.Nmesh * 0.001 + 0.99 * engine.q / pm.Nmesh # sample all positions.
 
-    field = pm.generate_whitenoise(seed=1234).c2r()
+    field = pm.generate_whitenoise(seed=1234, mode='real')
 
     code.decompose(s='s', layout='layout')
     code.readout(s='s', mesh='density', layout='layout', value='value')
 
-    check_grad(code, 'value', 's', init={'density' : field, 's': s}, eps=1e-4, rtol=1e-2)
+    check_grad(code, 'value', 'density', init={'density' : field, 's': s}, eps=1e-4, rtol=1e-8)
 
-    check_grad(code, 'value', 'density', init={'density' : field, 's': s}, eps=1e-4, rtol=1e-2)
+    check_grad(code, 'value', 's', init={'density' : field, 's': s}, eps=1e-4, rtol=1e-8)
 
+
+@skipif(not has_abopt)
+def test_transfer_imag():
+    def transfer(k):
+        return 1j * k[0]
+
+    field = pm.generate_whitenoise(seed=1234, mode='real')
+
+    engine = ParticleMeshEngine(pm)
+    code = CodeSegment(engine)
+    code.r2c(complex='c', real='r')
+    code.transfer(complex='c', tf=transfer)
+    code.c2r(complex='c', real='r')
+
+    check_grad(code, 'r', 'r', init={'r': field}, eps=1e-4, rtol=1e-8)
+
+@skipif(not has_abopt)
+def test_transfer_real():
+    def transfer(k):
+        return k[0]
+
+    field = pm.generate_whitenoise(seed=1234, mode='real')
+
+    engine = ParticleMeshEngine(pm)
+    code = CodeSegment(engine)
+    code.r2c(complex='c', real='r')
+    code.transfer(complex='c', tf=transfer)
+    code.c2r(complex='c', real='r')
+
+    check_grad(code, 'r', 'r', init={'r': field}, eps=1e-4, rtol=1e-8)
+
+@skipif(not has_abopt)
+def test_c2rr2c():
+    field = pm.generate_whitenoise(seed=1234, mode='real')
+
+    engine = ParticleMeshEngine(pm)
+    code = CodeSegment(engine)
+    code.r2c(real='r', complex='c')
+    code.c2r(complex='c', real='r')
+
+    check_grad(code, 'r', 'r', init={'r': field}, eps=1e-4, rtol=1e-8)
+
+@skipif(not has_abopt)
+def test_lowpass():
+    field = pm.generate_whitenoise(seed=1234, mode='real')
+
+    engine = ParticleMeshEngine(pm)
+    code = CodeSegment(engine)
+    code.lowpass(real='r', Neff=1)
+
+    check_grad(code, 'r', 'r', init={'r': field}, eps=1e-4, rtol=1e-8)

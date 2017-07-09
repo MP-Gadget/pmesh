@@ -1109,11 +1109,14 @@ class ParticleMesh(object):
         # one particle per base mesh point
         source = numpy.zeros((real.size, self.ndim), dtype=dtype)
 
-        for d in range(len(real.shape)):
+        for d in range(self.ndim):
             real[...] = 0
             for xi, slab in zip(real.slabs.i, real.slabs):
-                slab[...] = (xi[d] + 1.0 * _shift[d]) * (real.BoxSize[d] / real.Nmesh[d])
+                slab[...] = (1.0 * xi[d] + 1.0 * _shift[d]) * (real.BoxSize[d] / real.Nmesh[d])
             source[..., d] = real.value.flat
+
+        source.flags.writeable = False
+
         return source
 
     def decompose(self, pos, smoothing=None):

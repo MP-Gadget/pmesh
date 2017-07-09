@@ -4,26 +4,6 @@ import numpy
 from abopt.vmad2 import ZERO, Engine, statement, programme, CodeSegment, Literal
 from pmesh.pm import ParticleMesh, RealField, ComplexField
 
-def create_grid(basepm, shift=0, dtype='f4'):
-    """
-        create uniform grid of particles, one per grid point on the basepm mesh
-        this shall go to pmesh.
-    """
-    ndim = len(basepm.Nmesh)
-    real = basepm.create('real')
-
-    _shift = numpy.zeros(ndim, dtype)
-    _shift[:] = shift
-    # one particle per base mesh point
-    source = numpy.zeros((real.size, ndim), dtype=dtype)
-
-    for d in range(len(real.shape)):
-        real[...] = 0
-        for xi, slab in zip(real.slabs.i, real.slabs):
-            slab[...] = (xi[d] + 1.0 * _shift[d]) * (real.BoxSize[d] / real.Nmesh[d])
-        source[..., d] = real.value.flat
-    return source
-
 def nyquist_mask(factor, v):
     # any nyquist modes are set to 0 if the transfer function is complex
     mask = (numpy.imag(factor) == 0) | \
@@ -34,13 +14,12 @@ class ParticleMeshEngine(Engine):
     def __init__(self, pm, q=None):
         self.pm = pm
         if q is None:
-            q = create_grid(pm, dtype='f4')
+            q = pm.generate_uniform_particle_grid(shift=0.0, dtype='f4')
         self.q = q
 
     def get_x(self, s):
-        x = numpy.float64(self.q)
-        x[...] += s
-        return x
+        x = numpy.array(self.q, dtype='f8')
+        return x + s
 
     @statement(aout=['real'], ain=['complex'])
     def c2r(engine, real, complex):
@@ -52,7 +31,7 @@ class ParticleMeshEngine(Engine):
 
     @c2r.defjvp
     def _(engine, real_, complex_):
-        real_[...] = complex_.r2c()
+        real_[...] = complex_.c2r()
 
     @statement(aout=['complex'], ain=['real'])
     def r2c(engine, complex, real):
@@ -79,27 +58,27 @@ class ParticleMeshEngine(Engine):
         pass # XXX: is this correct?
 
     @staticmethod
-    def _resample_filter(k, v, Neff):
+    def _lowpass_filter(k, v, Neff):
         k0s = 2 * numpy.pi / v.BoxSize
         mask = numpy.bitwise_and.reduce([abs(ki) <= Neff//2 * k0 for ki, k0 in zip(k, k0s)])
         return v * mask
 
-    @statement(aout=['mesh'], ain=['mesh'])
-    def resample(engine, mesh, Neff):
-        mesh.r2c(out=Ellipsis).apply(
-            lambda k, v: engine._resample_filter(k, v, Neff),
+    @statement(aout=['real'], ain=['real'])
+    def lowpass(engine, real, Neff):
+        real.r2c(out=Ellipsis).apply(
+            lambda k, v: engine._lowpass_filter(k, v, Neff),
             out=Ellipsis).c2r(out=Ellipsis)
 
-    @resample.defvjp
-    def _(engine, _mesh, Neff):
-        _mesh.c2r_vjp().apply(
-            lambda k, v: engine._resample_filter(k, v, Neff),
+    @lowpass.defvjp
+    def _(engine, _real, Neff):
+        _real.c2r_vjp().apply(
+            lambda k, v: engine._lowpass_filter(k, v, Neff),
             out=Ellipsis).r2c_vjp(out=Ellipsis)
 
-    @resample.defjvp
-    def _(engine, mesh_, Neff):
-        mesh_.r2c().apply(
-            lambda k, v: engine._resample_filter(k, v, Neff),
+    @lowpass.defjvp
+    def _(engine, real_, Neff):
+        real_.r2c().apply(
+            lambda k, v: engine._lowpass_filter(k, v, Neff),
             out=Ellipsis).c2r(out=Ellipsis)
 
     @statement(aout=['layout'], ain=['s'])
@@ -212,8 +191,9 @@ class ParticleMeshEngine(Engine):
         _x[...] = _y
 
     @assign.defjvp
-    def _(engine, y_, x_):
-        y_[...] = x_.copy()
+    def _(engine, y_, x_, x):
+        y_[...] = x.copy()
+        y_[...][...] = x_
 
     @statement(ain=['x1', 'x2'], aout=['y'])
     def add(engine, x1, x2, y):
@@ -263,7 +243,7 @@ class ParticleMeshEngine(Engine):
         else:
             y_[...] = engine.pm.comm.allreduce((x * x_).sum(dtype='f8')) * 2
 
-def check_grad(code, yname, xname, init, eps, rtol, verbose=False):
+def check_grad(code, yname, xname, init, eps, rtol, atol=1e-12, verbose=False):
     from numpy.testing import assert_allclose
     engine = code.engine
     comm = engine.pm.comm
@@ -316,8 +296,8 @@ def check_grad(code, yname, xname, init, eps, rtol, verbose=False):
 
     center = init[xname]
     init2 = init.copy()
-    poor_ng_bg = []
-    poor_fg_bg = []
+    ng_bg = []
+    fg_bg = []
     for index in numpy.ndindex(*cshape):
         x1 = cperturb(center, index, eps)
         x0 = cperturb(center, index, -eps)
@@ -334,17 +314,31 @@ def check_grad(code, yname, xname, init, eps, rtol, verbose=False):
         if verbose:
             print(index, (x1 - x0)[...].max(), y, y1 - y0, y_, cget(_x, index) * 2 * eps)
 
-        if not numpy.allclose(y_, cget(_x, index) * 2 * eps, rtol=rtol):
-            poor_fg_bg.append([index, y_, cget(_x, index) * 2 * eps])
+        fg_bg.append([index, y_, cget(_x, index) * 2 * eps])
 
-        if not numpy.allclose(y1 - y0, cget(_x, index) * 2 * eps, rtol=rtol):
-            poor_ng_bg.append([index, y1 - y0, cget(_x, index) * 2 * eps])
+        ng_bg.append([index, y1 - y0, cget(_x, index) * 2 * eps])
 
-    if len(poor_ng_bg) != 0:
-        print('\n'.join(['%s' % a for a in poor_ng_bg]))
-        raise AssertionError("gradient of %d / %d parameters are bad." % (len(poor_ng_bg), numpy.prod(cshape)))
+    fg_bg = numpy.array(fg_bg, dtype='O')
+    ng_bg = numpy.array(ng_bg, dtype='O')
 
-    if len(poor_fg_bg) != 0:
-        print('\n'.join(['%s' % a for a in poor_fg_bg]))
-        raise AssertionError("gradient of %d / %d parameters are bad." % (len(poor_fg_bg), numpy.prod(cshape)))
+    def errorstat(stat, rtol, atol):
+        g1 = numpy.array([a[1] for a in stat])
+        g2 = numpy.array([a[2] for a in stat])
+
+        ag1 = abs(g1) + (abs(g1) == 0) * numpy.std(g1)
+        ag2 = abs(g2) + (abs(g2) == 0) * numpy.std(g2)
+        sig = (g1 - g2) / ((ag1 + ag2) * rtol + atol)
+        bins = [-100, -50, -20, -1, 1, 20, 50, 100]
+        d = numpy.digitize(sig, bins)
+        return d
+
+    d1 = errorstat(fg_bg, rtol, atol)
+
+    d2 = errorstat(ng_bg, rtol * 10000, atol)
+
+    if (d1 != 4).any():
+        raise AssertionError("FG_BG Bad gradients: %s " % numpy.bincount(d1))
+
+    if (d2 != 4).any():
+        raise AssertionError("NG_BG Bad gradients: %s " % numpy.bincount(d2))
 

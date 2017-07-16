@@ -35,6 +35,13 @@ def test_compute():
     assert_allclose(norm, field.cnorm() * 4)
 
 @skipif(not has_abopt)
+def test_vs():
+    engine = ParticleMeshEngine(pm)
+    field = pm.generate_whitenoise(seed=1234)
+    a = engine.vs.zeros_like(field)
+    assert_allclose(a, 0)
+
+@skipif(not has_abopt)
 def test_vjp():
     def transfer(k):
         k2 = sum(ki **2 for ki in k)

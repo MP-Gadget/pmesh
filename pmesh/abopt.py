@@ -2,7 +2,17 @@ from __future__ import absolute_import
 
 import numpy
 from abopt.vmad2 import ZERO, Engine, statement, programme, CodeSegment, Literal
+from abopt.abopt2 import VectorSpace
 from pmesh.pm import ParticleMesh, RealField, ComplexField
+
+def addmul(a, b, c, p=1):
+    b = b.copy()
+    r = b
+    if hasattr(a, 'plain'): a = a.plain
+    if hasattr(b, 'plain'): b = b.plain
+    if hasattr(c, 'plain'): c = c.plain
+    b[...] = a + b * c ** p
+    return r
 
 def nyquist_mask(factor, v):
     # any nyquist modes are set to 0 if the transfer function is complex
@@ -10,12 +20,50 @@ def nyquist_mask(factor, v):
             ~numpy.bitwise_and.reduce([(ii == 0) | (ii == ni // 2) for ii, ni in zip(v.i, v.Nmesh)])
     return factor * mask
 
+class ParticleMeshVectorSpace(VectorSpace):
+    def __init__(self, pm, q):
+        self.qshape = q.shape
+        self.pm = pm
+
+    def addmul(self, a, b, c, p=1):
+        if isinstance(b, RealField):
+            r = b.copy()
+            r[...] = a + b * c ** p
+            return r
+        elif isinstance(b, ComplexField):
+            r = b.copy()
+            if isinstance(c, ComplexField):
+                c = c.plain
+            r.plain[...] = a + b.plain * c ** p
+            return r
+        elif isinstance(b, numpy.ndarray):
+            assert len(b) == self.qshape[0]
+            return a + b * c ** p
+        else:
+            raise TypeError("type unknown")
+
+    def dot(self, a, b):
+        if type(a) != type(b):
+            raise TypeError("type mismatch")
+
+        if isinstance(a, RealField):
+            return a.cdot(b)
+        elif isinstance(a, ComplexField):
+            return a.cdot(b)
+        elif isinstance(a, numpy.ndarray):
+            assert len(a) == len(b)
+            assert len(a) == self.qshape[0]
+            return self.pm.comm.allreduce(a.dot(b))
+        else:
+            raise TypeError("type unknown")
+
 class ParticleMeshEngine(Engine):
     def __init__(self, pm, q=None):
         self.pm = pm
         if q is None:
             q = pm.generate_uniform_particle_grid(shift=0.0, dtype='f4')
         self.q = q
+        self.vs = ParticleMeshVectorSpace(self.pm, self.q)
 
     def get_x(self, s):
         x = numpy.array(self.q, dtype='f8')

@@ -91,6 +91,13 @@ class ResampleWindow(_ResampleWindow):
 
         mass = _mkarr(mass, len(pos), mass.dtype)
 
+        # workaround https://github.com/cython/cython/issues/1605
+
+        if not pos.flags.writeable:
+            pos = pos.copy()
+        if not mass.flags.writeable:
+            mass = mass.copy()
+
         _ResampleWindow.paint(self, real, pos, mass, order, transform.scale, transform.translate, transform.period)
 
     def readout(self, real, pos, out=None, diffdir=None, transform=None):
@@ -128,6 +135,11 @@ class ResampleWindow(_ResampleWindow):
         pos = numpy.asfarray(pos)
         if out is None:
             out = numpy.zeros(pos.shape[:-1], dtype='f8')
+
+        # workaround https://github.com/cython/cython/issues/1605
+
+        if not pos.flags.writeable:
+            pos = pos.copy()
 
         _ResampleWindow.readout(self, real, pos, out, order, transform.scale, transform.translate, transform.period)
 

@@ -34,6 +34,8 @@ class ParticleMeshVectorSpace(VectorSpace):
             r = b.copy()
             if isinstance(c, ComplexField):
                 c = c.plain
+            if isinstance(a, ComplexField):
+                a = a.plain
             r.plain[...] = a + b.plain * c ** p
             return r
         elif isinstance(b, numpy.ndarray):

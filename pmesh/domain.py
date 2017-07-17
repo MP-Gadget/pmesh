@@ -1,7 +1,21 @@
 """
-   Domain Decomposition in Gaepsi
+    Domain Decomposition in Gaepsi
 
     currently we have a GridND decomposition algorithm.
+
+    A few concepts:
+
+    - `local` and `ghost`. A data entry is local if
+      it is stored on the current rank. A data entry is ghost
+      if it is stored on another rank. 
+
+    - `primary` and `padding`. A spatial position is
+      primary if it is within the spatial boundary the current rank.
+      If it is not, then it is in the `padding` region, which is
+      determined by the `smoothing` parameter of decompose. If it
+      is further out, there must have been an error.
+
+    `local` and `primary` are not necessarily the same set of entries.
 
 """
 from mpi4py import MPI
@@ -146,11 +160,13 @@ class Layout(object):
             data for each received particles. 
             
         mode    : string 'sum', 'any', 'mean', 'all', 'local', or any numpy ufunc.
-            :code:`all` is to return all ghosts without any reduction
-            :code:`sum` is to add the ghosts together
-            :code:`local` is to remove all nonlocal ghosts
-            :code:`any` is to pick value of any ghosts
-            :code:`mean` is to use the mean of all ghosts
+            :code:`'all'` is to return all results, local and ghosts, without any reduction
+            :code:`'sum'` is to reduce the ghosts to the local with sum.
+            :code:`'local'` is to remove ghosts, keeping only local
+            :code:`'any'` is to reduce the ghosts to the local, by using any one local or ghost
+            :code:`'mean'` is to reduce the ghosts, to use the mean (sum divided by the total number)
+            any :code:`numpy.ufunc` is to reduce the ghosts, with the ufunc.
+            `'sum'` is equivalent to `numpy.ufunc.add`
 
         out : array_like or None
             stores the result of the gather operation.
@@ -161,7 +177,7 @@ class Layout(object):
             gathered data. It is of the same length and ordering of the original
             positions used in :py:meth:`domain.decompose`. When mode is 'all', 
             all gathered particles (corresponding to self.indices) are returned.
-        
+
         """
         # lets check the data type first
         data = promote(data, self.comm)

@@ -122,6 +122,7 @@ class Layout(object):
         # this is to avoid 2GB limit from bytes.
         duplicity = numpy.product(numpy.array(data.shape[1:], 'intp')) 
         itemsize = duplicity * data.dtype.itemsize
+
         dt = MPI.BYTE.Create_contiguous(itemsize)
         dt.Commit()
         dtype = numpy.dtype((data.dtype, data.shape[1:]))
@@ -308,14 +309,59 @@ class GridND(object):
         self.comm = comm
         assert comm.size >= numpy.product(self.shape)
 
-        # the following variables are not always defined if there are
-        # more ranks than domains.
+        # the primary region is empty for the extra tranks if there are more ranks than domains;
+        # in which case we set the primary_region to None.
 
-        #rank = numpy.unravel_index(self.comm.rank, self.shape)
+        try:
+            rank_index = numpy.unravel_index(self.comm.rank, self.shape, order='C')
+            primary_region = {}
+            primary_region['start'] = numpy.array([g[r] for g, r in zip(edges, rank_index)])
+            primary_region['end']   = numpy.array([g[r + 1] for g, r in zip(edges, rank_index)])
+        except:
+            primary_region = None
 
-        #self.myrank = numpy.array(rank)
-        #self.mystart = numpy.array([g[r] for g, r in zip(edges, rank)])
-        #self.myend = numpy.array([g[r + 1] for g, r in zip(edges, rank)])
+        self.primary_region = primary_region
+
+    def isprimary(self, pos, transform=None):
+        """
+        Returns a boolean, True if the position falls into the primary region
+            of the current rank.
+
+        Parameters
+        ----------
+        pos       :  array_like (, ndim)
+            position of particles, ndim can be more than the dimenions
+            of the domains, in which case only the first few directions are used.
+
+        Returns
+        -------
+        isprimary:  array_like, boolean.  Whether the position falls into
+            the primary region of the rank.
+
+        """
+
+        if self.primary_region is None:
+            return numpy.zeros(len(pos), dtype='?')
+
+        if transform is None:
+            transform = lambda x: x
+
+        r = numpy.empty(len(pos), dtype='?')
+
+        x0 = self.primary_region['start']
+        x1 = self.primary_region['end']
+
+        BoxSize = numpy.array([self.edges[j][-1] for j in range(self.ndim)])
+        chunksize = 1024 * 48
+
+        for i in range(0, len(pos), chunksize):
+            s = slice(i, i + chunksize)
+            chunk = transform(pos[s])[..., :self.ndim]
+            if self.periodic:
+                chunk = numpy.remainder(chunk,  BoxSize)
+            r[s] = ((chunk >= x0) & (chunk < x1)).all(axis=-1)
+
+        return r
 
     def decompose(self, pos, smoothing=0, transform=None):
         """ 

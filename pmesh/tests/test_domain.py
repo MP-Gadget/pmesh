@@ -153,3 +153,25 @@ def test_exchange_smooth(comm):
     assert_array_equal(npos[0], [[0, 0], [0, 1], [1, 0], [1, 1]])
     assert_array_equal(npos[1], [[0, 0], [0, 1], [1, 0], [1, 1]])
 
+@MPITest(commsize=2)
+def test_isprimary(comm):
+    DomainGrid = [[0, 1, 2], [0, 2]]
+
+    dcop = domain.GridND(DomainGrid, 
+            comm=comm,
+            periodic=True)
+
+    if comm.rank == 0:
+        pos = numpy.array(list(numpy.ndindex((6, 6, 1))), dtype='f8')
+        pos -= 2
+    else:
+        pos = numpy.empty((0, 3), dtype='f8')
+
+    layout = dcop.decompose(pos, smoothing=1.5)
+    npos = layout.exchange(pos)
+
+    isprimary = dcop.isprimary(npos)
+#    print('-----', comm.rank, isprimary, npos[isprimary], npos[~isprimary], dcop.primary_region)
+    assert comm.allreduce(isprimary.sum()) == comm.allreduce(len(pos))
+
+

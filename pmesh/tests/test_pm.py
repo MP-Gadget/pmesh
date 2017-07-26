@@ -32,6 +32,15 @@ def test_1d(comm):
     complex = pm.generate_whitenoise(seed=123, mode='complex')
     assert_array_equal(real, complex.c2r())
 
+@MPITest(commsize=(4,))
+@skipif(True, "2d on 2d is not supported")
+def test_2d_2d(comm):
+    import pfft
+    pm = ParticleMesh(BoxSize=8.0, Nmesh=[8, 8], np=pfft.split_size_2d(comm.size), comm=comm, dtype='f8')
+    real = pm.generate_whitenoise(seed=123, mode='real')
+    complex = pm.generate_whitenoise(seed=123, mode='complex')
+    assert_array_equal(real, complex.c2r())
+
 @MPITest(commsize=(1,4))
 def test_fft(comm):
     pm = ParticleMesh(BoxSize=8.0, Nmesh=[8, 8], comm=comm, dtype='f8')

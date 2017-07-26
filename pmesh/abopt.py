@@ -5,15 +5,6 @@ from abopt.vmad2 import ZERO, Engine, statement, programme, CodeSegment, Literal
 from abopt.abopt2 import VectorSpace
 from pmesh.pm import ParticleMesh, RealField, ComplexField
 
-def addmul(a, b, c, p=1):
-    b = b.copy()
-    r = b
-    if hasattr(a, 'plain'): a = a.plain
-    if hasattr(b, 'plain'): b = b.plain
-    if hasattr(c, 'plain'): c = c.plain
-    b[...] = a + b * c ** p
-    return r
-
 def nyquist_mask(factor, v):
     # any nyquist modes are set to 0 if the transfer function is complex
     mask = (numpy.imag(factor) == 0) | \
@@ -38,6 +29,8 @@ class ParticleMeshVectorSpace(VectorSpace):
                 a = a.plain
             r.plain[...] = a + b.plain * c ** p
             return r
+        elif numpy.isscalar(b):
+            return a + b * c ** p
         elif isinstance(b, numpy.ndarray):
             assert len(b) == self.qshape[0]
             return a + b * c ** p

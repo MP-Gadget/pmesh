@@ -166,7 +166,7 @@ class Field(object):
         self.size = self.value.size
         self.dtype = self.value.dtype
 
-        # the slices in the full array 
+        # the slices in the full array
         self.slices = tuple([
                 slice(s, s + n)
                 for s, n in zip(self.start, self.shape)
@@ -193,7 +193,7 @@ class Field(object):
             return value, tuple(list(index1 - self.start) + list(index[self.ndim:]))
         else:
             return value, None
-        
+
     def cgetitem(self, index):
         """ get a value from absolute index collectively.
         """
@@ -211,7 +211,7 @@ class Field(object):
             Returns the actually value that is set.
 
         """
-        
+
         index = numpy.array(index, copy=True)
         value, localindex = self._ctol(index)
         if isinstance(self, ComplexField):
@@ -327,7 +327,7 @@ class Field(object):
             flatiter = flatiter.flat
 
         assert isinstance(flatiter, numpy.flatiter)
-        assert len(flatiter) == self.size
+        assert self.pm.comm.allreduce(len(flatiter)) == self.csize
 
         if self.pm.comm.size > 1:
             ind = numpy.ravel_multi_index(numpy.mgrid[self.slices], self.cshape)
@@ -400,7 +400,7 @@ class Field(object):
                  [(n - ii) % n == ii
                     for ii, n in zip(i, complex.Nmesh)])
             slab.imag[mask] = 0
-            
+
             # remove the nyquist of the output
             # FIXME: the nyquist is messy due to hermitian constraints
             # let's do not touch them till we know they are important.
@@ -468,7 +468,7 @@ class RealField(Field):
         Field.__init__(self, pm, base)
 
     def r2c(self, out=None):
-        """ 
+        """
         Perform real to complex transformation.
 
         """
@@ -502,7 +502,7 @@ class RealField(Field):
         return self.csum() / self.csize
 
     def readout(self, pos, out=None, resampler=None, transform=None, gradient=None, layout=None):
-        """ 
+        """
         Read out from real field at positions
 
         Parameters
@@ -664,7 +664,7 @@ class ComplexField(Field):
 
             .. math ::
 
-                \sum_{m \in M} (self[m] * conjugate(other[m]) 
+                \sum_{m \in M} (self[m] * conjugate(other[m])
                             +   conjugate(self[m]) * other[m])
                              *  0.5  metric(k[m])
         """
@@ -882,7 +882,7 @@ class ParticleMesh(object):
     ----------
     np      : array_like (npx, npy)
         The shape of the process mesh. This is the number of domains per direction.
-        The product of the items shall equal to the size of communicator. 
+        The product of the items shall equal to the size of communicator.
         For example, for 64 rank job, np = (8, 8) is a good choice.
         Since for now only 3d simulations are supported, np must be of length-2.
         The default is try to split the total number of ranks equally. (eg, for
@@ -967,14 +967,14 @@ class ParticleMesh(object):
                 bufferin, bufferout, forward,
                 plan_method | pfft.Flags.PFFT_TRANSPOSED_OUT | pfft.Flags.PFFT_TUNE | pfft.Flags.PFFT_PADDED_R2C)
         self.backward = pfft.Plan(self.partition, pfft.Direction.PFFT_BACKWARD,
-                bufferout, bufferin, backward, 
+                bufferout, bufferin, backward,
                 plan_method | pfft.Flags.PFFT_TRANSPOSED_IN | pfft.Flags.PFFT_TUNE | pfft.Flags.PFFT_PADDED_C2R)
 
         self.ipforward = pfft.Plan(self.partition, pfft.Direction.PFFT_FORWARD,
                 bufferin, bufferin, forward,
                 plan_method | pfft.Flags.PFFT_TRANSPOSED_OUT | pfft.Flags.PFFT_TUNE | pfft.Flags.PFFT_PADDED_R2C)
         self.ipbackward = pfft.Plan(self.partition, pfft.Direction.PFFT_BACKWARD,
-                bufferout, bufferout, backward, 
+                bufferout, bufferout, backward,
                 plan_method | pfft.Flags.PFFT_TRANSPOSED_IN | pfft.Flags.PFFT_TUNE | pfft.Flags.PFFT_PADDED_C2R)
 
         self.domain = domain.GridND(self.partition.i_edges, comm=self.comm)
@@ -995,8 +995,8 @@ class ParticleMesh(object):
             i_indi = numpy.arange(t[d], dtype='intp') + self.partition.local_i_start[d]
             o_indi = numpy.arange(s[d], dtype='intp') + self.partition.local_o_start[d]
 
-            wi = numpy.arange(s[d], dtype='f4') + self.partition.local_o_start[d] 
-            ri = numpy.arange(t[d], dtype='f4') + self.partition.local_i_start[d] 
+            wi = numpy.arange(s[d], dtype='f4') + self.partition.local_o_start[d]
+            ri = numpy.arange(t[d], dtype='f4') + self.partition.local_i_start[d]
 
             wi[wi >= self.Nmesh[d] // 2] -= self.Nmesh[d]
             ri[ri >= self.Nmesh[d] // 2] -= self.Nmesh[d]
@@ -1120,7 +1120,7 @@ class ParticleMesh(object):
         return source
 
     def decompose(self, pos, smoothing=None):
-        """ 
+        """
         Create a domain decompose layout for particles at given
         coordinates.
 
@@ -1157,17 +1157,17 @@ class ParticleMesh(object):
                 transform=transform0)
 
     def paint(self, pos, mass=1.0, resampler=None, transform=None, hold=False, gradient=None, layout=None, out=None):
-        """ 
-        Paint particles into the internal real canvas. 
+        """
+        Paint particles into the internal real canvas.
 
         Transform the particle field given by pos and mass
         to the overdensity field in fourier space and save
-        it in the internal storage. 
+        it in the internal storage.
         A multi-linear CIC approximation scheme is used.
 
-        The function can be called multiple times: 
+        The function can be called multiple times:
         the result is cummulative. In a multi-step simulation where
-        :py:class:`ParticleMesh` object is reused,  before calling 
+        :py:class:`ParticleMesh` object is reused,  before calling
         :py:meth:`paint`, make sure the canvas is cleared with :py:meth:`clear`.
 
         Parameters

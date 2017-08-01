@@ -219,6 +219,21 @@ pmesh_painter_init(PMeshPainter * painter)
             painter->diff = _lanczos3_diff;
             painter->nativesupport = _lanczos3_nativesupport;
         break;
+        case PMESH_PAINTER_LANCZOS4:
+            painter->kernel = _lanczos4_kernel;
+            painter->diff = _lanczos4_diff;
+            painter->nativesupport = _lanczos4_nativesupport;
+        break;
+        case PMESH_PAINTER_LANCZOS5:
+            painter->kernel = _lanczos5_kernel;
+            painter->diff = _lanczos5_diff;
+            painter->nativesupport = _lanczos5_nativesupport;
+        break;
+        case PMESH_PAINTER_LANCZOS6:
+            painter->kernel = _lanczos6_kernel;
+            painter->diff = _lanczos6_diff;
+            painter->nativesupport = _lanczos6_nativesupport;
+        break;
         case PMESH_PAINTER_DB6:
             painter->kernel = _db6_kernel;
             painter->diff = _db6_diff;

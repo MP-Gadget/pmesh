@@ -18,6 +18,9 @@ cdef extern from "_window_imp.h":
         PMESH_PAINTER_CUBIC
         PMESH_PAINTER_LANCZOS2
         PMESH_PAINTER_LANCZOS3
+        PMESH_PAINTER_LANCZOS4
+        PMESH_PAINTER_LANCZOS5
+        PMESH_PAINTER_LANCZOS6
         PMESH_PAINTER_QUADRATIC
         PMESH_PAINTER_DB6
         PMESH_PAINTER_DB12
@@ -59,6 +62,9 @@ cdef class ResampleWindow(object):
                 'quadratic' : PMESH_PAINTER_QUADRATIC,
                 'lanczos2' : PMESH_PAINTER_LANCZOS2,
                 'lanczos3' : PMESH_PAINTER_LANCZOS3,
+                'lanczos4' : PMESH_PAINTER_LANCZOS4,
+                'lanczos5' : PMESH_PAINTER_LANCZOS5,
+                'lanczos6' : PMESH_PAINTER_LANCZOS6,
                 'db6' : PMESH_PAINTER_DB6,
                 'db12' : PMESH_PAINTER_DB12,
                 'db20' : PMESH_PAINTER_DB20,

@@ -10,12 +10,14 @@
 #include "_window_lanczos.h"
 
 static void
-_fill_k(PMeshPainter * painter, double pos[], int ipos[], double k[][64])
+_fill_k(PMeshPainter * painter, double pos[], int ipos[], double * k)
 {
     double gpos[painter->ndim];
     int d;
 
     for(d = 0; d < painter->ndim; d++) {
+        double * kd = &k[painter->support * d];
+
         gpos[d] = pos[d] * painter->scale[d] + painter->translate[d];
         ipos[d] = floor(gpos[d] + painter->shift) - painter->left;
         double dx = gpos[d] - ipos[d]; /* relative to the left most nonzero.*/
@@ -23,9 +25,9 @@ _fill_k(PMeshPainter * painter, double pos[], int ipos[], double k[][64])
         for(i = 0; i < painter->support; i ++) {
             double x = (dx - i) * painter->vfactor;
             if(painter->order[d] == 0) {
-                k[d][i] = painter->kernel(x) * painter->vfactor;
+                kd[i] = painter->kernel(x) * painter->vfactor;
             } else {
-                k[d][i] = painter->diff(x) * painter->scale[d] * painter->vfactor * painter->vfactor;
+                kd[i] = painter->diff(x) * painter->scale[d] * painter->vfactor * painter->vfactor;
             }
         }
         /* Watch out: do not renormalize per particle */

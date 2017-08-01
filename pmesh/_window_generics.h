@@ -3,7 +3,7 @@ mkname(_generic_paint) (PMeshPainter * painter, double pos[], double weight)
 {
     int ipos[painter->ndim];
     /* the max support is 32 */
-    double k[painter->ndim][64];
+    double k[painter->ndim * painter->support];
 
     char * canvas = (char*) painter->canvas;
 
@@ -19,9 +19,10 @@ mkname(_generic_paint) (PMeshPainter * painter, double pos[], double weight)
         ptrdiff_t ind = 0;
         int d;
         for(d = 0; d < painter->ndim; d++) {
+            double * kd = &k[painter->support * d];
             int r = rel[d];
             int targetpos = ipos[d] + r;
-            kernel *= k[d][r];
+            kernel *= kd[r];
             if(painter->Nmesh[d] > 0) {
                 while(targetpos >= painter->Nmesh[d]) {
                     targetpos -= painter->Nmesh[d];
@@ -58,7 +59,7 @@ mkname(_generic_readout) (PMeshPainter * painter, double pos[])
 {
     double value = 0;
     int ipos[painter->ndim];
-    double k[painter->ndim][64];
+    double k[painter->ndim * painter->support];
 
     char * canvas = (char*) painter->canvas;
 
@@ -74,9 +75,10 @@ mkname(_generic_readout) (PMeshPainter * painter, double pos[])
         ptrdiff_t ind = 0;
         int d;
         for(d = 0; d < painter->ndim; d++) {
+            double * kd = &k[painter->support * d];
             int r = rel[d];
 
-            kernel *= k[d][r];
+            kernel *= kd[r];
 
             int targetpos = ipos[d] + r;
 

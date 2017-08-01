@@ -52,6 +52,10 @@ class ResampleWindow(_ResampleWindow):
     def __init__(self, kind, support=-1):
         _ResampleWindow.__init__(self, kind, support)
 
+    def resize(self, support):
+        """ Change the support of the window, returning a new window. """
+        return ResampleWindow(self.kind, support)
+
     def paint(self, real, pos, mass=None, diffdir=None, transform=None):
         """
             paint to a field.

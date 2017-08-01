@@ -81,7 +81,9 @@ cdef class ResampleWindow(object):
         self.painter.canvas_dtype_elsize = 0
 
         pmesh_painter_init(self.painter)
+
         self.support = self.painter.support
+        self.kind = kind
 
     def paint(self, numpy.ndarray real, postype [:, :] pos, masstype [:] mass, order,
         double [:] scale, double [:] translate, ptrdiff_t [:] period):

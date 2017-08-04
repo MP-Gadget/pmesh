@@ -1296,27 +1296,52 @@ class ParticleMesh(object):
 
         return out_pos, out_mass
 
-    def upsample(self, source, resampler=None):
+    def upsample(self, source, resampler=None, keep_mean=False):
         """ Resample an image with the upsample method.
 
             Upsampling reads out the value of image at the pixel positions of the pm.
+
+            Parameters
+            ----------
+            source : RealField
+                the source image
+            keep_mean : bool
+                if True, conserves the mean rather than the total mass in the overlapped region.
+
+            Returns
+            -------
+            A new RealField.
         """
         assert isinstance(source, RealField)
 
         q = self.generate_uniform_particle_grid(shift=0)
         layout = source.pm.decompose(q, smoothing=resampler)
         v = source.readout(q, resampler=resampler, layout=layout)
-        v *= (source.pm.Nmesh.prod() / source.pm.BoxSize.prod()) / (self.Nmesh.prod() / self.BoxSize.prod())
+        if not keep_mean:
+            v *= (source.pm.Nmesh.prod() / source.pm.BoxSize.prod()) / (self.Nmesh.prod() / self.BoxSize.prod())
         return self.paint(q, v, resampler='nearest') # because all are on the grid. NGB is actually better
 
-    def downsample(self, source, resampler=None):
+    def downsample(self, source, resampler=None, keep_mean=False):
         """ Resample an image with the downsample method.
 
             Downsampling paints the value of image at the pixel positions source.
+
+            Parameters
+            ----------
+            source : RealField
+                the source image
+            keep_mean : bool
+                if True, conserves the mean rather than the total mass in the overlapped region.
+
+            Returns
+            -------
+            A new RealField.
         """
         assert isinstance(source, RealField)
 
         q = source.pm.generate_uniform_particle_grid(shift=0)
         v = source.readout(q, resampler='nearest')
+        if keep_mean:
+            v /= (source.pm.Nmesh.prod() / source.pm.BoxSize.prod()) / (self.Nmesh.prod() / self.BoxSize.prod())
         layout = self.decompose(q, smoothing=resampler)
         return self.paint(q, v, layout=layout, resampler=resampler)

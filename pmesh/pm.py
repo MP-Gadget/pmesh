@@ -420,10 +420,12 @@ class Field(object):
 
         return out
 
-    def preview(self, Nmesh=None, axes=None):
+    def preview(self, Nmesh=None, axes=None, resampler=None, method='downsample'):
         """ gathers the mesh into as a numpy array, with
-            (reduced resolution). The result is broadcast to
-            all ranks, so this uses Nmesh ** 3 per rank.
+            (reduced resolution).
+
+            The result is broadcast to all ranks, so this uses Nmesh.prod() per rank if all
+            axes are preserved.
 
             Parameters
             ----------
@@ -433,6 +435,9 @@ class Field(object):
                 None will not resample Nmesh.
             axes : list or None
                 list of axes to preserve.
+
+            method : string "upsample" or "downsample"
+                upsample is like subsampling (faster) when Nmesh is lower resolution
 
             Returns
             -------
@@ -444,21 +449,33 @@ class Field(object):
         if not hasattr(axes, '__iter__'): axes = (axes,)
         else: axes = list(axes)
 
-        pm = self.pm.resize(Nmesh)
+        if isinstance(self, ComplexField):
+            self = self.c2r()
 
-        out = pm.create(mode='real')
-        self.resample(out)
+        if Nmesh is not None:
+            pm = self.pm.resize(Nmesh)
+            if method == 'downsample':
+                out = pm.downsample(self, resampler=resampler, keep_mean=True)
+            elif method == 'upsample':
+                out = pm.upsample(self, resampler=resampler, keep_mean=True)
+            else:
+                raise ValueError("method can only be downsample or upsample")
+        else:
+            out = self
 
-        result = numpy.zeros([out.cshape[i] for i in axes], dtype=pm.dtype)
+        result = numpy.zeros([out.cshape[i] for i in axes], dtype=out.dtype)
         local_slice = tuple([out.slices[i] for i in axes])
+
+        # TODO: allow slicing along projected directions.
+        out = out[...]
 
         if len(axes) != self.ndim:
             removeaxes = set(range(self.ndim)) - set(axes)
             all_axes = list(axes) + list(removeaxes)
             removeaxes = tuple(range(len(all_axes) - len(removeaxes), len(all_axes)))
-            result[local_slice] += out[...].transpose(all_axes).sum(axis=removeaxes)
+            result[local_slice] += out.transpose(all_axes).sum(axis=removeaxes)
         else:
-            result[local_slice] += out[...]
+            result[local_slice] += out
 
         self.pm.comm.Allreduce(MPI.IN_PLACE, result)
         return result

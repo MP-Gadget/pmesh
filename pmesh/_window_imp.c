@@ -59,6 +59,7 @@ _fill_k(PMeshPainter * painter, double pos[], int ipos[], double * k)
 
 static double
 _nearest_kernel(double x) {
+    /* implementiong nearest in floating is poor due to round-off errors */
     if(x < 0.5 && x >= - 0.5)
         return 1.0;
     return 0;

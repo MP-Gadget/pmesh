@@ -1025,6 +1025,12 @@ class ParticleMesh(object):
                     scale=1.0 * self.Nmesh / self.BoxSize,
                     period = self.Nmesh)
 
+        # Transform from global grid unit to local grid unit.
+        self.affine_grid = Affine(self.partition.ndim,
+                    translate=-self.partition.local_i_start,
+                    scale=1.0,
+                    period = self.Nmesh)
+
         self.resampler = FindResampler(resampler)
 
     def resize(self, Nmesh):
@@ -1096,6 +1102,11 @@ class ParticleMesh(object):
         else:
             return complex.c2r(out=Ellipsis)
 
+    def mesh_coordinates(self, dtype=None):
+        coord = numpy.indices(self.partition.local_i_shape, dtype).reshape(self.ndim, -1).T
+        source = coord + self.partition.local_i_start
+        return source
+
     def generate_uniform_particle_grid(self, shift=0.5, dtype=None):
         """
             create uniform grid of particles, one per grid point on the basepm mesh
@@ -1107,19 +1118,15 @@ class ParticleMesh(object):
         _shift = numpy.zeros(self.ndim, dtype)
         _shift[:] = shift
         # one particle per base mesh point
-        source = numpy.zeros((real.size, self.ndim), dtype=dtype)
+        source = self.mesh_coordinates(dtype)
 
-        for d in range(self.ndim):
-            real[...] = 0
-            for xi, slab in zip(real.slabs.i, real.slabs):
-                slab[...] = (1.0 * xi[d] + 1.0 * _shift[d]) * (real.BoxSize[d] / real.Nmesh[d])
-            source[..., d] = real.value.flat
-
+        source[...] += _shift
+        source[...] *= self.BoxSize / self.Nmesh
         source.flags.writeable = False
 
         return source
 
-    def decompose(self, pos, smoothing=None):
+    def decompose(self, pos, smoothing=None, transform=None):
         """
         Create a domain decompose layout for particles at given
         coordinates.
@@ -1149,9 +1156,12 @@ class ParticleMesh(object):
         except TypeError:
             pass
 
+        if transform is None:
+            transform = self.affine
+
         # Transform from simulation unit to global grid unit.
         def transform0(x):
-            return self.affine.scale * x
+            return transform.scale * x
 
         return self.domain.decompose(pos, smoothing=smoothing,
                 transform=transform0)
@@ -1320,12 +1330,30 @@ class ParticleMesh(object):
         """
         assert isinstance(source, RealField)
 
-        q = self.generate_uniform_particle_grid(shift=0)
-        layout = source.pm.decompose(q, smoothing=resampler)
-        v = source.readout(q, resampler=resampler, layout=layout)
+        q = self.mesh_coordinates(dtype='i4')
+
+        # transform from my mesh to source's mesh
+        transform = Affine(self.ndim,
+                    translate=-source.pm.partition.local_i_start,
+                    scale=1.0 * source.Nmesh / self.Nmesh,
+                    period=source.Nmesh)
+
+        layout = source.pm.decompose(q, smoothing=resampler, transform=transform)
+        layout = source.pm.decompose(q, smoothing=1.6, transform=transform)
+
+        v = source.readout(q, resampler=resampler, layout=layout, transform=transform)
+
+        #q1 = layout.exchange(q)
+        #v1 = source.readout(q1, resampler=resampler, transform=transform)
+        #print(source.pm.partition.local_i_start, transform.translate)
+        #for a, b in zip(q1, v1):
+        #    if all(a == [0, 0]):
+        #        print(source.pm.partition.local_i_start, a, a * transform.scale + transform.translate, b)
         if not keep_mean:
             v *= (source.pm.Nmesh.prod() / source.pm.BoxSize.prod()) / (self.Nmesh.prod() / self.BoxSize.prod())
-        return self.paint(q, v, resampler='nearest') # because all are on the grid. NGB is actually better
+
+        # all are on the grid. NGB is faster, and no need to decompose
+        return self.paint(q, v, resampler='nearest', transform=self.affine_grid)
 
     def downsample(self, source, resampler=None, keep_mean=False):
         """ Resample an image with the downsample method.
@@ -1351,9 +1379,20 @@ class ParticleMesh(object):
         """
         assert isinstance(source, RealField)
 
-        q = source.pm.generate_uniform_particle_grid(shift=0)
-        v = source.readout(q, resampler='nearest')
+        q = source.pm.mesh_coordinates(dtype='i4')
+        v = source.readout(q, resampler='nearest', transform=source.pm.affine_grid)
+
+        # transform from ssource' mesh to my mesh
+        transform = Affine(self.ndim,
+                    translate=-self.partition.local_i_start,
+                    scale=1.0 * self.Nmesh / source.Nmesh,
+                    period=self.Nmesh)
+
         if keep_mean:
             v /= (source.pm.Nmesh.prod() / source.pm.BoxSize.prod()) / (self.Nmesh.prod() / self.BoxSize.prod())
-        layout = self.decompose(q, smoothing=resampler)
-        return self.paint(q, v, layout=layout, resampler=resampler)
+
+        layout = self.decompose(q, smoothing=resampler, transform=transform)
+        #q1 = layout.exchange(q)
+        #v1 = layout.exchange(v)
+        #print(q1, v1)
+        return self.paint(q, v, layout=layout, resampler=resampler, transform=transform)

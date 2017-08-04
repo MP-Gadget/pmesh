@@ -238,18 +238,19 @@ def test_fdownsample(comm):
 
 @MPITest(commsize=(1, 2, 3, 4))
 def test_real_resample(comm):
+    from functools import reduce
+
     pmh = ParticleMesh(BoxSize=8.0, Nmesh=[8, 8], comm=comm, dtype='f8')
     pml = ParticleMesh(BoxSize=8.0, Nmesh=[4, 4], comm=comm, dtype='f8')
 
     reall = pml.create(mode='real')
-    reall[...] = 0.0
-    reall[::2, ::2] = 1.0
+    reall.apply(lambda i, v: (i[0] % 2) * (i[1] %2 ), kind='index', out=Ellipsis)
     for resampler in ['nearest', 'cic', 'tsc', 'cubic']:
-        realh = pmh.upsample(reall, resampler=resampler)
+        realh = pmh.upsample(reall, resampler=resampler, keep_mean=False)
         reall2 = pml.downsample(realh, resampler=resampler)
+    #    print(resampler, comm.rank, comm.size, reall, realh)
         assert_almost_equal(reall.csum(), realh.csum())
         assert_almost_equal(reall.csum(), reall2.csum())
-        #assert_almost_equal(reall[...], reall2[...])
 
 @MPITest(commsize=(1, 2, 3, 4))
 def test_cmean(comm):

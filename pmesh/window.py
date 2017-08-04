@@ -157,6 +157,7 @@ def FindResampler(window):
     return window
 
 windows = dict(
+    NEAREST = ResampleWindow(kind="nearest"),
     LINEAR = ResampleWindow(kind="linear"),
     CIC = ResampleWindow(kind="tunedcic"),
     TSC = ResampleWindow(kind="tunedtsc"),

@@ -58,6 +58,19 @@ _fill_k(PMeshPainter * painter, double pos[], int ipos[], double * k)
 #undef mkname
 
 static double
+_nearest_kernel(double x) {
+    if(x < 0.5 && x >= - 0.5)
+        return 1.0;
+    return 0;
+}
+
+static double
+_nearest_diff(double x) {
+    return 0;
+}
+
+
+static double
 _linear_kernel(double x) {
     x = fabs(x);
     if(x < 1.0)
@@ -194,6 +207,11 @@ pmesh_painter_init(PMeshPainter * painter)
     }
 
     switch(painter->type) {
+        case PMESH_PAINTER_NEAREST:
+            painter->kernel = _nearest_kernel;
+            painter->diff = _nearest_diff;
+            painter->nativesupport = 1;
+        break;
         case PMESH_PAINTER_LINEAR:
             painter->kernel = _linear_kernel;
             painter->diff = _linear_diff;

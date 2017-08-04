@@ -1,7 +1,8 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-typedef enum { PMESH_PAINTER_LINEAR,
+typedef enum { PMESH_PAINTER_NEAREST,
+               PMESH_PAINTER_LINEAR,
                PMESH_PAINTER_CUBIC,
                PMESH_PAINTER_QUADRATIC,
                PMESH_PAINTER_LANCZOS2,

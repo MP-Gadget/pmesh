@@ -14,6 +14,7 @@ ctypedef fused masstype:
 cdef extern from "_window_imp.h":
 
     ctypedef enum PMeshPainterType:
+        PMESH_PAINTER_NEAREST
         PMESH_PAINTER_LINEAR
         PMESH_PAINTER_CUBIC
         PMESH_PAINTER_LANCZOS2
@@ -55,6 +56,7 @@ cdef class ResampleWindow(object):
     cdef readonly int support
     def __init__(self, kind, int support=-1):
         kinds = {
+                'nearest' : PMESH_PAINTER_NEAREST,
                 'tunedcic' : PMESH_PAINTER_TUNED_CIC,
                 'tunedtsc' : PMESH_PAINTER_TUNED_TSC,
                 'linear' : PMESH_PAINTER_LINEAR,

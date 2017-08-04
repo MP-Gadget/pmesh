@@ -1,4 +1,7 @@
-from pmesh.window import ResampleWindow, Affine, CIC, LANCZOS2, LANCZOS3, TSC, QUADRATIC, CUBIC, DB12, DB20, LINEAR
+from pmesh.window import ResampleWindow, Affine
+from pmesh.window import (CIC, LANCZOS2, LANCZOS3,
+                          TSC, QUADRATIC, CUBIC,
+                          DB12, DB20, LINEAR, NEAREST)
 
 import numpy
 from numpy.testing import assert_array_equal, assert_allclose, assert_almost_equal
@@ -165,6 +168,20 @@ def test_diff():
     assert_array_equal(real,
         [[-1, 1],
          [0, 0]])
+
+def test_nearest():
+    real = numpy.zeros((4, 4))
+    pos = [
+        [1.2, 1.2],
+    ]
+    NEAREST.paint(real, pos)
+    assert_allclose(real,
+      [[ 0 , 0,   0,  0], 
+       [ 0 , 1,   0,  0], 
+       [ 0 , 0,   0,  0], 
+       [ 0 , 0,   0,  0], 
+       ], atol=1e-5)
+    assert_array_equal(NEAREST.support, 1)
 
 def test_lanczos2():
     real = numpy.zeros((4, 4))

@@ -1358,7 +1358,7 @@ class ParticleMesh(object):
         layout = source.pm.decompose(q, smoothing=resampler, transform=transform)
         layout = source.pm.decompose(q, smoothing=1.6, transform=transform)
 
-        v = source.readout(q, resampler=resampler, layout=layout, transform=transform)
+        f = source.readout(q, resampler=resampler, layout=layout, transform=transform)
 
         #q1 = layout.exchange(q)
         #v1 = source.readout(q1, resampler=resampler, transform=transform)
@@ -1367,10 +1367,10 @@ class ParticleMesh(object):
         #    if all(a == [0, 0]):
         #        print(source.pm.partition.local_i_start, a, a * transform.scale + transform.translate, b)
         if not keep_mean:
-            v *= (source.pm.Nmesh.prod() / source.pm.BoxSize.prod()) / (self.Nmesh.prod() / self.BoxSize.prod())
+            f *= (source.pm.Nmesh.prod() / source.pm.BoxSize.prod()) / (self.Nmesh.prod() / self.BoxSize.prod())
 
         # all are on the grid. NGB is faster, and no need to decompose
-        return self.paint(q, v, resampler='nearest', transform=self.affine_grid)
+        return self.paint(q, f, resampler='nearest', transform=self.affine_grid)
 
     def downsample(self, source, resampler=None, keep_mean=False):
         """ Resample an image with the downsample method.
@@ -1397,7 +1397,7 @@ class ParticleMesh(object):
         assert isinstance(source, RealField)
 
         q = source.pm.mesh_coordinates(dtype='i4')
-        v = source.readout(q, resampler='nearest', transform=source.pm.affine_grid)
+        f = source.readout(q, resampler='nearest', transform=source.pm.affine_grid)
 
         # transform from ssource' mesh to my mesh
         transform = Affine(self.ndim,
@@ -1406,10 +1406,10 @@ class ParticleMesh(object):
                     period=self.Nmesh)
 
         if keep_mean:
-            v /= (source.pm.Nmesh.prod() / source.pm.BoxSize.prod()) / (self.Nmesh.prod() / self.BoxSize.prod())
+            f /= (source.pm.Nmesh.prod() / source.pm.BoxSize.prod()) / (self.Nmesh.prod() / self.BoxSize.prod())
 
         layout = self.decompose(q, smoothing=resampler, transform=transform)
         #q1 = layout.exchange(q)
-        #v1 = layout.exchange(v)
+        #v1 = layout.exchange(f)
         #print(q1, v1)
-        return self.paint(q, v, layout=layout, resampler=resampler, transform=transform)
+        return self.paint(q, f, layout=layout, resampler=resampler, transform=transform)

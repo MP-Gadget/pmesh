@@ -1295,3 +1295,28 @@ class ParticleMesh(object):
             v.readout(pos, out=out_mass, resampler=resampler, transform=transform, gradient=gradient, layout=layout)
 
         return out_pos, out_mass
+
+    def upsample(self, source, resampler=None):
+        """ Resample an image with the upsample method.
+
+            Upsampling reads out the value of image at the pixel positions of the pm.
+        """
+        assert isinstance(source, RealField)
+
+        q = self.generate_uniform_particle_grid(shift=0)
+        layout = source.pm.decompose(q, smoothing=resampler)
+        v = source.readout(q, resampler=resampler, layout=layout)
+        v *= (source.pm.Nmesh.prod() / source.pm.BoxSize.prod()) / (self.Nmesh.prod() / self.BoxSize.prod())
+        return self.paint(q, v, resampler='nearest') # because all are on the grid. NGB is actually better
+
+    def downsample(self, source, resampler=None):
+        """ Resample an image with the downsample method.
+
+            Downsampling paints the value of image at the pixel positions source.
+        """
+        assert isinstance(source, RealField)
+
+        q = source.pm.generate_uniform_particle_grid(shift=0)
+        v = source.readout(q, resampler='nearest')
+        layout = self.decompose(q, smoothing=resampler)
+        return self.paint(q, v, layout=layout, resampler=resampler)

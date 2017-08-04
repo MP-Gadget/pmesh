@@ -1311,6 +1311,12 @@ class ParticleMesh(object):
             Returns
             -------
             A new RealField.
+
+            Notes
+            -----
+            Note that kernels do not conserve total mass or mean exactly
+            by construction due to the sparse sampling, this is particularly bad
+            for lanzcos, db, and sym.
         """
         assert isinstance(source, RealField)
 
@@ -1336,6 +1342,12 @@ class ParticleMesh(object):
             Returns
             -------
             A new RealField.
+
+            Notes
+            -----
+            Note that kernels do not conserve total mass or mean exactly
+            by construction due to the sparse sampling, this is particularly bad
+            for lanzcos, db, and sym.
         """
         assert isinstance(source, RealField)
 

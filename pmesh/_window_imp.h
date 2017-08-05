@@ -18,6 +18,7 @@ typedef enum { PMESH_PAINTER_NEAREST,
                PMESH_PAINTER_SYM20,
                PMESH_PAINTER_TUNED_CIC,
                PMESH_PAINTER_TUNED_TSC,
+               PMESH_PAINTER_TUNED_NNB,
 } PMeshPainterType;
 
 typedef struct PMeshPainter PMeshPainter;

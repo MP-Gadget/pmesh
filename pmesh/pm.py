@@ -1370,7 +1370,7 @@ class ParticleMesh(object):
             f *= (source.pm.Nmesh.prod() / source.pm.BoxSize.prod()) / (self.Nmesh.prod() / self.BoxSize.prod())
 
         # all are on the grid. NGB is faster, and no need to decompose
-        return self.paint(q, f, resampler='nearest', transform=self.affine_grid)
+        return self.paint(q, f, resampler='nnb', transform=self.affine_grid)
 
     def downsample(self, source, resampler=None, keep_mean=False):
         """ Resample an image with the downsample method.
@@ -1397,7 +1397,7 @@ class ParticleMesh(object):
         assert isinstance(source, RealField)
 
         q = source.pm.mesh_coordinates(dtype='i4')
-        f = source.readout(q, resampler='nearest', transform=source.pm.affine_grid)
+        f = source.readout(q, resampler='nnb', transform=source.pm.affine_grid)
 
         # transform from ssource' mesh to my mesh
         transform = Affine(self.ndim,

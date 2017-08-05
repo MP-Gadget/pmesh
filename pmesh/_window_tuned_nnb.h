@@ -33,6 +33,8 @@ mkname(_nnb_tuned_paint3) (PMeshPainter * painter, double pos[], double weight)
 
     SETUP_KERNEL_NNB(3);
 
+    V0[1] *= weight;
+
     ACCESS3(_WRtPlus3, 0, 0, 0);
 }
 
@@ -55,6 +57,7 @@ mkname(_nnb_tuned_paint2) (PMeshPainter * painter, double pos[], double weight)
     FLOAT * canvas = painter->canvas;
 
     SETUP_KERNEL_NNB(2);
+    V0[1] *= weight;
 
     ACCESS2(_WRtPlus2, 0, 0);
 }

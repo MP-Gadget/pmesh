@@ -1,11 +1,15 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-typedef enum { PMESH_PAINTER_LINEAR,
+typedef enum { PMESH_PAINTER_NEAREST,
+               PMESH_PAINTER_LINEAR,
                PMESH_PAINTER_CUBIC,
                PMESH_PAINTER_QUADRATIC,
                PMESH_PAINTER_LANCZOS2,
                PMESH_PAINTER_LANCZOS3,
+               PMESH_PAINTER_LANCZOS4,
+               PMESH_PAINTER_LANCZOS5,
+               PMESH_PAINTER_LANCZOS6,
                PMESH_PAINTER_DB6,
                PMESH_PAINTER_DB12,
                PMESH_PAINTER_DB20,
@@ -14,6 +18,7 @@ typedef enum { PMESH_PAINTER_LINEAR,
                PMESH_PAINTER_SYM20,
                PMESH_PAINTER_TUNED_CIC,
                PMESH_PAINTER_TUNED_TSC,
+               PMESH_PAINTER_TUNED_NNB,
 } PMeshPainterType;
 
 typedef struct PMeshPainter PMeshPainter;

@@ -420,10 +420,12 @@ class Field(object):
 
         return out
 
-    def preview(self, Nmesh=None, axes=None):
+    def preview(self, Nmesh=None, axes=None, resampler=None, method='downsample'):
         """ gathers the mesh into as a numpy array, with
-            (reduced resolution). The result is broadcast to
-            all ranks, so this uses Nmesh ** 3 per rank.
+            (reduced resolution).
+
+            The result is broadcast to all ranks, so this uses Nmesh.prod() per rank if all
+            axes are preserved.
 
             Parameters
             ----------
@@ -433,6 +435,9 @@ class Field(object):
                 None will not resample Nmesh.
             axes : list or None
                 list of axes to preserve.
+
+            method : string "upsample" or "downsample"
+                upsample is like subsampling (faster) when Nmesh is lower resolution
 
             Returns
             -------
@@ -444,21 +449,33 @@ class Field(object):
         if not hasattr(axes, '__iter__'): axes = (axes,)
         else: axes = list(axes)
 
-        pm = self.pm.resize(Nmesh)
+        if isinstance(self, ComplexField):
+            self = self.c2r()
 
-        out = pm.create(mode='real')
-        self.resample(out)
+        if Nmesh is not None:
+            pm = self.pm.resize(Nmesh)
+            if method == 'downsample':
+                out = pm.downsample(self, resampler=resampler, keep_mean=True)
+            elif method == 'upsample':
+                out = pm.upsample(self, resampler=resampler, keep_mean=True)
+            else:
+                raise ValueError("method can only be downsample or upsample")
+        else:
+            out = self
 
-        result = numpy.zeros([out.cshape[i] for i in axes], dtype=pm.dtype)
+        result = numpy.zeros([out.cshape[i] for i in axes], dtype=out.dtype)
         local_slice = tuple([out.slices[i] for i in axes])
+
+        # TODO: allow slicing along projected directions.
+        out = out[...]
 
         if len(axes) != self.ndim:
             removeaxes = set(range(self.ndim)) - set(axes)
             all_axes = list(axes) + list(removeaxes)
             removeaxes = tuple(range(len(all_axes) - len(removeaxes), len(all_axes)))
-            result[local_slice] += out[...].transpose(all_axes).sum(axis=removeaxes)
+            result[local_slice] += out.transpose(all_axes).sum(axis=removeaxes)
         else:
-            result[local_slice] += out[...]
+            result[local_slice] += out
 
         self.pm.comm.Allreduce(MPI.IN_PLACE, result)
         return result
@@ -1025,6 +1042,12 @@ class ParticleMesh(object):
                     scale=1.0 * self.Nmesh / self.BoxSize,
                     period = self.Nmesh)
 
+        # Transform from global grid unit to local grid unit.
+        self.affine_grid = Affine(self.partition.ndim,
+                    translate=-self.partition.local_i_start,
+                    scale=1.0,
+                    period = self.Nmesh)
+
         self.resampler = FindResampler(resampler)
 
     def resize(self, Nmesh):
@@ -1096,6 +1119,11 @@ class ParticleMesh(object):
         else:
             return complex.c2r(out=Ellipsis)
 
+    def mesh_coordinates(self, dtype=None):
+        coord = numpy.indices(self.partition.local_i_shape, dtype).reshape(self.ndim, -1).T
+        source = coord + self.partition.local_i_start
+        return source
+
     def generate_uniform_particle_grid(self, shift=0.5, dtype=None):
         """
             create uniform grid of particles, one per grid point on the basepm mesh
@@ -1107,19 +1135,15 @@ class ParticleMesh(object):
         _shift = numpy.zeros(self.ndim, dtype)
         _shift[:] = shift
         # one particle per base mesh point
-        source = numpy.zeros((real.size, self.ndim), dtype=dtype)
+        source = self.mesh_coordinates(dtype)
 
-        for d in range(self.ndim):
-            real[...] = 0
-            for xi, slab in zip(real.slabs.i, real.slabs):
-                slab[...] = (1.0 * xi[d] + 1.0 * _shift[d]) * (real.BoxSize[d] / real.Nmesh[d])
-            source[..., d] = real.value.flat
-
+        source[...] += _shift
+        source[...] *= self.BoxSize / self.Nmesh
         source.flags.writeable = False
 
         return source
 
-    def decompose(self, pos, smoothing=None):
+    def decompose(self, pos, smoothing=None, transform=None):
         """
         Create a domain decompose layout for particles at given
         coordinates.
@@ -1149,9 +1173,12 @@ class ParticleMesh(object):
         except TypeError:
             pass
 
+        if transform is None:
+            transform = self.affine
+
         # Transform from simulation unit to global grid unit.
         def transform0(x):
-            return self.affine.scale * x
+            return transform.scale * x
 
         return self.domain.decompose(pos, smoothing=smoothing,
                 transform=transform0)
@@ -1295,3 +1322,98 @@ class ParticleMesh(object):
             v.readout(pos, out=out_mass, resampler=resampler, transform=transform, gradient=gradient, layout=layout)
 
         return out_pos, out_mass
+
+    def upsample(self, source, resampler=None, keep_mean=False):
+        """ Resample an image with the upsample method.
+
+            Upsampling reads out the value of image at the pixel positions of the pm.
+
+            Parameters
+            ----------
+            source : RealField
+                the source image
+            keep_mean : bool
+                if True, conserves the mean rather than the total mass in the overlapped region.
+
+            Returns
+            -------
+            A new RealField.
+
+            Notes
+            -----
+            Note that kernels do not conserve total mass or mean exactly
+            by construction due to the sparse sampling, this is particularly bad
+            for lanzcos, db, and sym.
+
+            some tests are shown in https://github.com/rainwoodman/pmesh/pull/22
+        """
+        assert isinstance(source, RealField)
+
+        q = self.mesh_coordinates(dtype='i4')
+
+        # transform from my mesh to source's mesh
+        transform = Affine(self.ndim,
+                    translate=-source.pm.partition.local_i_start,
+                    scale=1.0 * source.Nmesh / self.Nmesh,
+                    period=source.Nmesh)
+
+        layout = source.pm.decompose(q, smoothing=resampler, transform=transform)
+        layout = source.pm.decompose(q, smoothing=1.6, transform=transform)
+
+        f = source.readout(q, resampler=resampler, layout=layout, transform=transform)
+
+        #q1 = layout.exchange(q)
+        #v1 = source.readout(q1, resampler=resampler, transform=transform)
+        #print(source.pm.partition.local_i_start, transform.translate)
+        #for a, b in zip(q1, v1):
+        #    if all(a == [0, 0]):
+        #        print(source.pm.partition.local_i_start, a, a * transform.scale + transform.translate, b)
+        if not keep_mean:
+            f *= (source.pm.Nmesh.prod() / source.pm.BoxSize.prod()) / (self.Nmesh.prod() / self.BoxSize.prod())
+
+        # all are on the grid. NGB is faster, and no need to decompose
+        return self.paint(q, f, resampler='nnb', transform=self.affine_grid)
+
+    def downsample(self, source, resampler=None, keep_mean=False):
+        """ Resample an image with the downsample method.
+
+            Downsampling paints the value of image at the pixel positions source.
+
+            Parameters
+            ----------
+            source : RealField
+                the source image
+            keep_mean : bool
+                if True, conserves the mean rather than the total mass in the overlapped region.
+
+            Returns
+            -------
+            A new RealField.
+
+            Notes
+            -----
+            Note that kernels do not conserve total mass or mean exactly
+            by construction due to the sparse sampling, this is particularly bad
+            for lanzcos, db, and sym.
+
+            some tests are shown in https://github.com/rainwoodman/pmesh/pull/22
+        """
+        assert isinstance(source, RealField)
+
+        q = source.pm.mesh_coordinates(dtype='i4')
+        f = source.readout(q, resampler='nnb', transform=source.pm.affine_grid)
+
+        # transform from ssource' mesh to my mesh
+        transform = Affine(self.ndim,
+                    translate=-self.partition.local_i_start,
+                    scale=1.0 * self.Nmesh / source.Nmesh,
+                    period=self.Nmesh)
+
+        if keep_mean:
+            f /= (source.pm.Nmesh.prod() / source.pm.BoxSize.prod()) / (self.Nmesh.prod() / self.BoxSize.prod())
+
+        layout = self.decompose(q, smoothing=resampler, transform=transform)
+        #q1 = layout.exchange(q)
+        #v1 = layout.exchange(f)
+        #print(q1, v1)
+        return self.paint(q, f, layout=layout, resampler=resampler, transform=transform)

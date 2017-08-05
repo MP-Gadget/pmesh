@@ -65,3 +65,6 @@ with open('pmesh/_window_lanczos.h', 'wt') as f:
 """)
     f.write(genlanczos(2))
     f.write(genlanczos(3))
+    f.write(genlanczos(4))
+    f.write(genlanczos(5))
+    f.write(genlanczos(6))

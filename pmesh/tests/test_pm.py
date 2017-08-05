@@ -196,7 +196,8 @@ def test_sort(comm):
     assert_array_equal(conjecture, truth)
 
 @MPITest(commsize=(1, 2, 3, 4))
-def test_downsample(comm):
+def test_fdownsample(comm):
+    """ fourier space resample, deprecated """
     pm1 = ParticleMesh(BoxSize=8.0, Nmesh=[8, 8], comm=comm, dtype='f8')
     pm2 = ParticleMesh(BoxSize=8.0, Nmesh=[4, 4], comm=comm, dtype='f8')
 
@@ -236,6 +237,22 @@ def test_downsample(comm):
     assert_almost_equal(tmpr.r2c(), tmp[...])
 
 @MPITest(commsize=(1, 2, 3, 4))
+def test_real_resample(comm):
+    from functools import reduce
+
+    pmh = ParticleMesh(BoxSize=8.0, Nmesh=[8, 8], comm=comm, dtype='f8')
+    pml = ParticleMesh(BoxSize=8.0, Nmesh=[4, 4], comm=comm, dtype='f8')
+
+    reall = pml.create(mode='real')
+    reall.apply(lambda i, v: (i[0] % 2) * (i[1] %2 ), kind='index', out=Ellipsis)
+    for resampler in ['nearest', 'cic', 'tsc', 'cubic']:
+        realh = pmh.upsample(reall, resampler=resampler, keep_mean=False)
+        reall2 = pml.downsample(realh, resampler=resampler)
+    #    print(resampler, comm.rank, comm.size, reall, realh)
+        assert_almost_equal(reall.csum(), realh.csum())
+        assert_almost_equal(reall.csum(), reall2.csum())
+
+@MPITest(commsize=(1, 2, 3, 4))
 def test_cmean(comm):
     # this tests cmean (collective mean) along with resampling preseves it.
 
@@ -254,7 +271,7 @@ def test_cmean(comm):
     assert_almost_equal(real1.cmean(), real2.cmean())
 
 @MPITest(commsize=(1, 2, 3, 4))
-def test_upsample(comm):
+def test_fupsample(comm):
     pm1 = ParticleMesh(BoxSize=8.0, Nmesh=[8, 8], comm=comm, dtype='f8')
     pm2 = ParticleMesh(BoxSize=8.0, Nmesh=[4, 4], comm=comm, dtype='f8')
 

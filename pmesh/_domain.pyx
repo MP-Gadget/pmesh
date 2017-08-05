@@ -12,6 +12,7 @@ def gridnd_fill(
         int [:] adims,
         short int [:, ::1] sil,
         short int [:, ::1] sir,
+        short int [::1] domain_is_degenerate,
         int periodic,
         ):
     """ 
@@ -29,6 +30,7 @@ def gridnd_fill(
     cdef int jj
     cdef int k
     cdef int kk
+    cdef int kkk
     cdef int t
     cdef int [::1] indices = None
     cdef int Nrank
@@ -63,7 +65,9 @@ def gridnd_fill(
             p[j] = sil[j, i]
         if patchsize > target_list.shape[0]:
             target_list = numpy.empty(patchsize, 'intp')
-        for k in range(patchsize):
+
+        k = 0
+        for kkk in range(patchsize):
             target = 0
             for j in range(Ndim):
                 t = p[j]
@@ -74,19 +78,21 @@ def gridnd_fill(
                         t += dims[j]
                 target = target + t * strides[j]
 
-            # build a sorted target_list
-            # bubble sort (for patch_size is small)
-            target_list[k] = target
-            kk = k - 1
-            while kk >= 0:
-                if target_list[kk] > target_list[kk+1]:
-                    # swap
-                    target = target_list[kk+1]
-                    target_list[kk+1] = target_list[kk]
-                    target_list[kk] = target
-                    kk = kk - 1
-                else:
-                    break
+            if not domain_is_degenerate[target]:
+                # build a sorted target_list
+                # bubble sort (for patch_size is small)
+                target_list[k] = target
+                kk = k - 1
+                while kk >= 0:
+                    if target_list[kk] > target_list[kk+1]:
+                        # swap
+                        target = target_list[kk+1]
+                        target_list[kk+1] = target_list[kk]
+                        target_list[kk] = target
+                        kk = kk - 1
+                    else:
+                        break
+                k = k + 1
 
             p[Ndim - 1] += 1
             # advance
@@ -100,12 +106,12 @@ def gridnd_fill(
         # only push unique targets in the patch to
         # the result
         target = -1
-        for k in range(patchsize):
-            if target == target_list[k]:
+        for kkk in range(k):
+            if target == target_list[kkk]:
                 continue
-            if target_list[k] < target:
-                raise Exception("failed")
-            target = target_list[k]
+            if target_list[kkk] < target:
+                raise Exception("failed" + str(target_list[kkk]) + str(target))
+            target = target_list[kkk]
             if mode == 0:
                 counts[target] += 1
             else:

@@ -52,6 +52,10 @@ class ResampleWindow(_ResampleWindow):
     def __init__(self, kind, support=-1):
         _ResampleWindow.__init__(self, kind, support)
 
+    def resize(self, support):
+        """ Change the support of the window, returning a new window. """
+        return ResampleWindow(self.kind, support)
+
     def paint(self, real, pos, mass=None, diffdir=None, transform=None):
         """
             paint to a field.
@@ -153,13 +157,18 @@ def FindResampler(window):
     return window
 
 windows = dict(
+    NEAREST = ResampleWindow(kind="nearest"),
     LINEAR = ResampleWindow(kind="linear"),
+    NNB = ResampleWindow(kind="tunednnb"),
     CIC = ResampleWindow(kind="tunedcic"),
     TSC = ResampleWindow(kind="tunedtsc"),
     QUADRATIC = ResampleWindow(kind="quadratic"),
     CUBIC = ResampleWindow(kind="cubic"),
     LANCZOS2 = ResampleWindow(kind="lanczos2"),
     LANCZOS3 = ResampleWindow(kind="lanczos3"),
+    LANCZOS4 = ResampleWindow(kind="lanczos4"),
+    LANCZOS5 = ResampleWindow(kind="lanczos5"),
+    LANCZOS6 = ResampleWindow(kind="lanczos6"),
     DB6 = ResampleWindow(kind="db6"),
     DB12 = ResampleWindow(kind="db12"),
     DB20 = ResampleWindow(kind="db20"),

@@ -1344,6 +1344,8 @@ class ParticleMesh(object):
             Note that kernels do not conserve total mass or mean exactly
             by construction due to the sparse sampling, this is particularly bad
             for lanzcos, db, and sym.
+
+            some tests are shown in https://github.com/rainwoodman/pmesh/pull/22
         """
         assert isinstance(source, RealField)
 
@@ -1393,6 +1395,8 @@ class ParticleMesh(object):
             Note that kernels do not conserve total mass or mean exactly
             by construction due to the sparse sampling, this is particularly bad
             for lanzcos, db, and sym.
+
+            some tests are shown in https://github.com/rainwoodman/pmesh/pull/22
         """
         assert isinstance(source, RealField)
 

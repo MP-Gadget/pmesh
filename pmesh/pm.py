@@ -420,7 +420,7 @@ class Field(object):
 
         return out
 
-    def preview(self, Nmesh=None, axes=None, resampler=None, method='downsample'):
+    def preview(self, Nmesh=None, axes=None, resampler=None, method=None):
         """ gathers the mesh into as a numpy array, with
             (reduced resolution).
 
@@ -436,8 +436,9 @@ class Field(object):
             axes : list or None
                 list of axes to preserve.
 
-            method : string "upsample" or "downsample"
-                upsample is like subsampling (faster) when Nmesh is lower resolution
+            method : string "upsample" or "downsample", or None
+                upsample is like subsampling (faster) when Nmesh is lower resolution.
+                if None, use upsample for upsampling (Nmesh >= self.Nmesh) and downsample for down sampling.
 
             Returns
             -------
@@ -453,7 +454,14 @@ class Field(object):
             self = self.c2r()
 
         if Nmesh is not None:
+            # skip resampling if Nmesh is identical to current
+            if all(Nmesh == self.pm.Nmesh): Nmesh = None
+
+        if Nmesh is not None:
             pm = self.pm.resize(Nmesh)
+            if method is None:
+                if any(Nmesh < self.pm.Nmesh): method = 'downsample'
+                else : method = 'upsample'
             if method == 'downsample':
                 out = pm.downsample(self, resampler=resampler, keep_mean=True)
             elif method == 'upsample':

@@ -80,8 +80,9 @@ def test_paint():
     code = CodeSegment(engine)
     s = pm.BoxSize / pm.Nmesh * 0.001 + 0.99 * engine.q / pm.Nmesh # sample all positions.
 
-    code.decompose(s='s', layout='layout')
-    code.paint(s='s', mesh='density', layout='layout')
+    code.get_x(s='s', x='x')
+    code.decompose(x='x', layout='layout')
+    code.paint(x='x', mesh='density', layout='layout')
 
     check_grad(code, 'density', 's', init={'s': s}, eps=1e-4, rtol=1e-8)
 
@@ -93,8 +94,9 @@ def test_readout():
 
     field = pm.generate_whitenoise(seed=1234, mode='real')
 
-    code.decompose(s='s', layout='layout')
-    code.readout(s='s', mesh='density', layout='layout', value='value')
+    code.get_x(s='s', x='x')
+    code.decompose(x='x', layout='layout')
+    code.readout(x='x', mesh='density', layout='layout', value='value')
 
     check_grad(code, 'value', 'density', init={'density' : field, 's': s}, eps=1e-4, rtol=1e-8)
 

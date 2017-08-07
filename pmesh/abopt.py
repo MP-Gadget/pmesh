@@ -60,9 +60,11 @@ class ParticleMeshEngine(Engine):
         self.q = q
         self.vs = ParticleMeshVectorSpace(self.pm, self.q)
 
-    def get_x(self, s):
-        x = numpy.array(self.q, dtype='f8')
-        return x + s
+    @programme(ain=['s'], aout=['x'])
+    def get_x(engine, s, x):
+        code = CodeSegment(engine)
+        code.add(x1='s', x2=Literal(engine.q), y='x')
+        return code
 
     @statement(aout=['real'], ain=['complex'])
     def c2r(engine, real, complex):
@@ -124,65 +126,58 @@ class ParticleMeshEngine(Engine):
             lambda k, v: engine._lowpass_filter(k, v, Neff),
             out=Ellipsis).c2r(out=Ellipsis)
 
-    @statement(aout=['layout'], ain=['s'])
-    def decompose(engine, layout, s):
-        x = engine.get_x(s)
+    @statement(aout=['layout'], ain=['x'])
+    def decompose(engine, layout, x):
         pm = engine.pm
         layout[...] = pm.decompose(x)
 
     @decompose.defvjp
-    def _(engine, _layout, _s):
-        _s[...] = ZERO
+    def _(engine, _layout, _x):
+        _x[...] = ZERO
 
     @decompose.defjvp
-    def _(engine, layout_, s_):
+    def _(engine, layout_, x_):
         layout_[...] = ZERO
 
-    @statement(aout=['mesh'], ain=['s', 'layout'])
-    def paint(engine, s, mesh, layout):
+    @statement(aout=['mesh'], ain=['x', 'layout'])
+    def paint(engine, x, mesh, layout):
         pm = engine.pm
-        x = engine.get_x(s)
         N = pm.comm.allreduce(len(x))
         mesh[...] = pm.paint(x, layout=layout, hold=False)
         # to have 1 + \delta on the mesh
         mesh[...][...] *= 1.0 * pm.Nmesh.prod() / N
 
     @paint.defvjp
-    def _(engine, _s, _mesh, s, layout, _layout):
+    def _(engine, _x, _mesh, x, layout, _layout):
         pm = engine.pm
         _layout[...] = ZERO
-        x = engine.get_x(s)
         N = pm.comm.allreduce(len(x))
-        _s[...], junk = pm.paint_vjp(_mesh, x, layout=layout, out_mass=False)
-        _s[...][...] *= 1.0 * pm.Nmesh.prod() / N
+        _x[...], junk = pm.paint_vjp(_mesh, x, layout=layout, out_mass=False)
+        _x[...][...] *= 1.0 * pm.Nmesh.prod() / N
 
     @paint.defjvp
-    def _(engine, s_, mesh_, s, layout, layout_):
+    def _(engine, x_, mesh_, x, layout, layout_):
         pm = engine.pm
-        x = engine.get_x(s)
-        if s_ is ZERO: s_ = None
-        mesh_[...] = pm.paint_jvp(x, v_pos=s_, layout=layout)
+        if x_ is ZERO: x_ = None
+        mesh_[...] = pm.paint_jvp(x, v_pos=x_, layout=layout)
 
-    @statement(aout=['value'], ain=['s', 'mesh', 'layout'])
-    def readout(engine, value, s, mesh, layout):
+    @statement(aout=['value'], ain=['x', 'mesh', 'layout'])
+    def readout(engine, value, x, mesh, layout):
         pm = engine.pm
-        x = engine.get_x(s)
         N = pm.comm.allreduce(len(x))
         value[...] = mesh.readout(x, layout=layout)
 
     @readout.defvjp
-    def _(engine, _value, _s, _mesh, s, layout, mesh):
+    def _(engine, _value, _x, _mesh, x, layout, mesh):
         pm = engine.pm
-        x = engine.get_x(s)
-        _mesh[...], _s[...] = mesh.readout_vjp(x, _value, layout=layout)
+        _mesh[...], _x[...] = mesh.readout_vjp(x, _value, layout=layout)
 
     @readout.defjvp
-    def _(engine, value_, s_, mesh_, s, layout, mesh, layout_):
+    def _(engine, value_, x_, mesh_, x, layout, mesh, layout_):
         pm = engine.pm
-        x = engine.get_x(s)
         if mesh_ is ZERO: mesh_ = None
-        if s_ is ZERO: s_ = None
-        value_[...] = mesh.readout_jvp(x, v_self=mesh_, v_pos=s_, layout=layout)
+        if x_ is ZERO: x_ = None
+        value_[...] = mesh.readout_jvp(x, v_self=mesh_, v_pos=x_, layout=layout)
 
     @statement(aout=['complex'], ain=['complex'])
     def transfer(engine, complex, tf):

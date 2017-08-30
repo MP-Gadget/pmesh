@@ -13,6 +13,7 @@ def gridnd_fill(
         short int [:, ::1] sil,
         short int [:, ::1] sir,
         int periodic,
+        int [::1] DomainAssign,
         ):
     """ 
         fill in the counts or return the indices 
@@ -73,6 +74,7 @@ def gridnd_fill(
                     while t < 0:
                         t += dims[j]
                 target = target + t * strides[j]
+            target = DomainAssign[target]
 
             # build a sorted target_list
             # bubble sort (for patch_size is small)

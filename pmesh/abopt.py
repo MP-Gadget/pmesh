@@ -1,5 +1,9 @@
 from __future__ import absolute_import
 
+from warnings import warn
+
+warn("This module is deprecated and likely no longer maintained; a maintained version is moved to cosmo4d to minimize changes in pmesh.", DeprecationWarning)
+
 import numpy
 from abopt.vmad2 import ZERO, Engine, statement, programme, CodeSegment, Literal
 from abopt.abopt2 import VectorSpace

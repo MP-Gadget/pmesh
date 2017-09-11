@@ -51,7 +51,7 @@ mkname(_generic_fill)(PMeshWhiteNoiseGenerator * self, void * delta_k, int seed)
             /* d1, d2 points to the conjugate quandrant */
             if( (ci == i && cj < j)
              || (ci < i && cj != j)
-             || (ci > i && cj == j)) {
+             || (ci < i && cj == j)) {
                 d1 = 1;
                 d2 = 1;
             }

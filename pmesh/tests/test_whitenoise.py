@@ -23,6 +23,19 @@ def test_generate_3d():
 
     assert_array_equal(piece, truth)
 
+def test_3d_genic():
+    Nmesh = 4
+    value = numpy.zeros((Nmesh, Nmesh, Nmesh//2 + 1), dtype='complex128')
+
+    # Illustris seeds
+    generate(value, 0, (Nmesh, Nmesh, Nmesh), 5463, unitary=False)
+
+    # values from N-GenIC.
+    assert_allclose(value[0, 1, 0], (-0.040000000000000001-0.029999999999999999j), atol=0.02)
+    assert_allclose(value[1, 0, 0], (0.35999999999999999-0.78000000000000003j), atol=0.02)
+    assert_allclose(value[1, 1, 0], (-0.42999999999999999+0.33000000000000002j), atol=0.02)
+    assert_allclose(value[1, 1, 1], (-1.6499999999999999-0.64000000000000001j), atol=0.02)
+
 def test_generate_3d_hermitian():
     Nmesh = 8
     value = numpy.zeros((Nmesh, Nmesh, Nmesh//2 + 1), dtype='complex128')

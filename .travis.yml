@@ -29,7 +29,7 @@ install:
 
 script:
     - pip install runtests
-    - python runtests.py --mpirun="mpirun -np 9"
+    - python run-tests.py --mpirun="mpirun -np 9"
     - bash check_tag.sh pmesh/version.py
 
 deploy:

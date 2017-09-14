@@ -332,20 +332,20 @@ class GridND(object):
         self.edges = numpy.asarray(edges)
         self.periodic = periodic
         self.comm = comm
-        Ndomain = numpy.product(self.shape)
+        self.size = numpy.product(self.shape)
 
         if DomainAssign is None:
-            if comm.size >= Ndomain:
-                DomainAssign = numpy.array(range(Ndomain), dtype='int32')
+            if comm.size >= self.size:
+                DomainAssign = numpy.array(range(self.size), dtype='int32')
             else:
-                DomainAssign = numpy.empty(Ndomain, dtype='int32')
+                DomainAssign = numpy.empty(self.size, dtype='int32')
                 for i in range(comm.size):
-                    start = i * Ndomain // comm.size
-                    end = (i + 1) * Ndomain // comm.size
+                    start = i * self.size // comm.size
+                    end = (i + 1) * self.size // comm.size
                     DomainAssign[start:end] = i
 
         self.DomainAssign = DomainAssign
-        self.Ndomain = Ndomain
+        self.size = self.size
 
         dd = numpy.zeros(self.shape, dtype='int16')
 
@@ -399,10 +399,10 @@ class GridND(object):
                     sil[j, s] = self._digitize(tmp, self.edges[j]) - 1
 
             particle_domain = numpy.ravel_multi_index(sil, self.shape)
-            tmp = numpy.bincount(particle_domain, minlength=self.Ndomain)
+            tmp = numpy.bincount(particle_domain, minlength=self.size)
 
         else:
-            tmp = numpy.zeros(self.Ndomain)
+            tmp = numpy.zeros(self.size)
 
         domainload = self.comm.allreduce(tmp, op=MPI.SUM)
 
@@ -422,10 +422,10 @@ class GridND(object):
             The load of each domain. Can be calculated from self.load()
         """
 
-        if self.Ndomain <= self.comm.size:
+        if self.size <= self.comm.size:
             return
 
-        domain = [(domainload[i], i) for i in range(self.Ndomain)]
+        domain = [(domainload[i], i) for i in range(self.size)]
         domain.sort(reverse = True) 
 
         process = [(domain[i][0], i) for i in range(self.comm.size)]
@@ -438,7 +438,7 @@ class GridND(object):
 
         heapq.heapify(process)
 
-        for i in range(self.comm.size, self.Ndomain):
+        for i in range(self.comm.size, self.size):
             process[0] = (process[0][0]+domain[i][0], process[0][1])
             if process[0][1] == self.comm.rank:
                 my_domains = numpy.append(my_domains, domain[i][1])

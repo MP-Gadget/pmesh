@@ -345,7 +345,6 @@ class GridND(object):
                     DomainAssign[start:end] = i
 
         self.DomainAssign = DomainAssign
-        self.size = self.size
 
         dd = numpy.zeros(self.shape, dtype='int16')
 

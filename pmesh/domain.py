@@ -286,11 +286,17 @@ class GridND(object):
     from ._domain import gridnd_fill as _fill
     _fill = staticmethod(_fill)
     @staticmethod
-    def _digitize(data, bins):
+    def _digitize(data, bins, right=False, periodic=False):
         if len(data) == 0:
             return numpy.empty((0), dtype='intp')
         else:
-            return numpy.digitize(data, bins)
+            if periodic:
+                boxsize = bins[-1]
+                p = numpy.int32(data // boxsize)
+                r = data % boxsize
+                return numpy.digitize(r, bins, right) + p * len(bins)
+            else:
+                return numpy.digitize(data, bins, right)
 
     @classmethod
     def uniform(cls, BoxSize, comm=MPI.COMM_WORLD, periodic=True):
@@ -341,13 +347,18 @@ class GridND(object):
         self.DomainAssign = DomainAssign
         self.Ndomain = Ndomain
 
-        # the primary region is empty for the extra tranks if there are more ranks than domains;
-        # in which case we set the primary_region to None.
+        dd = numpy.zeros(self.shape, dtype='int16')
+
+        for i, edge in enumerate(edges):
+            edge = numpy.array(edge)
+            dd1 = edge[1:] == edge[:-1]
+            dd1 = dd1.reshape([-1 if ii == i else 1 for ii in range(self.ndim)])
+            dd[...] |= dd1
+
+        self.DomainDegenerate = dd.ravel()
 
         my_domains = numpy.where(DomainAssign == comm.rank)[0]
-
         self._update_primary_regions(my_domains)
-
 
     def load(self, pos, transform=None, gamma=2):
         """
@@ -452,7 +463,6 @@ class GridND(object):
 
         self.primary_region = primary_region
 
-
     def isprimary(self, pos, transform=None):
         """
         Returns a boolean, True if the position falls into the primary region
@@ -548,12 +558,9 @@ class GridND(object):
                 s = slice(i, i + chunksize)
                 chunk = transform(pos[s])
                 for j in range(self.ndim):
-                    if periodic:
-                        tmp = numpy.remainder(chunk[:, j], self.edges[j][-1])
-                    else:
-                        tmp = chunk[:, j]
-                    sil[j, s] = self._digitize(tmp - smoothing[j], self.edges[j]) - 1
-                    sir[j, s] = self._digitize(tmp + smoothing[j], self.edges[j])
+                    tmp = chunk[:, j]
+                    sil[j, s] = self._digitize(tmp - smoothing[j], self.edges[j], right=False, periodic=periodic) - 1
+                    sir[j, s] = self._digitize(tmp + smoothing[j], self.edges[j], right=False, periodic=periodic)
 
             for j in range(self.ndim):
                 dim = self.shape[j]
@@ -561,10 +568,11 @@ class GridND(object):
                     numpy.clip(sil[j], 0, dim, out=sil[j])
                     numpy.clip(sir[j], 0, dim, out=sir[j])
 
-            self._fill(0, counts, self.shape, sil, sir, periodic, self.DomainAssign)
+            self._fill(0, counts, self.shape, sil, sir, periodic, self.DomainDegenerate, self.DomainAssign)
 
             # now lets build the indices array.
-            indices = self._fill(1, counts, self.shape, sil, sir, periodic, self.DomainAssign)
+            indices = self._fill(1, counts, self.shape, sil, sir, periodic, self.DomainDegenerate, self.DomainAssign)
+
             indices = numpy.array(indices, copy=False)
         else:
             indices = numpy.empty(0, dtype='int32')

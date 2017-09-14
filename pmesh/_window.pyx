@@ -14,10 +14,14 @@ ctypedef fused masstype:
 cdef extern from "_window_imp.h":
 
     ctypedef enum PMeshPainterType:
+        PMESH_PAINTER_NEAREST
         PMESH_PAINTER_LINEAR
         PMESH_PAINTER_CUBIC
         PMESH_PAINTER_LANCZOS2
         PMESH_PAINTER_LANCZOS3
+        PMESH_PAINTER_LANCZOS4
+        PMESH_PAINTER_LANCZOS5
+        PMESH_PAINTER_LANCZOS6
         PMESH_PAINTER_QUADRATIC
         PMESH_PAINTER_DB6
         PMESH_PAINTER_DB12
@@ -27,6 +31,7 @@ cdef extern from "_window_imp.h":
         PMESH_PAINTER_SYM20
         PMESH_PAINTER_TUNED_CIC
         PMESH_PAINTER_TUNED_TSC
+        PMESH_PAINTER_TUNED_NNB
 
     ctypedef struct PMeshPainter:
         PMeshPainterType type
@@ -52,13 +57,18 @@ cdef class ResampleWindow(object):
     cdef readonly int support
     def __init__(self, kind, int support=-1):
         kinds = {
+                'tunednnb' : PMESH_PAINTER_TUNED_NNB,
                 'tunedcic' : PMESH_PAINTER_TUNED_CIC,
                 'tunedtsc' : PMESH_PAINTER_TUNED_TSC,
+                'nearest' : PMESH_PAINTER_NEAREST,
                 'linear' : PMESH_PAINTER_LINEAR,
                 'cubic' : PMESH_PAINTER_CUBIC,
                 'quadratic' : PMESH_PAINTER_QUADRATIC,
                 'lanczos2' : PMESH_PAINTER_LANCZOS2,
                 'lanczos3' : PMESH_PAINTER_LANCZOS3,
+                'lanczos4' : PMESH_PAINTER_LANCZOS4,
+                'lanczos5' : PMESH_PAINTER_LANCZOS5,
+                'lanczos6' : PMESH_PAINTER_LANCZOS6,
                 'db6' : PMESH_PAINTER_DB6,
                 'db12' : PMESH_PAINTER_DB12,
                 'db20' : PMESH_PAINTER_DB20,
@@ -81,7 +91,9 @@ cdef class ResampleWindow(object):
         self.painter.canvas_dtype_elsize = 0
 
         pmesh_painter_init(self.painter)
+
         self.support = self.painter.support
+        self.kind = kind
 
     def paint(self, numpy.ndarray real, postype [:, :] pos, masstype [:] mass, order,
         double [:] scale, double [:] translate, ptrdiff_t [:] period):

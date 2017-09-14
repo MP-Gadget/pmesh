@@ -115,6 +115,27 @@ def test_inhomotypes(comm):
     assert_array_equal(nmass[0], [0, 1])
     assert_array_equal(nmass[1], [2, 3])
 
+@MPITest(commsize=3)
+def test_period_empty_ranks(comm):
+    DomainGrid = [[0, 2, 4, 4], [0, 4]]
+
+    dcop = domain.GridND(DomainGrid, 
+            comm=comm,
+            periodic=True)
+
+    pos = numpy.array([(0, 0)])
+    layout = dcop.decompose(pos, smoothing=1.5)
+    p1 = layout.exchange(pos)
+
+    print(dcop.primary_region, len(p1))
+
+    if comm.rank == 2:
+        assert len(p1) == 0
+    if comm.rank == 0:
+        assert len(p1) == comm.size
+    if comm.rank == 1:
+        assert len(p1) == comm.size
+
 @MPITest(commsize=2)
 def test_exchange_smooth(comm):
     DomainGrid = [[0, 1, 2], [0, 2]]

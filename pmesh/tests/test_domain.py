@@ -212,16 +212,30 @@ def test_load(comm):
     domainload = dcop.load(pos, gamma=1)
     assert sum(domainload) == comm.allreduce(len(pos))
 
-@MPITest(commsize=2)
+@MPITest(commsize=4)
 def test_loadbalance(comm):
-    DomainGrid = [[0, 1, 2, 3, 4], [0, 4]]
+    DomainGrid = [[0, 1, 2, 3, 4], [0, 2, 4]]
 
     dcop = domain.GridND(DomainGrid,
             comm=comm,
             periodic=True)
 
-    domainload = [10, 6, 6, 2]
+    domainload = [5, 4, 9, 3, 15, 6, 8, 1]
 
     dcop.loadbalance(domainload)
 
-    assert not any(dcop.DomainAssign - [0,1,1,0])
+    assert not any(dcop.DomainAssign - [3, 2, 1, 1, 0, 3, 2, 3])
+
+@MPITest(commsize=4)
+def test_loadbalance_degenerate(comm):
+    DomainGrid = [[0, 1, 2, 3], [0, 3]]
+
+    dcop = domain.GridND(DomainGrid,
+            comm=comm,
+            periodic=True)
+
+    domainload = [10, 6, 12]
+
+    dcop.loadbalance(domainload)
+
+    assert not any(dcop.DomainAssign - [0, 1, 2])

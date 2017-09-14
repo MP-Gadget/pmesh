@@ -425,26 +425,23 @@ class GridND(object):
         if self.size <= self.comm.size:
             return
 
-        domain = [(domainload[i], i) for i in range(self.size)]
-        domain.sort(reverse = True) 
+        domains = [(domainload[i], i) for i in range(self.size)]
+        domains.sort(reverse = True)
 
-        processes = [(domain[i][0], i) for i in range(self.comm.size)]
+        # initially every rank is empty
+        processes = [(0, i) for i in range(self.comm.size)]
 
         #my_domains records which domains are assigned to this rank
-        my_domains = [domain[self.comm.rank][1]]
-
-        for i in range(self.comm.size):
-            self.DomainAssign[domain[i][1]] = i
+        my_domains = []
 
         heapq.heapify(processes)
 
-        for i in range(self.comm.size, self.size):
+        for dload, dindex in domains:
             pload, rank = heapq.heappop(processes)
-            dload, domain_index = domain[i]
             pload += dload
             if rank == self.comm.rank:
-                my_domains.append(domain_index)
-            self.DomainAssign[domain_index] = rank
+                my_domains.append(dindex)
+            self.DomainAssign[dindex] = rank
             heapq.heappush(processes, (pload, rank))
 
         self._update_primary_regions(my_domains)

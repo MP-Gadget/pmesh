@@ -357,12 +357,11 @@ class GridND(object):
 
         self.DomainDegenerate = dd.ravel()
 
-        my_domains = numpy.where(DomainAssign == comm.rank)[0]
-        self._update_primary_regions(my_domains)
+        self._update_primary_regions()
 
     def load(self, pos, transform=None, gamma=2):
         """
-        Returns the load of each domain, assuming that the load is proportional to N^gamma, where N is the number of particles within it.
+        Returns the load of each domain, assuming that the load is a power-law N^gamma, where N is the number of particles within it.
 
         Parameters
         ----------
@@ -376,6 +375,8 @@ class GridND(object):
             The load of each domain.
         """
 
+        # FIXME: this function looks like decompose; might be able to merge them into one?
+        
         pos = numpy.asarray(pos)
 
         assert pos.shape[1] >= self.ndim
@@ -414,40 +415,40 @@ class GridND(object):
     def loadbalance(self, domainload):
         """
         Balancing the load of different ranks given the load of each domain. 
-        The result is recorded in self.DomainAssign
+        The result is recorded in self.DomainAssign.
 
         Parameters
         ----------
         domainload       :  array_like
             The load of each domain. Can be calculated from self.load()
+
         """
 
         if self.size <= self.comm.size:
             return
 
-        domains = [(domainload[i], i) for i in range(self.size)]
-        domains.sort(reverse = True)
+        domains = sorted([ (domainload[i], i)
+                              for i in range(self.size)],
+                            reverse=True)
 
         # initially every rank is empty
         processes = [(0, i) for i in range(self.comm.size)]
-
-        #my_domains records which domains are assigned to this rank
-        my_domains = []
 
         heapq.heapify(processes)
 
         for dload, dindex in domains:
             pload, rank = heapq.heappop(processes)
             pload += dload
-            if rank == self.comm.rank:
-                my_domains.append(dindex)
             self.DomainAssign[dindex] = rank
             heapq.heappush(processes, (pload, rank))
 
-        self._update_primary_regions(my_domains)
-
-    def _update_primary_regions(self, my_domains):
         #update the primary region after balancing the load
+        self._update_primary_regions()
+
+    def _update_primary_regions(self):
+
+        my_domains = numpy.where(self.DomainAssign == self.comm.rank)[0]
+
         N = len(my_domains)
         if N == 0:
             primary_region = None

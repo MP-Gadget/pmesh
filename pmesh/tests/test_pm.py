@@ -510,3 +510,19 @@ def test_grid(comm):
     assert_array_equal(pm.comm.allreduce(grid.shape[0]), pm.Nmesh.prod())
     real = pm.paint(grid)
     assert_array_equal(real, 1.0)
+
+@MPITest(commsize=(1, 4))
+def test_grid_shifted(comm):
+    pm = ParticleMesh(BoxSize=8.0, Nmesh=[4, 4, 4], comm=comm, dtype='f8')
+    grid = pm.generate_uniform_particle_grid(shift=0.5)
+    grid = grid + 3.1
+    assert_array_equal(pm.comm.allreduce(grid.shape[0]), pm.Nmesh.prod())
+    layout = pm.decompose(grid)
+    real = pm.paint(grid, layout=layout)
+    assert_array_equal(real, 1.0)
+
+    grid = grid - 6.1
+    assert_array_equal(pm.comm.allreduce(grid.shape[0]), pm.Nmesh.prod())
+    layout = pm.decompose(grid)
+    real = pm.paint(grid, layout=layout)
+    assert_array_equal(real, 1.0)

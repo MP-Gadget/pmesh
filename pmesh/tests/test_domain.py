@@ -136,6 +136,23 @@ def test_period_empty_ranks(comm):
     if comm.rank == 1:
         assert len(p1) == comm.size
 
+@MPITest(commsize=4)
+def test_period(comm):
+    DomainGrid = [[0, 2, 4, 4], [0, 4]]
+
+    dcop = domain.GridND(DomainGrid, 
+            comm=comm,
+            periodic=True)
+
+    pos = numpy.array([(0, 0), (-1, -1)])
+    layout = dcop.decompose(pos, smoothing=0.0)
+    p1 = layout.exchange(pos)
+
+    if comm.rank == 0:
+        assert len(p1) == 4
+    if comm.rank == 1:
+        assert len(p1) == 4
+
 @MPITest(commsize=2)
 def test_exchange_smooth(comm):
     DomainGrid = [[0, 1, 2], [0, 2]]

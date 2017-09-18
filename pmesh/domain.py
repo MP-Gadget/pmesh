@@ -291,8 +291,8 @@ class GridND(object):
         else:
             if periodic:
                 boxsize = bins[-1]
-                p = numpy.int32(data // boxsize)
                 r = data % boxsize
+                p = numpy.int32((data - r) / boxsize + 0.5)
                 return numpy.digitize(r, bins, right) + p * len(bins)
             else:
                 return numpy.digitize(data, bins, right)
@@ -439,7 +439,7 @@ class GridND(object):
         if Npoint != 0:
             sil = numpy.empty((self.ndim, Npoint), dtype='i2', order='C')
             sir = numpy.empty((self.ndim, Npoint), dtype='i2', order='C')
-            chunksize = 1024 * 48 
+            chunksize = 1024 * 48
             for i in range(0, Npoint, chunksize):
                 s = slice(i, i + chunksize)
                 chunk = transform(pos[s])

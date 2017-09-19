@@ -15,8 +15,8 @@ def gridnd_fill(
         short int [::1] domain_is_degenerate,
         int periodic,
         ):
-    """ 
-        fill in the counts or return the indices 
+    """
+        fill in the counts or return the indices
         This really can be done with numba / hope /cyjit
     """
     # first count the sizes
@@ -92,7 +92,7 @@ def gridnd_fill(
                         kk = kk - 1
                     else:
                         break
-                k = k + 1
+            k = k + 1
 
             p[Ndim - 1] += 1
             # advance
@@ -102,7 +102,7 @@ def gridnd_fill(
                     p[jj - 1] += 1
                 else:
                     break
-             
+
         # only push unique targets in the patch to
         # the result
         target = -1
@@ -118,4 +118,3 @@ def gridnd_fill(
                 indices[offset[target]] = i
                 offset[target] += 1
     return indices
-

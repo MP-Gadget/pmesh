@@ -93,29 +93,37 @@ def test_inplace_fft(comm):
 
 @MPITest(commsize=(1,4))
 def test_decompose(comm):
-    pm = ParticleMesh(BoxSize=8.0, Nmesh=[8, 8, 8], comm=comm, dtype='f8')
+    pm = ParticleMesh(BoxSize=4.0, Nmesh=[4, 4, 4], comm=comm, dtype='f8')
     numpy.random.seed(1234)
     if comm.rank == 0:
         Npar = 1000
     else:
         Npar = 0
 
-    pos = 8.0 * (numpy.random.uniform(size=(Npar, 3)))
+    pos = 4.0 * (numpy.random.uniform(size=(Npar, 3)))
+
+    pos = pm.generate_uniform_particle_grid()
+
+    all_pos = numpy.concatenate(comm.allgather(pos), axis=0)
 
     for resampler in ['cic', 'tsc', 'db12']:
         def test(resampler):
+            print(resampler)
             truth = numpy.zeros(pm.Nmesh, dtype='f8')
-            affine = window.Affine(ndim=3, period=8)
-            window.FindResampler(resampler).paint(truth, pos, transform=affine)
+            affine = window.Affine(ndim=3, period=4)
+            window.FindResampler(resampler).paint(truth, all_pos,
+                transform=affine)
             truth = comm.bcast(truth)
             layout = pm.decompose(pos, smoothing=resampler)
             npos = layout.exchange(pos)
-
             real = pm.paint(npos, resampler=resampler)
 
             full = numpy.zeros(pm.Nmesh, dtype='f8')
             full[real.slices] = real
             full = comm.allreduce(full)
+            #print(full.sum(), pm.Nmesh.prod())
+            #print(truth.sum(), pm.Nmesh.prod())
+            #print(comm.rank, npos, real.slices)
             assert_almost_equal(full, truth)
         # can't yield!
         test(resampler)
@@ -515,14 +523,18 @@ def test_grid(comm):
 def test_grid_shifted(comm):
     pm = ParticleMesh(BoxSize=8.0, Nmesh=[4, 4, 4], comm=comm, dtype='f8')
     grid = pm.generate_uniform_particle_grid(shift=0.5)
-    grid = grid + 3.1
+    grid = grid + 4.0
     assert_array_equal(pm.comm.allreduce(grid.shape[0]), pm.Nmesh.prod())
+
     layout = pm.decompose(grid)
+    g2 = layout.exchange(grid)
     real = pm.paint(grid, layout=layout)
-    assert_array_equal(real, 1.0)
+    #print(real, g2 % 8, real.slices)
+    assert_allclose(real, 1.0)
 
     grid = grid - 6.1
     assert_array_equal(pm.comm.allreduce(grid.shape[0]), pm.Nmesh.prod())
+
     layout = pm.decompose(grid)
     real = pm.paint(grid, layout=layout)
-    assert_array_equal(real, 1.0)
+    assert_allclose(real, 1.0)

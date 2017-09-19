@@ -285,17 +285,11 @@ class GridND(object):
     from ._domain import gridnd_fill as _fill
     _fill = staticmethod(_fill)
     @staticmethod
-    def _digitize(data, bins, right=False, periodic=False):
+    def _digitize(data, bins, right=False):
         if len(data) == 0:
             return numpy.empty((0), dtype='intp')
         else:
-            if periodic:
-                boxsize = bins[-1]
-                r = data % boxsize
-                p = numpy.int32((data - r) / boxsize + 0.5)
-                return numpy.digitize(r, bins, right) + p * len(bins)
-            else:
-                return numpy.digitize(data, bins, right)
+            return numpy.digitize(data, bins, right)
 
     @classmethod
     def uniform(cls, BoxSize, comm=MPI.COMM_WORLD, periodic=True):
@@ -417,7 +411,6 @@ class GridND(object):
         layout :  :py:class:`Layout` object that can be used to exchange data
 
         """
-
         # we can't deal with too many points per rank, by  MPI
         assert len(pos) < 1024 * 1024 * 1024 * 2
         pos = numpy.asarray(pos)
@@ -445,14 +438,27 @@ class GridND(object):
                 chunk = transform(pos[s])
                 for j in range(self.ndim):
                     tmp = chunk[:, j]
-                    sil[j, s] = self._digitize(tmp - smoothing[j], self.edges[j], right=False, periodic=periodic) - 1
-                    sir[j, s] = self._digitize(tmp + smoothing[j], self.edges[j], right=False, periodic=periodic)
+                    if periodic:
+                        boxsize = self.edges[j][-1]
+                        c = tmp % boxsize
+                        l = self._digitize((c - smoothing[j]) % boxsize, self.edges[j], right=False)
+                        r = self._digitize((c + smoothing[j]) % boxsize, self.edges[j], right=False)
+                        p = self._digitize(c, self.edges[j], right=False)
+                        l = p - (p - l) % self.shape[j] - 1
+                        r = p + (r - p) % self.shape[j]
+                        #print(l, p, r)
+                        sil[j, s] = l
+                        sir[j, s] = r
+                    else:
+                        l = self._digitize(tmp - smoothing[j], self.edges[j], right=False)
+                        r = self._digitize(tmp + smoothing[j], self.edges[j], right=False)
 
-            for j in range(self.ndim):
-                dim = self.shape[j]
-                if not periodic:
-                    numpy.clip(sil[j], 0, dim, out=sil[j])
-                    numpy.clip(sir[j], 0, dim, out=sir[j])
+                        sil[j, s] = (l - 1).clip(0, self.shape[j])
+                        sir[j, s] = r.clip(0, self.shape[j])
+
+#            for i in range(Npoint):
+#                print(pos[i], smoothing, sil[..., i], sir[..., i])
+
 
             self._fill(0, counts, self.shape, sil, sir, domain_is_degenerate, periodic)
 

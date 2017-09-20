@@ -212,4 +212,47 @@ def test_isprimary(comm):
 #    print('-----', comm.rank, isprimary, npos[isprimary], npos[~isprimary], dcop.primary_region)
     assert comm.allreduce(isprimary.sum()) == comm.allreduce(len(pos))
 
+@MPITest(commsize=2)
+def test_load(comm):
+    DomainGrid = [[0, 1, 2], [0, 2]]
 
+    dcop = domain.GridND(DomainGrid, 
+            comm=comm,
+            periodic=True)
+
+    if comm.rank == 0:
+        pos = numpy.array(list(numpy.ndindex((3, 6, 1))), dtype='f8')
+        #pos -= 2
+    else:
+        pos = numpy.array(list(numpy.ndindex((6, 6, 1))), dtype='f8')
+
+    domainload = dcop.load(pos, gamma=1)
+    assert sum(domainload) == comm.allreduce(len(pos))
+
+@MPITest(commsize=4)
+def test_loadbalance(comm):
+    DomainGrid = [[0, 1, 2, 3, 4], [0, 2, 4]]
+
+    dcop = domain.GridND(DomainGrid,
+            comm=comm,
+            periodic=True)
+
+    domainload = [5, 4, 9, 3, 15, 6, 8, 1]
+
+    dcop.loadbalance(domainload)
+
+    assert not any(dcop.DomainAssign - [3, 2, 1, 1, 0, 3, 2, 3])
+
+@MPITest(commsize=4)
+def test_loadbalance_degenerate(comm):
+    DomainGrid = [[0, 1, 2, 3], [0, 3]]
+
+    dcop = domain.GridND(DomainGrid,
+            comm=comm,
+            periodic=True)
+
+    domainload = [10, 6, 12]
+
+    dcop.loadbalance(domainload)
+
+    assert not any(dcop.DomainAssign - [0, 1, 2])

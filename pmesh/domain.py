@@ -20,6 +20,7 @@
 """
 from mpi4py import MPI
 import numpy
+import heapq
 
 def bincountv(x, weights, minlength=None, dtype=None, out=None):
     """ bincount with vector weights """
@@ -315,32 +316,145 @@ class GridND(object):
     def __init__(self, 
             edges,
             comm=MPI.COMM_WORLD,
-            periodic=True):
+            periodic=True,
+            DomainAssign=None):
         """ 
+        DomainAssign records each domain is assigned to which rank
         """
         self.shape = numpy.array([len(g) - 1 for g in edges], dtype='int32')
         self.ndim = len(self.shape)
         self.edges = numpy.asarray(edges)
         self.periodic = periodic
         self.comm = comm
-        assert comm.size >= numpy.product(self.shape)
+        self.size = numpy.product(self.shape)
 
-        # the primary region is empty for the extra tranks if there are more ranks than domains;
-        # in which case we set the primary_region to None.
+        if DomainAssign is None:
+            if comm.size >= self.size:
+                DomainAssign = numpy.array(range(self.size), dtype='int32')
+            else:
+                DomainAssign = numpy.empty(self.size, dtype='int32')
+                for i in range(comm.size):
+                    start = i * self.size // comm.size
+                    end = (i + 1) * self.size // comm.size
+                    DomainAssign[start:end] = i
 
-        try:
-            rank_index = numpy.unravel_index(self.comm.rank, self.shape, order='C')
-            primary_region = {}
-            primary_region['start'] = numpy.array([g[r] for g, r in zip(edges, rank_index)])
-            primary_region['end']   = numpy.array([g[r + 1] for g, r in zip(edges, rank_index)])
-            degenerated = (primary_region['start'] == primary_region['end']).any()
-        except:
+        self.DomainAssign = DomainAssign
+
+        dd = numpy.zeros(self.shape, dtype='int16')
+
+        for i, edge in enumerate(edges):
+            edge = numpy.array(edge)
+            dd1 = edge[1:] == edge[:-1]
+            dd1 = dd1.reshape([-1 if ii == i else 1 for ii in range(self.ndim)])
+            dd[...] |= dd1
+
+        self.DomainDegenerate = dd.ravel()
+
+        self._update_primary_regions()
+
+    def load(self, pos, transform=None, gamma=2):
+        """
+        Returns the load of each domain, assuming that the load is a power-law N^gamma, where N is the number of particles within it.
+
+        Parameters
+        ----------
+        pos       :  array_like (, ndim)
+            position of particles, ndim can be more than the dimenions
+            of the domains, in which case only the first few directions are used.
+
+        Returns
+        -------
+        domainload       :  array_like
+            The load of each domain.
+        """
+
+        # FIXME: this function looks like decompose; might be able to merge them into one?
+        
+        pos = numpy.asarray(pos)
+
+        assert pos.shape[1] >= self.ndim
+
+        if transform is None:
+            transform = lambda x: x
+        Npoint = len(pos)
+        periodic = self.periodic
+
+        if Npoint != 0:
+            sil = numpy.empty((self.ndim, Npoint), dtype='i2', order='C')
+            chunksize = 1024 * 48 
+            for i in range(0, Npoint, chunksize):
+                s = slice(i, i + chunksize)
+                chunk = transform(pos[s])
+                for j in range(self.ndim):
+                    if periodic:
+                        tmp = numpy.remainder(chunk[:, j], self.edges[j][-1])
+                    else:
+                        tmp = chunk[:, j]
+                    sil[j, s] = self._digitize(tmp, self.edges[j]) - 1
+
+            particle_domain = numpy.ravel_multi_index(sil, self.shape)
+            tmp = numpy.bincount(particle_domain, minlength=self.size)
+
+        else:
+            tmp = numpy.zeros(self.size)
+
+        domainload = self.comm.allreduce(tmp, op=MPI.SUM)
+
+        domainload = domainload ** gamma
+
+        return domainload
+
+
+    def loadbalance(self, domainload):
+        """
+        Balancing the load of different ranks given the load of each domain. 
+        The result is recorded in self.DomainAssign.
+
+        Parameters
+        ----------
+        domainload       :  array_like
+            The load of each domain. Can be calculated from self.load()
+
+        """
+
+        if self.size <= self.comm.size:
+            return
+
+        domains = sorted([ (domainload[i], i)
+                              for i in range(self.size)],
+                            reverse=True)
+
+        # initially every rank is empty
+        processes = [(0, i) for i in range(self.comm.size)]
+
+        heapq.heapify(processes)
+
+        for dload, dindex in domains:
+            pload, rank = heapq.heappop(processes)
+            pload += dload
+            self.DomainAssign[dindex] = rank
+            heapq.heappush(processes, (pload, rank))
+
+        #update the primary region after balancing the load
+        self._update_primary_regions()
+
+    def _update_primary_regions(self):
+
+        my_domains = numpy.where(self.DomainAssign == self.comm.rank)[0]
+
+        N = len(my_domains)
+        if N == 0:
             primary_region = None
-            degenerated = True
+        else:
+            primary_region = {}
+            primary_region['start'] = numpy.empty((N, self.ndim))
+            primary_region['end'] = numpy.empty((N, self.ndim))
+            for i in range(N):
+                domain_index = numpy.unravel_index(my_domains[i], self.shape, order='C')
+                primary_region['start'][i] = numpy.array([g[r] for g, r in zip(self.edges, domain_index)])
+                primary_region['end'][i]   = numpy.array([g[r + 1] for g, r in zip(self.edges, domain_index)])
 
         self.primary_region = primary_region
-
-        self.degenerated = degenerated
 
     def isprimary(self, pos, transform=None):
         """
@@ -366,7 +480,7 @@ class GridND(object):
         if transform is None:
             transform = lambda x: x
 
-        r = numpy.empty(len(pos), dtype='?')
+        r = numpy.zeros(len(pos), dtype='?')
 
         x0 = self.primary_region['start']
         x1 = self.primary_region['end']
@@ -379,8 +493,9 @@ class GridND(object):
             chunk = transform(pos[s])[..., :self.ndim]
             if self.periodic:
                 chunk = numpy.remainder(chunk,  BoxSize)
-            r[s] = ((chunk >= x0) & (chunk < x1)).all(axis=-1)
-
+            # looping over all primary regions.
+            for j in range(len(x0)):
+                r[s] += ((chunk >= x0[j]) & (chunk < x1[j])).all(axis=-1)
         return r
 
     def decompose(self, pos, smoothing=0, transform=None):
@@ -427,8 +542,6 @@ class GridND(object):
         counts = numpy.zeros(self.comm.size, dtype='int32')
         periodic = self.periodic
 
-        domain_is_degenerate = numpy.array(self.comm.allgather(self.degenerated), dtype='i2')
-
         if Npoint != 0:
             sil = numpy.empty((self.ndim, Npoint), dtype='i2', order='C')
             sir = numpy.empty((self.ndim, Npoint), dtype='i2', order='C')
@@ -460,10 +573,11 @@ class GridND(object):
 #                print(pos[i], smoothing, sil[..., i], sir[..., i])
 
 
-            self._fill(0, counts, self.shape, sil, sir, domain_is_degenerate, periodic)
+            self._fill(0, counts, self.shape, sil, sir, periodic, self.DomainDegenerate, self.DomainAssign)
 
             # now lets build the indices array.
-            indices = self._fill(1, counts, self.shape, sil, sir, domain_is_degenerate, periodic)
+            indices = self._fill(1, counts, self.shape, sil, sir, periodic, self.DomainDegenerate, self.DomainAssign)
+
             indices = numpy.array(indices, copy=False)
         else:
             indices = numpy.empty(0, dtype='int32')

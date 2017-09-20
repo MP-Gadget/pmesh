@@ -1,20 +1,17 @@
+
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-
 
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    
-    <title>pmesh.window module &#8212; PyPM 0.1 documentation</title>
-    
+    <title>pmesh.window module &#8212; pmesh 0.1.32 documentation</title>
     <link rel="stylesheet" href="_static/classic.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
-    
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    './',
-        VERSION:     '0.1',
+        VERSION:     '0.1.32',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true,
@@ -28,7 +25,7 @@
     <link rel="search" title="Search" href="search.html" />
     <link rel="prev" title="pmesh.whitenoise module" href="pmesh.whitenoise.html" /> 
   </head>
-  <body role="document">
+  <body>
     <div class="related" role="navigation" aria-label="related navigation">
       <h3>Navigation</h3>
       <ul>
@@ -41,7 +38,7 @@
         <li class="right" >
           <a href="pmesh.whitenoise.html" title="pmesh.whitenoise module"
              accesskey="P">previous</a> |</li>
-        <li class="nav-item nav-item-0"><a href="index.html">PyPM 0.1 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-0"><a href="index.html">pmesh 0.1.32 documentation</a> &#187;</li>
           <li class="nav-item nav-item-1"><a href="modules.html" >pmesh</a> &#187;</li>
           <li class="nav-item nav-item-2"><a href="pmesh.html" accesskey="U">pmesh package</a> &#187;</li> 
       </ul>
@@ -81,6 +78,11 @@ Amount is in integer mesh units, as translate.</p>
 
 </dd></dl>
 
+<dl class="function">
+<dt id="pmesh.window.FindResampler">
+<code class="descclassname">pmesh.window.</code><code class="descname">FindResampler</code><span class="sig-paren">(</span><em>window</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pmesh/window.html#FindResampler"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pmesh.window.FindResampler" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
 <dl class="class">
 <dt id="pmesh.window.ResampleWindow">
 <em class="property">class </em><code class="descclassname">pmesh.window.</code><code class="descname">ResampleWindow</code><span class="sig-paren">(</span><em>kind</em>, <em>support=-1</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pmesh/window.html#ResampleWindow"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pmesh.window.ResampleWindow" title="Permalink to this definition">¶</a></dt>
@@ -105,7 +107,7 @@ Amount is in integer mesh units, as translate.</p>
 <p><strong>diffdir: int or None</strong></p>
 <blockquote>
 <div><p>direction for differentiation kernel.
-0, 1, 2,... or None</p>
+0, 1, 2,… or None</p>
 </div></blockquote>
 <p><strong>transform: Affine</strong></p>
 <blockquote class="last">
@@ -135,7 +137,7 @@ Amount is in integer mesh units, as translate.</p>
 <p><strong>diffdir: int or None</strong></p>
 <blockquote>
 <div><p>direction for differentiation kernel.
-0, 1, 2,... or None</p>
+0, 1, 2,… or None</p>
 </div></blockquote>
 <p><strong>transform: Affine</strong></p>
 <blockquote class="last">
@@ -145,6 +147,12 @@ Amount is in integer mesh units, as translate.</p>
 </tr>
 </tbody>
 </table>
+</dd></dl>
+
+<dl class="method">
+<dt id="pmesh.window.ResampleWindow.resize">
+<code class="descname">resize</code><span class="sig-paren">(</span><em>support</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pmesh/window.html#ResampleWindow.resize"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pmesh.window.ResampleWindow.resize" title="Permalink to this definition">¶</a></dt>
+<dd><p>Change the support of the window, returning a new window.</p>
 </dd></dl>
 
 </dd></dl>
@@ -193,14 +201,14 @@ Amount is in integer mesh units, as translate.</p>
         <li class="right" >
           <a href="pmesh.whitenoise.html" title="pmesh.whitenoise module"
              >previous</a> |</li>
-        <li class="nav-item nav-item-0"><a href="index.html">PyPM 0.1 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-0"><a href="index.html">pmesh 0.1.32 documentation</a> &#187;</li>
           <li class="nav-item nav-item-1"><a href="modules.html" >pmesh</a> &#187;</li>
           <li class="nav-item nav-item-2"><a href="pmesh.html" >pmesh package</a> &#187;</li> 
       </ul>
     </div>
     <div class="footer" role="contentinfo">
-        &#169; Copyright 2015, Yu Feng.
-      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.5.1.
+        &#169; Copyright 2017, Yu Feng.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.6.3.
     </div>
   </body>
 </html>

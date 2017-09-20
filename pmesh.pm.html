@@ -1,20 +1,17 @@
+
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-
 
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    
-    <title>pmesh.pm module &#8212; PyPM 0.1 documentation</title>
-    
+    <title>pmesh.pm module &#8212; pmesh 0.1.32 documentation</title>
     <link rel="stylesheet" href="_static/classic.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
-    
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    './',
-        VERSION:     '0.1',
+        VERSION:     '0.1.32',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true,
@@ -29,7 +26,7 @@
     <link rel="next" title="pmesh.tools module" href="pmesh.tools.html" />
     <link rel="prev" title="pmesh.particlemesh module" href="pmesh.particlemesh.html" /> 
   </head>
-  <body role="document">
+  <body>
     <div class="related" role="navigation" aria-label="related navigation">
       <h3>Navigation</h3>
       <ul>
@@ -45,7 +42,7 @@
         <li class="right" >
           <a href="pmesh.particlemesh.html" title="pmesh.particlemesh module"
              accesskey="P">previous</a> |</li>
-        <li class="nav-item nav-item-0"><a href="index.html">PyPM 0.1 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-0"><a href="index.html">pmesh 0.1.32 documentation</a> &#187;</li>
           <li class="nav-item nav-item-1"><a href="modules.html" >pmesh</a> &#187;</li>
           <li class="nav-item nav-item-2"><a href="pmesh.html" accesskey="U">pmesh package</a> &#187;</li> 
       </ul>
@@ -72,15 +69,15 @@
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>func</strong> : callable</p>
 <blockquote>
-<div><p>func(k, v) where k is a list of k values that broadcasts into a full array.
-value of k depends on kind. v is the corrsponding value of field.</p>
+<div><p>func(k, y) where k is a list of k values that broadcasts into a full array.
+value of k depends on kind. y is the corrsponding value of field.</p>
 </div></blockquote>
 <p><strong>kind</strong> : string</p>
 <blockquote class="last">
 <div><p>The kind of value in k.
-&#8216;wavenumber&#8217; means wavenumber from [- 2 pi / L * N / 2, 2 pi / L * N / 2).
-&#8216;circular&#8217; means circular frequency from [- pi, pi).
-&#8216;index&#8217; means [0, Nmesh )</p>
+‘wavenumber’ means wavenumber from [- 2 pi / L * N / 2, 2 pi / L * N / 2).
+‘circular’ means circular frequency from [- pi, pi).
+‘index’ means [0, Nmesh )</p>
 </div></blockquote>
 </td>
 </tr>
@@ -120,8 +117,8 @@ cdot = Self-conj + upper</p>
 </dd></dl>
 
 <dl class="method">
-<dt id="pmesh.pm.ComplexField.cdot_gradient">
-<code class="descname">cdot_gradient</code><span class="sig-paren">(</span><em>gcdot</em>, <em>metric=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pmesh/pm.html#ComplexField.cdot_gradient"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pmesh.pm.ComplexField.cdot_gradient" title="Permalink to this definition">¶</a></dt>
+<dt id="pmesh.pm.ComplexField.cdot_vjp">
+<code class="descname">cdot_vjp</code><span class="sig-paren">(</span><em>v</em>, <em>metric=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pmesh/pm.html#ComplexField.cdot_vjp"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pmesh.pm.ComplexField.cdot_vjp" title="Permalink to this definition">¶</a></dt>
 <dd><p>backtrace gradient of cdot against other. This is a partial gradient.</p>
 </dd></dl>
 
@@ -131,27 +128,22 @@ cdot = Self-conj + upper</p>
 <dd><p>compute the norm collectively. The conjugates are added too.</p>
 <p>NORM = Self-conj + lower + upper</p>
 <div class="math">
-<p><img src="_images/math/78a6b4c8f45e845649ab0945e0a7ccf704ebe959.png" alt="\sum_{m \in M} (self[m] * conjugate(other[m]) 
+<p><img src="_images/math/e63a2a8f8918cdf964c4c4b1919b8d75741fbf3c.png" alt="\sum_{m \in M} (self[m] * conjugate(other[m])
             +   conjugate(self[m]) * other[m])
              *  0.5  metric(k[m])"/></p>
 </div></dd></dl>
 
 <dl class="method">
-<dt id="pmesh.pm.ComplexField.cnorm_gradient">
-<code class="descname">cnorm_gradient</code><span class="sig-paren">(</span><em>gcnorm</em>, <em>metric=None</em>, <em>out=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pmesh/pm.html#ComplexField.cnorm_gradient"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pmesh.pm.ComplexField.cnorm_gradient" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="method">
-<dt id="pmesh.pm.ComplexField.decompress_gradient">
-<code class="descname">decompress_gradient</code><span class="sig-paren">(</span><em>btgrad</em>, <em>out=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pmesh/pm.html#ComplexField.decompress_gradient"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pmesh.pm.ComplexField.decompress_gradient" title="Permalink to this definition">¶</a></dt>
+<dt id="pmesh.pm.ComplexField.decompress_vjp">
+<code class="descname">decompress_vjp</code><span class="sig-paren">(</span><em>v</em>, <em>out=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pmesh/pm.html#ComplexField.decompress_vjp"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pmesh.pm.ComplexField.decompress_vjp" title="Permalink to this definition">¶</a></dt>
 <dd><p>Back-propagate the gradient of decompress from self to out.
 If I change this mode in the .value array, how many modes are
 actually changed in order to maintain the hermitian?</p>
 </dd></dl>
 
 <dl class="method">
-<dt id="pmesh.pm.ComplexField.r2c_gradient">
-<code class="descname">r2c_gradient</code><span class="sig-paren">(</span><em>btgrad</em>, <em>out=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pmesh/pm.html#ComplexField.r2c_gradient"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pmesh.pm.ComplexField.r2c_gradient" title="Permalink to this definition">¶</a></dt>
+<dt id="pmesh.pm.ComplexField.r2c_vjp">
+<code class="descname">r2c_vjp</code><span class="sig-paren">(</span><em>v</em>, <em>out=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pmesh/pm.html#ComplexField.r2c_vjp"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pmesh.pm.ComplexField.r2c_vjp" title="Permalink to this definition">¶</a></dt>
 <dd><p>Back-propagate the gradient of r2c to self.</p>
 </dd></dl>
 
@@ -176,7 +168,7 @@ actually changed in order to maintain the hermitian?</p>
 
 <dl class="method">
 <dt id="pmesh.pm.Field.csetitem">
-<code class="descname">csetitem</code><span class="sig-paren">(</span><em>index</em>, <em>v</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pmesh/pm.html#Field.csetitem"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pmesh.pm.Field.csetitem" title="Permalink to this definition">¶</a></dt>
+<code class="descname">csetitem</code><span class="sig-paren">(</span><em>index</em>, <em>y</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pmesh/pm.html#Field.csetitem"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pmesh.pm.Field.csetitem" title="Permalink to this definition">¶</a></dt>
 <dd><p>get a value from absolute index collectively.
 maintains Hermitian conjugation.
 Returns the actually value that is set.</p>
@@ -184,22 +176,29 @@ Returns the actually value that is set.</p>
 
 <dl class="method">
 <dt id="pmesh.pm.Field.preview">
-<code class="descname">preview</code><span class="sig-paren">(</span><em>Nmesh</em>, <em>axes=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pmesh/pm.html#Field.preview"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pmesh.pm.Field.preview" title="Permalink to this definition">¶</a></dt>
+<code class="descname">preview</code><span class="sig-paren">(</span><em>Nmesh=None</em>, <em>axes=None</em>, <em>resampler=None</em>, <em>method=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pmesh/pm.html#Field.preview"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pmesh.pm.Field.preview" title="Permalink to this definition">¶</a></dt>
 <dd><p>gathers the mesh into as a numpy array, with
-(reduced resolution). The result is broadcast to
-all ranks, so this uses Nmesh ** 3 per rank.</p>
+(reduced resolution).</p>
+<p>The result is broadcast to all ranks, so this uses Nmesh.prod() per rank if all
+axes are preserved.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>Nmesh</strong> : int, array_like</p>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>Nmesh</strong> : int, array_like, None</p>
 <blockquote>
 <div><p>The desired Nmesh of the result. Be aware this function
-allocates memory to hold A full Nmesh on each rank.</p>
+allocates memory to hold A full Nmesh on each rank.
+None will not resample Nmesh.</p>
 </div></blockquote>
 <p><strong>axes</strong> : list or None</p>
 <blockquote>
 <div><p>list of axes to preserve.</p>
+</div></blockquote>
+<p><strong>method</strong> : string “upsample” or “downsample”, or None</p>
+<blockquote>
+<div><p>upsample is like subsampling (faster) when Nmesh is lower resolution.
+if None, use upsample for upsampling (Nmesh &gt;= self.Nmesh) and downsample for down sampling.</p>
 </div></blockquote>
 </td>
 </tr>
@@ -211,6 +210,31 @@ allocates memory to hold A full Nmesh on each rank.</p>
 </tr>
 </tbody>
 </table>
+</dd></dl>
+
+<dl class="method">
+<dt id="pmesh.pm.Field.ravel">
+<code class="descname">ravel</code><span class="sig-paren">(</span><em>out=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pmesh/pm.html#Field.ravel"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pmesh.pm.Field.ravel" title="Permalink to this definition">¶</a></dt>
+<dd><p>Ravel the field to ‘C’-order, partitioned by MPI ranks. Save the
+result to flatiter.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>out</strong> : numpy.flatiter, or Ellipsis for inplace</p>
+<blockquote>
+<div><p>A flatiter to store the ‘C’ order. If not a flatiter, the .flat
+attribute is used.</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"><strong>numpy.flatiter</strong> : the flatiter provided or created.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Notes</p>
+<p>Set <cite>out</cite> to or Ellisps self.value for an ‘inplace’ ravel.</p>
 </dd></dl>
 
 <dl class="method">
@@ -240,31 +264,11 @@ Convert from and between Real/Complex automatically.</p>
 <dl class="method">
 <dt id="pmesh.pm.Field.sort">
 <code class="descname">sort</code><span class="sig-paren">(</span><em>out=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pmesh/pm.html#Field.sort"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pmesh.pm.Field.sort" title="Permalink to this definition">¶</a></dt>
-<dd><p>Sort the field to &#8216;C&#8217;-order, partitioned by MPI ranks. Save the
-result to flatiter.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>out</strong> : numpy.flatiter, or Ellipsis for inplace</p>
-<blockquote>
-<div><p>A flatiter to store the &#8216;C&#8217; order. If not a flatiter, the .flat
-attribute is used.</p>
-</div></blockquote>
-</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"><strong>numpy.flatiter</strong> : the flatiter provided or created.</p>
-</td>
-</tr>
-</tbody>
-</table>
-<p class="rubric">Notes</p>
-<p>Set <cite>out</cite> to or Ellisps self.value for an &#8216;inplace&#8217; sort.</p>
-</dd></dl>
+<dd></dd></dl>
 
 <dl class="method">
-<dt id="pmesh.pm.Field.unsort">
-<code class="descname">unsort</code><span class="sig-paren">(</span><em>flatiter</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pmesh/pm.html#Field.unsort"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pmesh.pm.Field.unsort" title="Permalink to this definition">¶</a></dt>
+<dt id="pmesh.pm.Field.unravel">
+<code class="descname">unravel</code><span class="sig-paren">(</span><em>flatiter</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pmesh/pm.html#Field.unravel"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pmesh.pm.Field.unravel" title="Permalink to this definition">¶</a></dt>
 <dd><p>Unsort c-ordered field values to the field.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -278,11 +282,16 @@ attribute is used.</p>
 <p>self is updated. <cite>array</cite> does not have to be C_CONTIGUOUS flat iterator of array is used.</p>
 </dd></dl>
 
+<dl class="method">
+<dt id="pmesh.pm.Field.unsort">
+<code class="descname">unsort</code><span class="sig-paren">(</span><em>flatiter</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pmesh/pm.html#Field.unsort"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pmesh.pm.Field.unsort" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
 </dd></dl>
 
 <dl class="class">
 <dt id="pmesh.pm.ParticleMesh">
-<em class="property">class </em><code class="descclassname">pmesh.pm.</code><code class="descname">ParticleMesh</code><span class="sig-paren">(</span><em>Nmesh</em>, <em>BoxSize=1.0</em>, <em>comm=None</em>, <em>np=None</em>, <em>dtype='f8'</em>, <em>plan_method='estimate'</em>, <em>method='cic'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pmesh/pm.html#ParticleMesh"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pmesh.pm.ParticleMesh" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="descclassname">pmesh.pm.</code><code class="descname">ParticleMesh</code><span class="sig-paren">(</span><em>Nmesh</em>, <em>BoxSize=1.0</em>, <em>comm=None</em>, <em>np=None</em>, <em>dtype='f8'</em>, <em>plan_method='estimate'</em>, <em>resampler='cic'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pmesh/pm.html#ParticleMesh"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pmesh.pm.ParticleMesh" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">object</span></code></p>
 <p>ParticleMesh provides an interface to solver for forces
 with particle mesh method</p>
@@ -291,41 +300,41 @@ to create memory buffers.</p>
 <p class="rubric">Attributes</p>
 <table border="1" class="docutils">
 <colgroup>
-<col width="2%" />
-<col width="98%" />
+<col width="3%" />
+<col width="97%" />
 </colgroup>
 <tbody valign="top">
-<tr class="row-odd"><td>np</td>
+<tr class="row-odd"><td><strong>np</strong></td>
 <td>(array_like (npx, npy)) The shape of the process mesh. This is the number of domains per direction. The product of the items shall equal to the size of communicator. For example, for 64 rank job, np = (8, 8) is a good choice. Since for now only 3d simulations are supported, np must be of length-2. The default is try to split the total number of ranks equally. (eg, for a 64 rank job, default is (8, 8)</td>
 </tr>
-<tr class="row-even"><td>comm</td>
+<tr class="row-even"><td><strong>comm</strong></td>
 <td>(<code class="xref py py-class docutils literal"><span class="pre">MPI.Comm</span></code>) the MPI communicator, (default is MPI.COMM_WORLD)</td>
 </tr>
-<tr class="row-odd"><td>Nmesh</td>
+<tr class="row-odd"><td><strong>Nmesh</strong></td>
 <td>(array of int) number of mesh points per side. The length decides the number of dimensions.</td>
 </tr>
-<tr class="row-even"><td>dtype</td>
+<tr class="row-even"><td><strong>dtype</strong></td>
 <td>(dtype) dtype of the buffers</td>
 </tr>
-<tr class="row-odd"><td>BoxSize</td>
+<tr class="row-odd"><td><strong>BoxSize</strong></td>
 <td>(float) size of box</td>
 </tr>
-<tr class="row-even"><td>domain</td>
+<tr class="row-even"><td><strong>domain</strong></td>
 <td>(<a class="reference internal" href="pmesh.domain.html#pmesh.domain.GridND" title="pmesh.domain.GridND"><code class="xref py py-class docutils literal"><span class="pre">pmesh.domain.GridND</span></code></a>) domain decomposition (private)</td>
 </tr>
-<tr class="row-odd"><td>partition</td>
+<tr class="row-odd"><td><strong>partition</strong></td>
 <td>(<code class="xref py py-class docutils literal"><span class="pre">pfft.Partition</span></code>) domain partition (private)</td>
 </tr>
-<tr class="row-even"><td>w</td>
+<tr class="row-even"><td><strong>w</strong></td>
 <td>(list) a list of the circular frequencies along each direction (-pi to pi)</td>
 </tr>
-<tr class="row-odd"><td>k</td>
+<tr class="row-odd"><td><strong>k</strong></td>
 <td>(list) a list of the wave numbers k along each direction (- pi N/ L to pi N/ L)</td>
 </tr>
-<tr class="row-even"><td>x</td>
+<tr class="row-even"><td><strong>x</strong></td>
 <td>(list) a list of the position along each direction (-L/2 to L/ 2). x is conjugate of k.</td>
 </tr>
-<tr class="row-odd"><td>r</td>
+<tr class="row-odd"><td><strong>r</strong></td>
 <td>(list) a list of the mesh position along each direction (-N/2 to N/2). r is conjugate of w.</td>
 </tr>
 </tbody>
@@ -340,7 +349,7 @@ to create memory buffers.</p>
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>mode</strong> : string</p>
 <blockquote>
-<div><p>&#8216;real&#8217; or &#8216;complex&#8217;.</p>
+<div><p>‘real’ or ‘complex’.</p>
 </div></blockquote>
 <p><strong>base</strong> : object, None</p>
 <blockquote class="last">
@@ -355,7 +364,7 @@ object. Provide the attribute, not the field object.</p>
 
 <dl class="method">
 <dt id="pmesh.pm.ParticleMesh.decompose">
-<code class="descname">decompose</code><span class="sig-paren">(</span><em>pos</em>, <em>smoothing=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pmesh/pm.html#ParticleMesh.decompose"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pmesh.pm.ParticleMesh.decompose" title="Permalink to this definition">¶</a></dt>
+<code class="descname">decompose</code><span class="sig-paren">(</span><em>pos</em>, <em>smoothing=None</em>, <em>transform=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pmesh/pm.html#ParticleMesh.decompose"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pmesh.pm.ParticleMesh.decompose" title="Permalink to this definition">¶</a></dt>
 <dd><p>Create a domain decompose layout for particles at given
 coordinates.</p>
 <table class="docutils field-list" frame="void" rules="none">
@@ -370,7 +379,7 @@ coordinates.</p>
 <blockquote>
 <div><p>if given as a string or ResampleWindow, use 0.5 * support.
 This is the size of the buffer region around a domain.
-Default: None, use self.method</p>
+Default: None, use self.resampler</p>
 </div></blockquote>
 </td>
 </tr>
@@ -383,6 +392,44 @@ Default: None, use self.method</p>
 </tr>
 </tbody>
 </table>
+</dd></dl>
+
+<dl class="method">
+<dt id="pmesh.pm.ParticleMesh.downsample">
+<code class="descname">downsample</code><span class="sig-paren">(</span><em>source</em>, <em>resampler=None</em>, <em>keep_mean=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pmesh/pm.html#ParticleMesh.downsample"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pmesh.pm.ParticleMesh.downsample" title="Permalink to this definition">¶</a></dt>
+<dd><p>Resample an image with the downsample method.</p>
+<p>Downsampling paints the value of image at the pixel positions source.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>source</strong> : RealField</p>
+<blockquote>
+<div><p>the source image</p>
+</div></blockquote>
+<p><strong>keep_mean</strong> : bool</p>
+<blockquote>
+<div><p>if True, conserves the mean rather than the total mass in the overlapped region.</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">A new RealField.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Notes</p>
+<p>Note that kernels do not conserve total mass or mean exactly
+by construction due to the sparse sampling, this is particularly bad
+for lanzcos, db, and sym.</p>
+<p>some tests are shown in <a class="reference external" href="https://github.com/rainwoodman/pmesh/pull/22">https://github.com/rainwoodman/pmesh/pull/22</a></p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pmesh.pm.ParticleMesh.generate_uniform_particle_grid">
+<code class="descname">generate_uniform_particle_grid</code><span class="sig-paren">(</span><em>shift=0.5</em>, <em>dtype=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pmesh/pm.html#ParticleMesh.generate_uniform_particle_grid"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pmesh.pm.ParticleMesh.generate_uniform_particle_grid" title="Permalink to this definition">¶</a></dt>
+<dd><p>create uniform grid of particles, one per grid point on the basepm mesh
+this shall go to pmesh.</p>
 </dd></dl>
 
 <dl class="method">
@@ -409,77 +456,23 @@ only the phase is random.</p>
 </table>
 </dd></dl>
 
-</dd></dl>
-
-<dl class="class">
-<dt id="pmesh.pm.RealField">
-<em class="property">class </em><code class="descclassname">pmesh.pm.</code><code class="descname">RealField</code><span class="sig-paren">(</span><em>pm</em>, <em>base=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pmesh/pm.html#RealField"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pmesh.pm.RealField" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <a class="reference internal" href="#pmesh.pm.Field" title="pmesh.pm.Field"><code class="xref py py-class docutils literal"><span class="pre">pmesh.pm.Field</span></code></a></p>
 <dl class="method">
-<dt id="pmesh.pm.RealField.apply">
-<code class="descname">apply</code><span class="sig-paren">(</span><em>func</em>, <em>kind='relative'</em>, <em>out=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pmesh/pm.html#RealField.apply"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pmesh.pm.RealField.apply" title="Permalink to this definition">¶</a></dt>
-<dd><p>apply a function to the field.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>func</strong> : callable</p>
-<blockquote>
-<div><p>func(r, v) where r is a list of r values that broadcasts into a full array.
-value of r depends on kind. v is the value of the field on the corresponding locations.</p>
-</div></blockquote>
-<p><strong>kind</strong> : string</p>
-<blockquote class="last">
-<div><p>The kind of value in r.
-&#8216;relative&#8217; means distance from [-0.5 Boxsize, 0.5 BoxSize).
-&#8216;index&#8217; means [0, Nmesh )</p>
-</div></blockquote>
-</td>
-</tr>
-</tbody>
-</table>
-</dd></dl>
-
-<dl class="method">
-<dt id="pmesh.pm.RealField.c2r_gradient">
-<code class="descname">c2r_gradient</code><span class="sig-paren">(</span><em>btgrad</em>, <em>out=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pmesh/pm.html#RealField.c2r_gradient"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pmesh.pm.RealField.c2r_gradient" title="Permalink to this definition">¶</a></dt>
-<dd><p>Back-propagate the gradient of c2r from self to out</p>
-</dd></dl>
-
-<dl class="method">
-<dt id="pmesh.pm.RealField.cdot">
-<code class="descname">cdot</code><span class="sig-paren">(</span><em>other</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pmesh/pm.html#RealField.cdot"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pmesh.pm.RealField.cdot" title="Permalink to this definition">¶</a></dt>
+<dt id="pmesh.pm.ParticleMesh.mesh_coordinates">
+<code class="descname">mesh_coordinates</code><span class="sig-paren">(</span><em>dtype=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pmesh/pm.html#ParticleMesh.mesh_coordinates"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pmesh.pm.ParticleMesh.mesh_coordinates" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="method">
-<dt id="pmesh.pm.RealField.cmean">
-<code class="descname">cmean</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/pmesh/pm.html#RealField.cmean"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pmesh.pm.RealField.cmean" title="Permalink to this definition">¶</a></dt>
-<dd><p>Collective mean. Mean of the entire mesh. (Must be called collectively)</p>
-</dd></dl>
-
-<dl class="method">
-<dt id="pmesh.pm.RealField.cnorm">
-<code class="descname">cnorm</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/pmesh/pm.html#RealField.cnorm"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pmesh.pm.RealField.cnorm" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="method">
-<dt id="pmesh.pm.RealField.csum">
-<code class="descname">csum</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/pmesh/pm.html#RealField.csum"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pmesh.pm.RealField.csum" title="Permalink to this definition">¶</a></dt>
-<dd><p>Collective mean. Sum of the entire mesh. (Must be called collectively)</p>
-</dd></dl>
-
-<dl class="method">
-<dt id="pmesh.pm.RealField.paint">
-<code class="descname">paint</code><span class="sig-paren">(</span><em>pos</em>, <em>mass=1.0</em>, <em>method=None</em>, <em>transform=None</em>, <em>hold=False</em>, <em>gradient=None</em>, <em>layout=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pmesh/pm.html#RealField.paint"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pmesh.pm.RealField.paint" title="Permalink to this definition">¶</a></dt>
+<dt id="pmesh.pm.ParticleMesh.paint">
+<code class="descname">paint</code><span class="sig-paren">(</span><em>pos</em>, <em>mass=1.0</em>, <em>resampler=None</em>, <em>transform=None</em>, <em>hold=False</em>, <em>gradient=None</em>, <em>layout=None</em>, <em>out=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pmesh/pm.html#ParticleMesh.paint"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pmesh.pm.ParticleMesh.paint" title="Permalink to this definition">¶</a></dt>
 <dd><p>Paint particles into the internal real canvas.</p>
 <p>Transform the particle field given by pos and mass
 to the overdensity field in fourier space and save
-it in the internal storage. 
+it in the internal storage.
 A multi-linear CIC approximation scheme is used.</p>
-<p>The function can be called multiple times: 
+<p>The function can be called multiple times:
 the result is cummulative. In a multi-step simulation where
-<a class="reference internal" href="#pmesh.pm.ParticleMesh" title="pmesh.pm.ParticleMesh"><code class="xref py py-class docutils literal"><span class="pre">ParticleMesh</span></code></a> object is reused,  before calling 
-<a class="reference internal" href="#pmesh.pm.RealField.paint" title="pmesh.pm.RealField.paint"><code class="xref py py-meth docutils literal"><span class="pre">paint()</span></code></a>, make sure the canvas is cleared with <code class="xref py py-meth docutils literal"><span class="pre">clear()</span></code>.</p>
+<a class="reference internal" href="#pmesh.pm.ParticleMesh" title="pmesh.pm.ParticleMesh"><code class="xref py py-class docutils literal"><span class="pre">ParticleMesh</span></code></a> object is reused,  before calling
+<a class="reference internal" href="#pmesh.pm.ParticleMesh.paint" title="pmesh.pm.ParticleMesh.paint"><code class="xref py py-meth docutils literal"><span class="pre">paint()</span></code></a>, make sure the canvas is cleared with <code class="xref py py-meth docutils literal"><span class="pre">clear()</span></code>.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
@@ -501,9 +494,9 @@ the result is cummulative. In a multi-step simulation where
 <div><p>Direction to take the gradient of the window. The affine transformation
 is properly applied.</p>
 </div></blockquote>
-<p><strong>method: None or string</strong></p>
+<p><strong>resampler: None or string</strong></p>
 <blockquote>
-<div><p>type of window. Default : None, use self.pm.method</p>
+<div><p>type of window. Default : None, use self.pm.resampler</p>
 </div></blockquote>
 <p><strong>layout</strong> : Layout</p>
 <blockquote class="last">
@@ -519,10 +512,15 @@ routed to the target ranks and the result is reduced</p>
 </dd></dl>
 
 <dl class="method">
-<dt id="pmesh.pm.RealField.paint_gradient">
-<code class="descname">paint_gradient</code><span class="sig-paren">(</span><em>btgrad</em>, <em>pos</em>, <em>mass=1.0</em>, <em>method=None</em>, <em>transform=None</em>, <em>gradient=None</em>, <em>out_pos=None</em>, <em>out_mass=None</em>, <em>layout=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pmesh/pm.html#RealField.paint_gradient"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pmesh.pm.RealField.paint_gradient" title="Permalink to this definition">¶</a></dt>
-<dd><p>back-propagate the gradient of paint from self. self contains
-the current gradient.</p>
+<dt id="pmesh.pm.ParticleMesh.paint_jvp">
+<code class="descname">paint_jvp</code><span class="sig-paren">(</span><em>pos</em>, <em>mass=1.0</em>, <em>v_pos=None</em>, <em>v_mass=None</em>, <em>resampler=None</em>, <em>transform=None</em>, <em>gradient=None</em>, <em>layout=None</em>, <em>out=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pmesh/pm.html#ParticleMesh.paint_jvp"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pmesh.pm.ParticleMesh.paint_jvp" title="Permalink to this definition">¶</a></dt>
+<dd><p>A_q = W_qi M_i</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pmesh.pm.ParticleMesh.paint_vjp">
+<code class="descname">paint_vjp</code><span class="sig-paren">(</span><em>v</em>, <em>pos</em>, <em>mass=1.0</em>, <em>resampler=None</em>, <em>transform=None</em>, <em>gradient=None</em>, <em>out_pos=None</em>, <em>out_mass=None</em>, <em>layout=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pmesh/pm.html#ParticleMesh.paint_vjp"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pmesh.pm.ParticleMesh.paint_vjp" title="Permalink to this definition">¶</a></dt>
+<dd><p>back-propagate the gradient of paint from v.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
@@ -551,6 +549,123 @@ if None, a new array is created and returned</p>
 </dd></dl>
 
 <dl class="method">
+<dt id="pmesh.pm.ParticleMesh.resize">
+<code class="descname">resize</code><span class="sig-paren">(</span><em>Nmesh</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pmesh/pm.html#ParticleMesh.resize"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pmesh.pm.ParticleMesh.resize" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a resized ParticleMesh object, changing the resolution Nmesh.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>Nmesh</strong> : int or array_like or None</p>
+<blockquote>
+<div><p>The new resolution</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">A ParticleMesh of the given resolution. If Nmesh is None</p>
+<p class="last">or the same as <code class="docutils literal"><span class="pre">self.Nmesh</span></code>, a reference of <code class="docutils literal"><span class="pre">self</span></code> is returned.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="pmesh.pm.ParticleMesh.upsample">
+<code class="descname">upsample</code><span class="sig-paren">(</span><em>source</em>, <em>resampler=None</em>, <em>keep_mean=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pmesh/pm.html#ParticleMesh.upsample"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pmesh.pm.ParticleMesh.upsample" title="Permalink to this definition">¶</a></dt>
+<dd><p>Resample an image with the upsample method.</p>
+<p>Upsampling reads out the value of image at the pixel positions of the pm.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>source</strong> : RealField</p>
+<blockquote>
+<div><p>the source image</p>
+</div></blockquote>
+<p><strong>keep_mean</strong> : bool</p>
+<blockquote>
+<div><p>if True, conserves the mean rather than the total mass in the overlapped region.</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">A new RealField.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Notes</p>
+<p>Note that kernels do not conserve total mass or mean exactly
+by construction due to the sparse sampling, this is particularly bad
+for lanzcos, db, and sym.</p>
+<p>some tests are shown in <a class="reference external" href="https://github.com/rainwoodman/pmesh/pull/22">https://github.com/rainwoodman/pmesh/pull/22</a></p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="pmesh.pm.RealField">
+<em class="property">class </em><code class="descclassname">pmesh.pm.</code><code class="descname">RealField</code><span class="sig-paren">(</span><em>pm</em>, <em>base=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pmesh/pm.html#RealField"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pmesh.pm.RealField" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#pmesh.pm.Field" title="pmesh.pm.Field"><code class="xref py py-class docutils literal"><span class="pre">pmesh.pm.Field</span></code></a></p>
+<dl class="method">
+<dt id="pmesh.pm.RealField.apply">
+<code class="descname">apply</code><span class="sig-paren">(</span><em>func</em>, <em>kind='relative'</em>, <em>out=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pmesh/pm.html#RealField.apply"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pmesh.pm.RealField.apply" title="Permalink to this definition">¶</a></dt>
+<dd><p>apply a function to the field.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>func</strong> : callable</p>
+<blockquote>
+<div><p>func(r, y) where r is a list of r values that broadcasts into a full array.
+value of r depends on kind. y is the value of the field on the corresponding locations.</p>
+</div></blockquote>
+<p><strong>kind</strong> : string</p>
+<blockquote class="last">
+<div><p>The kind of value in r.
+‘relative’ means distance from [-0.5 Boxsize, 0.5 BoxSize).
+‘index’ means [0, Nmesh )</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="pmesh.pm.RealField.c2r_vjp">
+<code class="descname">c2r_vjp</code><span class="sig-paren">(</span><em>v</em>, <em>out=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pmesh/pm.html#RealField.c2r_vjp"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pmesh.pm.RealField.c2r_vjp" title="Permalink to this definition">¶</a></dt>
+<dd><p>Back-propagate the gradient of c2r from self to out</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pmesh.pm.RealField.cdot">
+<code class="descname">cdot</code><span class="sig-paren">(</span><em>other</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pmesh/pm.html#RealField.cdot"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pmesh.pm.RealField.cdot" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pmesh.pm.RealField.cmean">
+<code class="descname">cmean</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/pmesh/pm.html#RealField.cmean"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pmesh.pm.RealField.cmean" title="Permalink to this definition">¶</a></dt>
+<dd><p>Collective mean. Mean of the entire mesh. (Must be called collectively)</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pmesh.pm.RealField.cnorm">
+<code class="descname">cnorm</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/pmesh/pm.html#RealField.cnorm"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pmesh.pm.RealField.cnorm" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pmesh.pm.RealField.csum">
+<code class="descname">csum</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/pmesh/pm.html#RealField.csum"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pmesh.pm.RealField.csum" title="Permalink to this definition">¶</a></dt>
+<dd><p>Collective mean. Sum of the entire mesh. (Must be called collectively)</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pmesh.pm.RealField.paint">
+<code class="descname">paint</code><span class="sig-paren">(</span><em>pos</em>, <em>mass=1.0</em>, <em>resampler=None</em>, <em>transform=None</em>, <em>hold=False</em>, <em>gradient=None</em>, <em>layout=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pmesh/pm.html#RealField.paint"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pmesh.pm.RealField.paint" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
 <dt id="pmesh.pm.RealField.r2c">
 <code class="descname">r2c</code><span class="sig-paren">(</span><em>out=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pmesh/pm.html#RealField.r2c"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pmesh.pm.RealField.r2c" title="Permalink to this definition">¶</a></dt>
 <dd><p>Perform real to complex transformation.</p>
@@ -558,7 +673,7 @@ if None, a new array is created and returned</p>
 
 <dl class="method">
 <dt id="pmesh.pm.RealField.readout">
-<code class="descname">readout</code><span class="sig-paren">(</span><em>pos</em>, <em>out=None</em>, <em>method=None</em>, <em>transform=None</em>, <em>gradient=None</em>, <em>layout=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pmesh/pm.html#RealField.readout"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pmesh.pm.RealField.readout" title="Permalink to this definition">¶</a></dt>
+<code class="descname">readout</code><span class="sig-paren">(</span><em>pos</em>, <em>out=None</em>, <em>resampler=None</em>, <em>transform=None</em>, <em>gradient=None</em>, <em>layout=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pmesh/pm.html#RealField.readout"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pmesh.pm.RealField.readout" title="Permalink to this definition">¶</a></dt>
 <dd><p>Read out from real field at positions</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -573,9 +688,9 @@ if None, a new array is created and returned</p>
 <div><p>Direction to take the gradient of the window. The affine transformation
 is properly applied.</p>
 </div></blockquote>
-<p><strong>method</strong> : None or string</p>
+<p><strong>resampler</strong> : None or string</p>
 <blockquote>
-<div><p>type of window, default to self.pm.method</p>
+<div><p>type of window, default to self.pm.resampler</p>
 </div></blockquote>
 <p><strong>layout</strong> : Layout</p>
 <blockquote>
@@ -595,8 +710,14 @@ routed to the target ranks and the result is reduced</p>
 </dd></dl>
 
 <dl class="method">
-<dt id="pmesh.pm.RealField.readout_gradient">
-<code class="descname">readout_gradient</code><span class="sig-paren">(</span><em>pos</em>, <em>btgrad</em>, <em>method=None</em>, <em>transform=None</em>, <em>gradient=None</em>, <em>out_self=None</em>, <em>out_pos=None</em>, <em>layout=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pmesh/pm.html#RealField.readout_gradient"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pmesh.pm.RealField.readout_gradient" title="Permalink to this definition">¶</a></dt>
+<dt id="pmesh.pm.RealField.readout_jvp">
+<code class="descname">readout_jvp</code><span class="sig-paren">(</span><em>pos</em>, <em>v_self=None</em>, <em>v_pos=None</em>, <em>resampler=None</em>, <em>transform=None</em>, <em>gradient=None</em>, <em>layout=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pmesh/pm.html#RealField.readout_jvp"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pmesh.pm.RealField.readout_jvp" title="Permalink to this definition">¶</a></dt>
+<dd><p>f_i = W_qi A_q</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pmesh.pm.RealField.readout_vjp">
+<code class="descname">readout_vjp</code><span class="sig-paren">(</span><em>pos</em>, <em>v</em>, <em>resampler=None</em>, <em>transform=None</em>, <em>gradient=None</em>, <em>out_self=None</em>, <em>out_pos=None</em>, <em>layout=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pmesh/pm.html#RealField.readout_vjp"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pmesh.pm.RealField.readout_vjp" title="Permalink to this definition">¶</a></dt>
 <dd><p>back-propagate the gradient of readout.</p>
 <p>Returns a tuple of (out_self, out_pos), one of both can be False depending
 on the value of out_self and out_pos.</p>
@@ -604,7 +725,7 @@ on the value of out_self and out_pos.</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>btgrad</strong> : array</p>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>v: array</strong></p>
 <blockquote>
 <div><p>current gradient over the result of readout.</p>
 </div></blockquote>
@@ -646,8 +767,8 @@ This is similar to numpy.ravel_multi_index.</p>
 </dd>
 <dt>Returns:</dt>
 <dd><dl class="first last docutils">
-<dt>ind</dt>
- <span class="classifier-delimiter">:</span> <span class="classifier">a 3-d array of the indices of the coordinates in indices in</span><dd>an array of size fullshape. -1 if any indices is -1.</dd>
+<dt>ind <span class="classifier-delimiter">:</span> <span class="classifier">a 3-d array of the indices of the coordinates in indices in</span></dt>
+<dd>an array of size fullshape. -1 if any indices is -1.</dd>
 </dl>
 </dd>
 </dl>
@@ -663,7 +784,7 @@ This is similar to numpy.ravel_multi_index.</p>
 <code class="descclassname">pmesh.pm.</code><code class="descname">reindex</code><span class="sig-paren">(</span><em>Nsrc</em>, <em>Ndest</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pmesh/pm.html#reindex"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pmesh.pm.reindex" title="Permalink to this definition">¶</a></dt>
 <dd><p>returns the index in the frequency array for corresponding
 k in Nsrc and composes Ndest</p>
-<p>For those Ndest that doesn&#8217;t exist in Nsrc, return -1</p>
+<p>For those Ndest that doesn’t exist in Nsrc, return -1</p>
 <p>Example:
 &gt;&gt;&gt; reindex(8, 4)
 &gt;&gt;&gt; array([0, 1, 2, 7])
@@ -739,14 +860,14 @@ k in Nsrc and composes Ndest</p>
         <li class="right" >
           <a href="pmesh.particlemesh.html" title="pmesh.particlemesh module"
              >previous</a> |</li>
-        <li class="nav-item nav-item-0"><a href="index.html">PyPM 0.1 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-0"><a href="index.html">pmesh 0.1.32 documentation</a> &#187;</li>
           <li class="nav-item nav-item-1"><a href="modules.html" >pmesh</a> &#187;</li>
           <li class="nav-item nav-item-2"><a href="pmesh.html" >pmesh package</a> &#187;</li> 
       </ul>
     </div>
     <div class="footer" role="contentinfo">
-        &#169; Copyright 2015, Yu Feng.
-      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.5.1.
+        &#169; Copyright 2017, Yu Feng.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.6.3.
     </div>
   </body>
 </html>

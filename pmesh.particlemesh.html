@@ -1,20 +1,17 @@
+
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-
 
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    
-    <title>pmesh.particlemesh module &#8212; PyPM 0.1 documentation</title>
-    
+    <title>pmesh.particlemesh module &#8212; pmesh 0.1.32 documentation</title>
     <link rel="stylesheet" href="_static/classic.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
-    
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    './',
-        VERSION:     '0.1',
+        VERSION:     '0.1.32',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true,
@@ -29,7 +26,7 @@
     <link rel="next" title="pmesh.pm module" href="pmesh.pm.html" />
     <link rel="prev" title="pmesh.lanczos module" href="pmesh.lanczos.html" /> 
   </head>
-  <body role="document">
+  <body>
     <div class="related" role="navigation" aria-label="related navigation">
       <h3>Navigation</h3>
       <ul>
@@ -45,7 +42,7 @@
         <li class="right" >
           <a href="pmesh.lanczos.html" title="pmesh.lanczos module"
              accesskey="P">previous</a> |</li>
-        <li class="nav-item nav-item-0"><a href="index.html">PyPM 0.1 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-0"><a href="index.html">pmesh 0.1.32 documentation</a> &#187;</li>
           <li class="nav-item nav-item-1"><a href="modules.html" >pmesh</a> &#187;</li>
           <li class="nav-item nav-item-2"><a href="pmesh.html" accesskey="U">pmesh package</a> &#187;</li> 
       </ul>
@@ -75,47 +72,47 @@ Be aware the transfer functions may take more memory.</p>
 <p class="rubric">Attributes</p>
 <table border="1" class="docutils">
 <colgroup>
-<col width="2%" />
-<col width="98%" />
+<col width="3%" />
+<col width="97%" />
 </colgroup>
 <tbody valign="top">
-<tr class="row-odd"><td>np</td>
+<tr class="row-odd"><td><strong>np</strong></td>
 <td>(array_like (npx, npy)) The shape of the process mesh. This is the number of domains per direction. The product of the items shall equal to the size of communicator. For example, for 64 rank job, np = (8, 8) is a good choice. Since for now only 3d simulations are supported, np must be of length-2. The default is try to split the total number of ranks equally. (eg, for a 64 rank job, default is (8, 8)</td>
 </tr>
-<tr class="row-even"><td>comm</td>
+<tr class="row-even"><td><strong>comm</strong></td>
 <td>(<code class="xref py py-class docutils literal"><span class="pre">MPI.Comm</span></code>) the MPI communicator, (default is MPI.COMM_WORLD)</td>
 </tr>
-<tr class="row-odd"><td>Nmesh</td>
+<tr class="row-odd"><td><strong>Nmesh</strong></td>
 <td>(int) number of mesh points per side. Only 3d simulations are supported by now, and the true mesh is [Nmesh, Nmesh, Nmesh]</td>
 </tr>
-<tr class="row-even"><td>BoxSize</td>
+<tr class="row-even"><td><strong>BoxSize</strong></td>
 <td>(float) size of box</td>
 </tr>
-<tr class="row-odd"><td>domain</td>
+<tr class="row-odd"><td><strong>domain</strong></td>
 <td>(<a class="reference internal" href="pmesh.domain.html#pmesh.domain.GridND" title="pmesh.domain.GridND"><code class="xref py py-class docutils literal"><span class="pre">pmesh.domain.GridND</span></code></a>) domain decomposition (private)</td>
 </tr>
-<tr class="row-even"><td>partition</td>
+<tr class="row-even"><td><strong>partition</strong></td>
 <td>(<code class="xref py py-class docutils literal"><span class="pre">pfft.Partition</span></code>) domain partition (private)</td>
 </tr>
-<tr class="row-odd"><td>real</td>
+<tr class="row-odd"><td><strong>real</strong></td>
 <td>(array_like) the real FFT array (private)</td>
 </tr>
-<tr class="row-even"><td>complex</td>
+<tr class="row-even"><td><strong>complex</strong></td>
 <td>(array_like) the complex FFT array (private)</td>
 </tr>
-<tr class="row-odd"><td>w</td>
+<tr class="row-odd"><td><strong>w</strong></td>
 <td>(list) a list of the circular frequencies along each direction (-pi to pi)</td>
 </tr>
-<tr class="row-even"><td>k</td>
+<tr class="row-even"><td><strong>k</strong></td>
 <td>(list) a list of the wave numbers k along each direction (- pi N/ L to pi N/ L)</td>
 </tr>
-<tr class="row-odd"><td>x</td>
+<tr class="row-odd"><td><strong>x</strong></td>
 <td>(list) a list of the position along each direction (-L/2 to L/ 2). x is conjugate of k.</td>
 </tr>
-<tr class="row-even"><td>r</td>
+<tr class="row-even"><td><strong>r</strong></td>
 <td>(list) a list of the mesh position along each direction (-N/2 to N/2). r is conjugate of w.</td>
 </tr>
-<tr class="row-odd"><td>T</td>
+<tr class="row-odd"><td><strong>T</strong></td>
 <td>(<a class="reference internal" href="pmesh.tools.html#pmesh.tools.Timers" title="pmesh.tools.Timers"><code class="xref py py-class docutils literal"><span class="pre">pmesh.tools.Timers</span></code></a>) profiling timers</td>
 </tr>
 </tbody>
@@ -376,14 +373,14 @@ If the original field shall be preserved, use <a class="reference internal" href
         <li class="right" >
           <a href="pmesh.lanczos.html" title="pmesh.lanczos module"
              >previous</a> |</li>
-        <li class="nav-item nav-item-0"><a href="index.html">PyPM 0.1 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-0"><a href="index.html">pmesh 0.1.32 documentation</a> &#187;</li>
           <li class="nav-item nav-item-1"><a href="modules.html" >pmesh</a> &#187;</li>
           <li class="nav-item nav-item-2"><a href="pmesh.html" >pmesh package</a> &#187;</li> 
       </ul>
     </div>
     <div class="footer" role="contentinfo">
-        &#169; Copyright 2015, Yu Feng.
-      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.5.1.
+        &#169; Copyright 2017, Yu Feng.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.6.3.
     </div>
   </body>
 </html>

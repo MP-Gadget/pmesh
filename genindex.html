@@ -1,21 +1,18 @@
 
+
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-
 
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    
-    <title>Index &#8212; PyPM 0.1 documentation</title>
-    
+    <title>Index &#8212; pmesh 0.1.32 documentation</title>
     <link rel="stylesheet" href="_static/classic.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
-    
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    './',
-        VERSION:     '0.1',
+        VERSION:     '0.1.32',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true,
@@ -28,7 +25,7 @@
     <link rel="index" title="Index" href="#" />
     <link rel="search" title="Search" href="search.html" /> 
   </head>
-  <body role="document">
+  <body>
     <div class="related" role="navigation" aria-label="related navigation">
       <h3>Navigation</h3>
       <ul>
@@ -38,7 +35,7 @@
         <li class="right" >
           <a href="py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li class="nav-item nav-item-0"><a href="index.html">PyPM 0.1 documentation</a> &#187;</li> 
+        <li class="nav-item nav-item-0"><a href="index.html">pmesh 0.1.32 documentation</a> &#187;</li> 
       </ul>
     </div>  
 
@@ -61,6 +58,7 @@
  | <a href="#I"><strong>I</strong></a>
  | <a href="#K"><strong>K</strong></a>
  | <a href="#L"><strong>L</strong></a>
+ | <a href="#M"><strong>M</strong></a>
  | <a href="#N"><strong>N</strong></a>
  | <a href="#P"><strong>P</strong></a>
  | <a href="#R"><strong>R</strong></a>
@@ -107,7 +105,7 @@
         <li><a href="pmesh.pm.html#pmesh.pm.ComplexField.c2r">(pmesh.pm.ComplexField method)</a>
 </li>
       </ul></li>
-      <li><a href="pmesh.pm.html#pmesh.pm.RealField.c2r_gradient">c2r_gradient() (pmesh.pm.RealField method)</a>
+      <li><a href="pmesh.pm.html#pmesh.pm.RealField.c2r_vjp">c2r_vjp() (pmesh.pm.RealField method)</a>
 </li>
       <li><a href="pmesh.pm.html#pmesh.pm.ComplexField.cdot">cdot() (pmesh.pm.ComplexField method)</a>
 
@@ -115,7 +113,7 @@
         <li><a href="pmesh.pm.html#pmesh.pm.RealField.cdot">(pmesh.pm.RealField method)</a>
 </li>
       </ul></li>
-      <li><a href="pmesh.pm.html#pmesh.pm.ComplexField.cdot_gradient">cdot_gradient() (pmesh.pm.ComplexField method)</a>
+      <li><a href="pmesh.pm.html#pmesh.pm.ComplexField.cdot_vjp">cdot_vjp() (pmesh.pm.ComplexField method)</a>
 </li>
       <li><a href="pmesh.pm.html#pmesh.pm.Field.cgetitem">cgetitem() (pmesh.pm.Field method)</a>
 </li>
@@ -131,8 +129,6 @@
         <li><a href="pmesh.pm.html#pmesh.pm.RealField.cnorm">(pmesh.pm.RealField method)</a>
 </li>
       </ul></li>
-      <li><a href="pmesh.pm.html#pmesh.pm.ComplexField.cnorm_gradient">cnorm_gradient() (pmesh.pm.ComplexField method)</a>
-</li>
       <li><a href="pmesh.pm.html#pmesh.pm.ComplexField">ComplexField (class in pmesh.pm)</a>
 </li>
       <li><a href="pmesh.transfer.html#pmesh.transfer.TransferFunction.Constant">Constant() (pmesh.transfer.TransferFunction static method)</a>
@@ -163,7 +159,9 @@
       </ul></li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="pmesh.pm.html#pmesh.pm.ComplexField.decompress_gradient">decompress_gradient() (pmesh.pm.ComplexField method)</a>
+      <li><a href="pmesh.pm.html#pmesh.pm.ComplexField.decompress_vjp">decompress_vjp() (pmesh.pm.ComplexField method)</a>
+</li>
+      <li><a href="pmesh.pm.html#pmesh.pm.ParticleMesh.downsample">downsample() (pmesh.pm.ParticleMesh method)</a>
 </li>
       <li><a href="pmesh.tsc.html#pmesh.tsc.driver">driver() (in module pmesh.tsc)</a>
 </li>
@@ -185,6 +183,8 @@
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="pmesh.window.html#pmesh.window.FindResampler">FindResampler() (in module pmesh.window)</a>
+</li>
       <li><a href="pmesh.tools.html#pmesh.tools.FromRoot">FromRoot() (in module pmesh.tools)</a>
 </li>
   </ul></td>
@@ -197,9 +197,11 @@
 </li>
       <li><a href="pmesh.transfer.html#pmesh.transfer.TransferFunction.Gaussian">Gaussian() (pmesh.transfer.TransferFunction static method)</a>
 </li>
+      <li><a href="pmesh.whitenoise.html#pmesh.whitenoise.generate">generate() (in module pmesh.whitenoise)</a>
+</li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="pmesh.whitenoise.html#pmesh.whitenoise.generate">generate() (in module pmesh.whitenoise)</a>
+      <li><a href="pmesh.pm.html#pmesh.pm.ParticleMesh.generate_uniform_particle_grid">generate_uniform_particle_grid() (pmesh.pm.ParticleMesh method)</a>
 </li>
       <li><a href="pmesh.pm.html#pmesh.pm.ParticleMesh.generate_whitenoise">generate_whitenoise() (pmesh.pm.ParticleMesh method)</a>
 </li>
@@ -216,6 +218,8 @@
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="pmesh.pm.html#pmesh.pm.is_inplace">is_inplace() (in module pmesh.pm)</a>
+</li>
+      <li><a href="pmesh.domain.html#pmesh.domain.GridND.isprimary">isprimary() (pmesh.domain.GridND method)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -248,6 +252,14 @@
   </ul></td>
 </tr></table>
 
+<h2 id="M">M</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="pmesh.pm.html#pmesh.pm.ParticleMesh.mesh_coordinates">mesh_coordinates() (pmesh.pm.ParticleMesh method)</a>
+</li>
+  </ul></td>
+</tr></table>
+
 <h2 id="N">N</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
@@ -266,16 +278,20 @@
 </li>
         <li><a href="pmesh.particlemesh.html#pmesh.particlemesh.ParticleMesh.paint">(pmesh.particlemesh.ParticleMesh method)</a>
 </li>
+        <li><a href="pmesh.pm.html#pmesh.pm.ParticleMesh.paint">(pmesh.pm.ParticleMesh method)</a>
+</li>
         <li><a href="pmesh.pm.html#pmesh.pm.RealField.paint">(pmesh.pm.RealField method)</a>
 </li>
         <li><a href="pmesh.window.html#pmesh.window.ResampleWindow.paint">(pmesh.window.ResampleWindow method)</a>
 </li>
       </ul></li>
-      <li><a href="pmesh.pm.html#pmesh.pm.RealField.paint_gradient">paint_gradient() (pmesh.pm.RealField method)</a>
+      <li><a href="pmesh.pm.html#pmesh.pm.ParticleMesh.paint_jvp">paint_jvp() (pmesh.pm.ParticleMesh method)</a>
 </li>
       <li><a href="pmesh.cic.html#pmesh.cic.paint_old">paint_old() (in module pmesh.cic)</a>
 </li>
       <li><a href="pmesh.tsc.html#pmesh.tsc.paint_some">paint_some (in module pmesh.tsc)</a>
+</li>
+      <li><a href="pmesh.pm.html#pmesh.pm.ParticleMesh.paint_vjp">paint_vjp() (pmesh.pm.ParticleMesh method)</a>
 </li>
       <li><a href="pmesh.particlemesh.html#pmesh.particlemesh.ParticleMesh">ParticleMesh (class in pmesh.particlemesh)</a>
 
@@ -289,10 +305,10 @@
 </li>
       <li><a href="pmesh.domain.html#module-pmesh.domain">pmesh.domain (module)</a>
 </li>
-      <li><a href="pmesh.lanczos.html#module-pmesh.lanczos">pmesh.lanczos (module)</a>
-</li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="pmesh.lanczos.html#module-pmesh.lanczos">pmesh.lanczos (module)</a>
+</li>
       <li><a href="pmesh.particlemesh.html#module-pmesh.particlemesh">pmesh.particlemesh (module)</a>
 </li>
       <li><a href="pmesh.pm.html#module-pmesh.pm">pmesh.pm (module)</a>
@@ -333,7 +349,9 @@
         <li><a href="pmesh.pm.html#pmesh.pm.RealField.r2c">(pmesh.pm.RealField method)</a>
 </li>
       </ul></li>
-      <li><a href="pmesh.pm.html#pmesh.pm.ComplexField.r2c_gradient">r2c_gradient() (pmesh.pm.ComplexField method)</a>
+      <li><a href="pmesh.pm.html#pmesh.pm.ComplexField.r2c_vjp">r2c_vjp() (pmesh.pm.ComplexField method)</a>
+</li>
+      <li><a href="pmesh.pm.html#pmesh.pm.Field.ravel">ravel() (pmesh.pm.Field method)</a>
 </li>
       <li><a href="pmesh.tsc.html#pmesh.tsc.readout">readout() (in module pmesh.tsc)</a>
 
@@ -345,11 +363,13 @@
         <li><a href="pmesh.window.html#pmesh.window.ResampleWindow.readout">(pmesh.window.ResampleWindow method)</a>
 </li>
       </ul></li>
+      <li><a href="pmesh.pm.html#pmesh.pm.RealField.readout_jvp">readout_jvp() (pmesh.pm.RealField method)</a>
+</li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="pmesh.pm.html#pmesh.pm.RealField.readout_gradient">readout_gradient() (pmesh.pm.RealField method)</a>
-</li>
       <li><a href="pmesh.cic.html#pmesh.cic.readout_old">readout_old() (in module pmesh.cic)</a>
+</li>
+      <li><a href="pmesh.pm.html#pmesh.pm.RealField.readout_vjp">readout_vjp() (pmesh.pm.RealField method)</a>
 </li>
       <li><a href="pmesh.pm.html#pmesh.pm.RealField">RealField (class in pmesh.pm)</a>
 </li>
@@ -361,6 +381,12 @@
 </li>
       <li><a href="pmesh.window.html#pmesh.window.ResampleWindow">ResampleWindow (class in pmesh.window)</a>
 </li>
+      <li><a href="pmesh.pm.html#pmesh.pm.ParticleMesh.resize">resize() (pmesh.pm.ParticleMesh method)</a>
+
+      <ul>
+        <li><a href="pmesh.window.html#pmesh.window.ResampleWindow.resize">(pmesh.window.ResampleWindow method)</a>
+</li>
+      </ul></li>
       <li><a href="pmesh.tools.html#pmesh.tools.Rotator">Rotator (class in pmesh.tools)</a>
 </li>
   </ul></td>
@@ -413,9 +439,13 @@
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="pmesh.domain.html#pmesh.domain.GridND.uniform">uniform() (pmesh.domain.GridND class method)</a>
 </li>
+      <li><a href="pmesh.pm.html#pmesh.pm.Field.unravel">unravel() (pmesh.pm.Field method)</a>
+</li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="pmesh.pm.html#pmesh.pm.Field.unsort">unsort() (pmesh.pm.Field method)</a>
+</li>
+      <li><a href="pmesh.pm.html#pmesh.pm.ParticleMesh.upsample">upsample() (pmesh.pm.ParticleMesh method)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -461,12 +491,12 @@
         <li class="right" >
           <a href="py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li class="nav-item nav-item-0"><a href="index.html">PyPM 0.1 documentation</a> &#187;</li> 
+        <li class="nav-item nav-item-0"><a href="index.html">pmesh 0.1.32 documentation</a> &#187;</li> 
       </ul>
     </div>
     <div class="footer" role="contentinfo">
-        &#169; Copyright 2015, Yu Feng.
-      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.5.1.
+        &#169; Copyright 2017, Yu Feng.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.6.3.
     </div>
   </body>
 </html>

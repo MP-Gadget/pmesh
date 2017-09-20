@@ -71,20 +71,25 @@ transformation.</p>
 <div class="section" id="for-development">
 <h2>For Development<a class="headerlink" href="#for-development" title="Permalink to this headline">¶</a></h2>
 <p>Recommended development environment is anaconda. First install pfft-python</p>
-<div class="highlight-sh"><div class="highlight"><pre><span></span>conda install -c bccp pfft-python
+<div class="highlight-sh"><div class="highlight"><pre><span></span>conda install -c bccp pfft-python runtests
 </pre></div>
 </div>
-<p>Then install pmesh in development mode from git cloned version of source code.</p>
+<p>in development mode from git cloned version of source code.</p>
 <div class="highlight-sh"><div class="highlight"><pre><span></span>git clone https://github.com/rainwoodman/pmesh
 <span class="nb">cd</span> pmesh
-pip install -e .
 </pre></div>
 </div>
-<p>I recommended running the test suites</p>
-<div class="highlight-sh"><div class="highlight"><pre><span></span>python runtests.py  --mpirun
+<p>The development shall ideally be test driven. Write test cases
+in the tests directories in the source code, then invoke them with</p>
+<div class="highlight-sh"><div class="highlight"><pre><span></span>python run-tests.py pmesh/tests/test_....py::test_...
 </pre></div>
 </div>
-<p>No tests shall fail.</p>
+<p>or with a single rank</p>
+<div class="highlight-sh"><div class="highlight"><pre><span></span>python run-tests.py --single pmesh/tests/test_....py::test_...
+</pre></div>
+</div>
+<p>Replace <cite>…</cite> with names of files and functions.</p>
+<p><cite>run-tests.py</cite> takes care of building and installation before testing.</p>
 </div>
 </div>
 

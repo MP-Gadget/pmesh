@@ -29,21 +29,29 @@ Recommended development environment is anaconda. First install pfft-python
 
 .. code-block:: sh
 
-    conda install -c bccp pfft-python
+    conda install -c bccp pfft-python runtests
 
-Then install pmesh in development mode from git cloned version of source code.
+in development mode from git cloned version of source code.
 
 .. code-block:: sh
 
     git clone https://github.com/rainwoodman/pmesh
     cd pmesh
-    pip install -e .
 
-I recommended running the test suites
+The development shall ideally be test driven. Write test cases
+in the tests directories in the source code, then invoke them with
 
 .. code-block:: sh
 
-    python runtests.py  --mpirun
+    python run-tests.py pmesh/tests/test_....py::test_...
 
-No tests shall fail.
+or with a single rank
+
+.. code-block:: sh
+
+    python run-tests.py --single pmesh/tests/test_....py::test_...
+
+Replace `...` with names of files and functions.
+
+`run-tests.py` takes care of building and installation before testing.
 

@@ -24,6 +24,7 @@ extensions = [
                          "pmesh/_window_generics.h",
                          "pmesh/_window_wavelets.h",
                          "pmesh/_window_lanczos.h"],
+                libraries = ['m'],
                 include_dirs=["./", numpy.get_include()]),
         Extension("pmesh._whitenoise", ["pmesh/gsl/ranlxd.c", "pmesh/gsl/missing.c", "pmesh/gsl/rng.c", "pmesh/_whitenoise_imp.c", "pmesh/_whitenoise.pyx"],
                 depends=["pmesh/gsl/config.h", "pmesh/gsl/gsl_errno.h",
@@ -31,6 +32,7 @@ extensions = [
                          "pmesh/gsl/gsl_types.h",
                          "pmesh/_whitenoise_imp.h", "pmesh/_whitenoise_generics.h"
                         ],
+                libraries = ['m'],
                 include_dirs=["pmesh/gsl", "pmesh", numpy.get_include()])
         ]
 

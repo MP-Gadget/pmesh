@@ -1,7 +1,7 @@
 import numpy
 from .window import FindResampler
 
-def lic(vectors, kernel, length, ds, resampler=None, texture=None):
+def lic(vectors, kernel, length, ds, resampler=None, texture=None, normalize=True):
     """ Line Intergral Convolution for visualizing vector fields.
 
         The vectors must be normalized to norm of 1.0 for LIC to give a reasonable
@@ -27,9 +27,12 @@ def lic(vectors, kernel, length, ds, resampler=None, texture=None):
         resampler: string, ResamplerWindow
             the resampler window. See pmesh.window module for a full list. if None, use pm's
             default sampler, pm.resampler, where pm is infered from the first vector.
- 
+
         texture : RealField, or None
             the texture to use. If None, a default gaussian texture is used.
+
+        normalize : bool
+            True if normalize the vectors to 1.0
 
         Returns
         -------
@@ -37,6 +40,12 @@ def lic(vectors, kernel, length, ds, resampler=None, texture=None):
             the integration result.
     """
     pm = vectors[0].pm
+
+    if normalize:
+        vabs = sum(vi**2 for vi in vectors) ** 0.5
+        mask = vabs[...] == 0.0
+        vabs[mask] = 1.0
+        vectors = [vi / vabs for vi in vectors]
 
     if texture is None:
         texture = pm.generate_whitenoise(seed=990919, mode='real')

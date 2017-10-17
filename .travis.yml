@@ -22,9 +22,7 @@ install:
     - conda create --yes -n test python=$TRAVIS_PYTHON_VERSION
     - source activate test
     - conda install --yes numpy=$NUMPY_VERSION nose cython mpi4py numba
-    - pip install pfft-python
-    - pip install mpsort
-    - pip install abopt
+    - conda install -c bccp pfft-python mpsort
     - python setup.py install
 
 script:

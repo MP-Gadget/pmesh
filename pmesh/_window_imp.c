@@ -180,46 +180,11 @@ _cubic_diff(double x) {
     return 0;
 }
 
-static int
-_compatible_with_nnb_tuned(PMeshPainter * painter, int ndim)
-{
-    if(painter->type != PMESH_PAINTER_TUNED_NNB) return 0;
-    if(painter->ndim != ndim) return 0;
-    if(painter->order[0] > 1) return 0;
-    if(ndim > 1 && painter->order[1] > 1) return 0;
-    if(ndim > 2 && painter->order[2] > 1) return 0;
-    if(painter->support != 1 && painter->support > 0) return 0;
-    return 1;
-}
-
-
-static int
-_compatible_with_cic_tuned(PMeshPainter * painter, int ndim)
-{
-    if(painter->type != PMESH_PAINTER_TUNED_CIC) return 0;
-    if(painter->ndim != ndim) return 0;
-    if(painter->order[0] > 1) return 0;
-    if(ndim > 1 && painter->order[1] > 1) return 0;
-    if(ndim > 2 && painter->order[2] > 1) return 0;
-    if(painter->support != 2 && painter->support > 0) return 0;
-    return 1;
-}
-
-static int
-_compatible_with_tsc_tuned(PMeshPainter * painter, int ndim)
-{
-    if(painter->type != PMESH_PAINTER_TUNED_TSC) return 0;
-    if(painter->ndim != ndim) return 0;
-    if(painter->order[0] > 1) return 0;
-    if(ndim > 1 && painter->order[1] > 1) return 0;
-    if(ndim > 2 && painter->order[2] > 1) return 0;
-    if(painter->support != 3 && painter->support > 0) return 0;
-    return 1;
-}
-
 void
 pmesh_painter_init(PMeshPainter * painter)
 {
+    painter->getfastmethod = NULL;
+
     if(painter->canvas_dtype_elsize == 8) {
         painter->paint = _generic_paint_double;
         painter->readout = _generic_readout_double;
@@ -304,49 +269,42 @@ pmesh_painter_init(PMeshPainter * painter)
             painter->diff = _sym20_diff;
             painter->nativesupport = _sym20_nativesupport;
         break;
-#define CASE_TUNED(xxx_tuned) \
-            if(_compatible_with_ ## xxx_tuned (painter, 2)) { \
-                if(painter->canvas_dtype_elsize == 8) { \
-                    painter->paint = _ ## xxx_tuned ## _paint2_double; \
-                    painter->readout = _ ## xxx_tuned ## _readout2_double; \
-                } else { \
-                    painter->paint = _ ## xxx_tuned ## _paint2_float; \
-                    painter->readout = _ ## xxx_tuned ## _readout2_float; \
-                } \
-                break; \
-            } \
-            if(_compatible_with_ ## xxx_tuned (painter, 3)) { \
-                if(painter->canvas_dtype_elsize == 8) { \
-                    painter->paint = _ ## xxx_tuned ## _paint3_double; \
-                    painter->readout = _ ## xxx_tuned ## _readout3_double; \
-                } else { \
-                    painter->paint = _ ## xxx_tuned ## _paint3_float; \
-                    painter->readout = _ ## xxx_tuned ## _readout3_float; \
-                } \
-                break; \
-            }
         case PMESH_PAINTER_TUNED_NNB:
             /* fall back to use nearest kernel */
             painter->kernel = _nearest_kernel;
             painter->diff = _nearest_diff;
             painter->nativesupport = 1;
-            CASE_TUNED(nnb_tuned)
+
+            if(painter->canvas_dtype_elsize == 8) {
+                painter->getfastmethod = _getfastmethod_nnb_double;
+            } else {
+                painter->getfastmethod = _getfastmethod_nnb_float;
+            }
         break;
         case PMESH_PAINTER_TUNED_CIC:
             /* fall back to use linear kernel */
             painter->kernel = _linear_kernel;
             painter->diff = _linear_diff;
             painter->nativesupport = 2;
-            CASE_TUNED(cic_tuned)
+
+            if(painter->canvas_dtype_elsize == 8) {
+                painter->getfastmethod = _getfastmethod_cic_double;
+            } else {
+                painter->getfastmethod = _getfastmethod_cic_float;
+            }
         break;
         case PMESH_PAINTER_TUNED_TSC:
             /* fall back to use quad kernel */
             painter->kernel = _quadratic_kernel;
             painter->diff = _quadratic_diff;
             painter->nativesupport = 3;
-            CASE_TUNED(tsc_tuned)
+
+            if(painter->canvas_dtype_elsize == 8) {
+                painter->getfastmethod = _getfastmethod_tsc_double;
+            } else {
+                painter->getfastmethod = _getfastmethod_tsc_float;
+            }
         break;
-#undef CASE_TUNED
     }
 
     if(painter->support <= 0) {

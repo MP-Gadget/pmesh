@@ -4,6 +4,17 @@
 static void
 mkname(_generic_paint) (PMeshPainter * painter, double pos[], double weight)
 {
+    /* Check for fast painting routines */
+    paintfunc fastpaint;
+    readoutfunc fastreadout;
+
+    if(painter->getfastmethod &&
+       painter->getfastmethod(painter, &fastpaint, &fastreadout)) {
+
+        fastpaint(painter, pos, weight);
+        return;
+    }
+
     int ipos[painter->ndim];
     /* the max support is 32 */
     double k[painter->ndim * painter->support];
@@ -60,6 +71,16 @@ mkname(_generic_paint) (PMeshPainter * painter, double pos[], double weight)
 static double
 mkname(_generic_readout) (PMeshPainter * painter, double pos[])
 {
+    /* Check for fast painting routines */
+    paintfunc fastpaint;
+    readoutfunc fastreadout;
+
+    if(painter->getfastmethod &&
+       painter->getfastmethod(painter, &fastpaint, &fastreadout)) {
+
+        return fastreadout(painter, pos);
+    }
+
     double value = 0;
     int ipos[painter->ndim];
     double k[painter->ndim * painter->support];

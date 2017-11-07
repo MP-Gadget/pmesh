@@ -25,6 +25,11 @@ typedef struct PMeshPainter PMeshPainter;
 
 typedef double (*pmesh_kernelfunc)(double x);
 
+typedef    void   (*paintfunc)(PMeshPainter * painter, double pos[], double weight);
+typedef    double (*readoutfunc)(PMeshPainter * painter, double pos[]);
+
+typedef int (*getfastmethodfunc)(PMeshPainter * painter, paintfunc * paint, readoutfunc * readout);
+
 struct PMeshPainter {
     PMeshPainterType type;
     int order[32]; /* diff order per axis */
@@ -40,8 +45,9 @@ struct PMeshPainter {
     ptrdiff_t strides[32];
 
     /* Private: */
-    void   (*paint)(PMeshPainter * painter, double pos[], double weight);
-    double (*readout)(PMeshPainter * painter, double pos[]);
+    paintfunc paint;
+    readoutfunc readout;
+    getfastmethodfunc getfastmethod;
 
     pmesh_kernelfunc kernel;
     pmesh_kernelfunc diff;
@@ -51,6 +57,7 @@ struct PMeshPainter {
     double shift;
     int left; /* offset to start the kernel, (support - 1) / 2*/
     int Npoints; /* (support) ** ndim */
+
 };
 
 void

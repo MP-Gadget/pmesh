@@ -154,4 +154,28 @@ mkname(_tsc_tuned_readout2) (PMeshPainter * painter, double pos[])
     value += ACCESS2(_REd2, 2, 2);
     return value;
 }
+
+static int
+mkname(_getfastmethod_tsc) (PMeshPainter * painter, paintfunc * fastpaint, readoutfunc * fastreadout)
+{
+    if(painter->order[0] > 1) return 0;
+    if(painter->ndim > 1 && painter->order[1] > 1) return 0;
+    if(painter->ndim > 2 && painter->order[2] > 1) return 0;
+    if(painter->support != 3 && painter->support > 0) return 0;
+    if(painter->ndim == 1) return 0;
+
+    if(painter->ndim == 2) {
+        *fastpaint = mkname(_tsc_tuned_paint2); \
+        *fastreadout = mkname(_tsc_tuned_readout2); \
+        return 1;
+    } 
+    if(painter->ndim == 3) {
+        *fastpaint = mkname(_tsc_tuned_paint3); \
+        *fastreadout = mkname(_tsc_tuned_readout3); \
+        return 1;
+    }
+    return 0;
+}
+
+
 #undef SETUP_KERNEL_TSC

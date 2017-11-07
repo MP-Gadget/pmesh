@@ -27,7 +27,7 @@
     } \
 
 static void
-mkname(_nnb_tuned_paint3) (PMeshPainter * painter, double pos[], double weight)
+mkname(_nnb_tuned_paint3) (PMeshPainter * painter, double pos[], double weight, double hsml)
 {
     FLOAT * canvas = painter->canvas;
 
@@ -39,7 +39,7 @@ mkname(_nnb_tuned_paint3) (PMeshPainter * painter, double pos[], double weight)
 }
 
 static double
-mkname(_nnb_tuned_readout3) (PMeshPainter * painter, double pos[])
+mkname(_nnb_tuned_readout3) (PMeshPainter * painter, double pos[], double hsml)
 {
     FLOAT * canvas = painter->canvas;
 
@@ -52,7 +52,7 @@ mkname(_nnb_tuned_readout3) (PMeshPainter * painter, double pos[])
 }
 
 static void
-mkname(_nnb_tuned_paint2) (PMeshPainter * painter, double pos[], double weight)
+mkname(_nnb_tuned_paint2) (PMeshPainter * painter, double pos[], double weight, double hsml)
 {
     FLOAT * canvas = painter->canvas;
 
@@ -63,7 +63,7 @@ mkname(_nnb_tuned_paint2) (PMeshPainter * painter, double pos[], double weight)
 }
 
 static double
-mkname(_nnb_tuned_readout2) (PMeshPainter * painter, double pos[])
+mkname(_nnb_tuned_readout2) (PMeshPainter * painter, double pos[], double hsml)
 {
     FLOAT * canvas = painter->canvas;
 

@@ -2,7 +2,7 @@
 #define LIKELY(x) (x)
 
 static void
-mkname(_generic_paint) (PMeshPainter * painter, double pos[], double weight)
+mkname(_generic_paint) (PMeshPainter * painter, double pos[], double weight, double hsml)
 {
     PMeshWindowInfo * window = &painter->window;
 
@@ -13,7 +13,7 @@ mkname(_generic_paint) (PMeshPainter * painter, double pos[], double weight)
     if(painter->getfastmethod &&
        painter->getfastmethod(painter, window, &fastpaint, &fastreadout)) {
 
-        fastpaint(painter, pos, weight);
+        fastpaint(painter, pos, weight, hsml);
         return;
     }
 
@@ -72,7 +72,7 @@ mkname(_generic_paint) (PMeshPainter * painter, double pos[], double weight)
 }
 
 static double
-mkname(_generic_readout) (PMeshPainter * painter, double pos[])
+mkname(_generic_readout) (PMeshPainter * painter, double pos[], double hsml)
 {
     PMeshWindowInfo * window = &painter->window;
 
@@ -83,7 +83,7 @@ mkname(_generic_readout) (PMeshPainter * painter, double pos[])
     if(painter->getfastmethod &&
        painter->getfastmethod(painter, window, &fastpaint, &fastreadout)) {
 
-        return fastreadout(painter, pos);
+        return fastreadout(painter, pos, hsml);
     }
 
     double value = 0;

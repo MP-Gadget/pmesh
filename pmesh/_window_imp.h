@@ -33,8 +33,8 @@ typedef struct PMeshPainter PMeshPainter;
 
 typedef double (*pmesh_kernelfunc)(double x);
 
-typedef    void   (*paintfunc)(PMeshPainter * painter, double pos[], double weight);
-typedef    double (*readoutfunc)(PMeshPainter * painter, double pos[]);
+typedef    void   (*paintfunc)(PMeshPainter * painter, double pos[], double weight, double hsml);
+typedef    double (*readoutfunc)(PMeshPainter * painter, double pos[], double hsml);
 
 typedef int (*getfastmethodfunc)(PMeshPainter * painter, PMeshWindowInfo * window, paintfunc * paint, readoutfunc * readout);
 
@@ -69,10 +69,10 @@ void
 pmesh_painter_init(PMeshPainter * painter);
 
 void
-pmesh_painter_paint(PMeshPainter * painter, double pos[], double weight);
+pmesh_painter_paint(PMeshPainter * painter, double pos[], double weight, double hsml);
 
 double
-pmesh_painter_readout(PMeshPainter * painter, double pos[]);
+pmesh_painter_readout(PMeshPainter * painter, double pos[], double hsml);
 
 #ifdef __cplusplus
 }

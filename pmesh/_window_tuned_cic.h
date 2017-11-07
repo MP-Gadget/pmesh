@@ -32,7 +32,7 @@
     } \
 
 static void
-mkname(_cic_tuned_paint3) (PMeshPainter * painter, double pos[], double weight)
+mkname(_cic_tuned_paint3) (PMeshPainter * painter, double pos[], double weight, double hsml)
 {
     FLOAT * canvas = painter->canvas;
 
@@ -52,7 +52,7 @@ mkname(_cic_tuned_paint3) (PMeshPainter * painter, double pos[], double weight)
 }
 
 static double
-mkname(_cic_tuned_readout3) (PMeshPainter * painter, double pos[])
+mkname(_cic_tuned_readout3) (PMeshPainter * painter, double pos[], double hsml)
 {
     FLOAT * canvas = painter->canvas;
 
@@ -72,7 +72,7 @@ mkname(_cic_tuned_readout3) (PMeshPainter * painter, double pos[])
 }
 
 static void
-mkname(_cic_tuned_paint2) (PMeshPainter * painter, double pos[], double weight)
+mkname(_cic_tuned_paint2) (PMeshPainter * painter, double pos[], double weight, double hsml)
 {
     FLOAT * canvas = painter->canvas;
 
@@ -88,7 +88,7 @@ mkname(_cic_tuned_paint2) (PMeshPainter * painter, double pos[], double weight)
 }
 
 static double
-mkname(_cic_tuned_readout2) (PMeshPainter * painter, double pos[])
+mkname(_cic_tuned_readout2) (PMeshPainter * painter, double pos[], double hsml)
 {
     FLOAT * canvas = painter->canvas;
 

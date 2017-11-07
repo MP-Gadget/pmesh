@@ -356,14 +356,14 @@ pmesh_painter_init(PMeshPainter * painter)
 }
 
 void
-pmesh_painter_paint(PMeshPainter * painter, double pos[], double weight)
+pmesh_painter_paint(PMeshPainter * painter, double pos[], double weight, double hsml)
 {
-    painter->paint(painter, pos, weight);
+    painter->paint(painter, pos, weight, hsml);
 }
 
 double
-pmesh_painter_readout(PMeshPainter * painter, double pos[])
+pmesh_painter_readout(PMeshPainter * painter, double pos[], double hsml)
 {
-    return painter->readout(painter, pos);
+    return painter->readout(painter, pos, hsml);
 }
 

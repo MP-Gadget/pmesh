@@ -50,8 +50,8 @@ cdef extern from "_window_imp.h":
         ptrdiff_t strides[32]
 
     void pmesh_painter_init(PMeshPainter * painter)
-    void pmesh_painter_paint(PMeshPainter * painter, double pos[], double mass)
-    double pmesh_painter_readout(PMeshPainter * painter, double pos[])
+    void pmesh_painter_paint(PMeshPainter * painter, double pos[], double mass, double hsml)
+    double pmesh_painter_readout(PMeshPainter * painter, double pos[], double hsml)
 
 cdef class ResampleWindow(object):
     cdef PMeshPainter painter[1]
@@ -131,7 +131,7 @@ cdef class ResampleWindow(object):
             for d in range(painter.ndim):
                 x[d] = pos[i, d]
             m = mass[i]
-            pmesh_painter_paint(painter, x, m)
+            pmesh_painter_paint(painter, x, m, 1.0)
 
     def readout(self, numpy.ndarray real, postype [:, :] pos, masstype [:] out, order,
         double [:] scale, double [:] translate, ptrdiff_t [:] period):
@@ -167,5 +167,5 @@ cdef class ResampleWindow(object):
         for i in range(pos.shape[0]):
             for d in range(painter.ndim):
                 x[d] = pos[i, d]
-            out[i] = pmesh_painter_readout(painter, x)
+            out[i] = pmesh_painter_readout(painter, x, 1.0)
 

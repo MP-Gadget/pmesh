@@ -21,6 +21,14 @@ typedef enum { PMESH_PAINTER_NEAREST,
                PMESH_PAINTER_TUNED_NNB,
 } PMeshPainterType;
 
+typedef struct PMeshWindowInfo {
+    int support;
+    double vfactor; /* nativesupport / support */
+    double shift;
+    int left; /* offset to start the kernel, (support - 1) / 2*/
+    int Npoints; /* (support) ** ndim */
+} PMeshWindowInfo;
+
 typedef struct PMeshPainter PMeshPainter;
 
 typedef double (*pmesh_kernelfunc)(double x);
@@ -28,16 +36,16 @@ typedef double (*pmesh_kernelfunc)(double x);
 typedef    void   (*paintfunc)(PMeshPainter * painter, double pos[], double weight);
 typedef    double (*readoutfunc)(PMeshPainter * painter, double pos[]);
 
-typedef int (*getfastmethodfunc)(PMeshPainter * painter, paintfunc * paint, readoutfunc * readout);
+typedef int (*getfastmethodfunc)(PMeshPainter * painter, PMeshWindowInfo * window, paintfunc * paint, readoutfunc * readout);
 
 struct PMeshPainter {
     PMeshPainterType type;
     int order[32]; /* diff order per axis */
-    int support;
     int ndim;
     double scale[32]; /* scale from position to grid units */
     double translate[32]; /* translate in grid units */
     ptrdiff_t Nmesh[32]; /* periodicity */
+    int support;
 
     void * canvas;
     int canvas_dtype_elsize;
@@ -53,11 +61,8 @@ struct PMeshPainter {
     pmesh_kernelfunc diff;
 
     double nativesupport; /* unscaled support */
-    double vfactor; /* nativesupport / support */
-    double shift;
-    int left; /* offset to start the kernel, (support - 1) / 2*/
-    int Npoints; /* (support) ** ndim */
 
+    PMeshWindowInfo window;
 };
 
 void

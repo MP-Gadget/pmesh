@@ -36,6 +36,7 @@ cdef extern from "_window_imp.h":
     ctypedef struct PMeshPainter:
         PMeshPainterType type
         int support
+        int nativesupport
         int ndim
         double scale[32]
         double translate[32]
@@ -54,6 +55,7 @@ cdef extern from "_window_imp.h":
 
 cdef class ResampleWindow(object):
     cdef PMeshPainter painter[1]
+    cdef readonly int nativesupport
     cdef readonly int support
     def __init__(self, kind, int support=-1):
         kinds = {
@@ -92,6 +94,7 @@ cdef class ResampleWindow(object):
 
         pmesh_painter_init(self.painter)
 
+        self.nativesupport = self.painter.nativesupport
         self.support = self.painter.support
         self.kind = kind
 

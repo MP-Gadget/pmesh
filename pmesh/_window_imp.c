@@ -10,24 +10,24 @@
 #include "_window_lanczos.h"
 
 static void
-_fill_k(PMeshPainter * painter, double pos[], int ipos[], double * k)
+_fill_k(PMeshPainter * painter, PMeshWindowInfo * window, double pos[], int ipos[], double * k)
 {
     double gpos[painter->ndim];
     int d;
 
     for(d = 0; d < painter->ndim; d++) {
-        double * kd = &k[painter->support * d];
+        double * kd = &k[window->support * d];
 
         gpos[d] = pos[d] * painter->scale[d] + painter->translate[d];
-        ipos[d] = floor(gpos[d] + painter->shift) - painter->left;
+        ipos[d] = floor(gpos[d] + window->shift) - window->left;
         double dx = gpos[d] - ipos[d]; /* relative to the left most nonzero.*/
         int i;
-        for(i = 0; i < painter->support; i ++) {
-            double x = (dx - i) * painter->vfactor;
+        for(i = 0; i < window->support; i ++) {
+            double x = (dx - i) * window->vfactor;
             if(painter->order[d] == 0) {
-                kd[i] = painter->kernel(x) * painter->vfactor;
+                kd[i] = painter->kernel(x) * window->vfactor;
             } else {
-                kd[i] = painter->diff(x) * painter->scale[d] * painter->vfactor * painter->vfactor;
+                kd[i] = painter->diff(x) * painter->scale[d] * window->vfactor * window->vfactor;
             }
         }
         /* Watch out: do not renormalize per particle */
@@ -180,6 +180,30 @@ _cubic_diff(double x) {
     return 0;
 }
 
+static void
+pmesh_window_info_init(PMeshWindowInfo * info, int ndim, int nativesupport, int support)
+{
+    info->support = support;
+
+    if(info->support <= 0) {
+        info->support = nativesupport;
+    }
+
+    info->left = (info->support - 1) / 2;
+    if (info->support % 2 == 0){
+        info->shift = 0;
+    } else {
+        info->shift = 0.5;
+    }
+    int nmax = 1;
+    int d;
+    for(d = 0; d < ndim; d++) {
+        nmax *= (info->support);
+    }
+    info->Npoints = nmax;
+    info->vfactor = nativesupport / (1. * info->support);
+}
+
 void
 pmesh_painter_init(PMeshPainter * painter)
 {
@@ -275,6 +299,12 @@ pmesh_painter_init(PMeshPainter * painter)
             painter->diff = _nearest_diff;
             painter->nativesupport = 1;
 
+            if(painter->order[0] > 1) break;
+            if(painter->ndim > 1 && painter->order[1] > 1) break;
+            if(painter->ndim > 2 && painter->order[2] > 1) break;
+            if(painter->ndim == 1) break;
+            if(painter->ndim > 3) break;
+
             if(painter->canvas_dtype_elsize == 8) {
                 painter->getfastmethod = _getfastmethod_nnb_double;
             } else {
@@ -286,6 +316,12 @@ pmesh_painter_init(PMeshPainter * painter)
             painter->kernel = _linear_kernel;
             painter->diff = _linear_diff;
             painter->nativesupport = 2;
+
+            if(painter->order[0] > 1) break;
+            if(painter->ndim > 1 && painter->order[1] > 1) break;
+            if(painter->ndim > 2 && painter->order[2] > 1) break;
+            if(painter->ndim == 1) break;
+            if(painter->ndim > 3) break;
 
             if(painter->canvas_dtype_elsize == 8) {
                 painter->getfastmethod = _getfastmethod_cic_double;
@@ -299,6 +335,12 @@ pmesh_painter_init(PMeshPainter * painter)
             painter->diff = _quadratic_diff;
             painter->nativesupport = 3;
 
+            if(painter->order[0] > 1) break;
+            if(painter->ndim > 1 && painter->order[1] > 1) break;
+            if(painter->ndim > 2 && painter->order[2] > 1) break;
+            if(painter->ndim == 1) break;
+            if(painter->ndim > 3) break;
+
             if(painter->canvas_dtype_elsize == 8) {
                 painter->getfastmethod = _getfastmethod_tsc_double;
             } else {
@@ -306,24 +348,11 @@ pmesh_painter_init(PMeshPainter * painter)
             }
         break;
     }
+    pmesh_window_info_init(&painter->window, painter->ndim, painter->nativesupport, painter->support);
 
-    if(painter->support <= 0) {
-        painter->support = painter->nativesupport;
-    }
+    /* update the support */
+    painter->support = painter->window.support;
 
-    painter->left = (painter->support - 1) / 2;
-    if (painter->support % 2 == 0){
-        painter->shift = 0;
-    } else {
-        painter->shift = 0.5;
-    }
-    int nmax = 1;
-    int d;
-    for(d = 0; d < painter->ndim; d++) {
-        nmax *= (painter->support);
-    }
-    painter->Npoints = nmax;
-    painter->vfactor = painter->nativesupport / (1. * painter->support);
 }
 
 void

@@ -4,36 +4,39 @@
 static void
 mkname(_generic_paint) (PMeshPainter * painter, double pos[], double weight)
 {
+    PMeshWindowInfo * window = &painter->window;
+
     /* Check for fast painting routines */
     paintfunc fastpaint;
     readoutfunc fastreadout;
 
     if(painter->getfastmethod &&
-       painter->getfastmethod(painter, &fastpaint, &fastreadout)) {
+       painter->getfastmethod(painter, window, &fastpaint, &fastreadout)) {
 
         fastpaint(painter, pos, weight);
         return;
     }
 
     int ipos[painter->ndim];
+
     /* the max support is 32 */
-    double k[painter->ndim * painter->support];
+    double k[painter->ndim * window->support];
 
     char * canvas = (char*) painter->canvas;
 
-    _fill_k(painter, pos, ipos, k);
+    _fill_k(painter, window, pos, ipos, k);
 
     int rel[painter->ndim];
     int d;
     for(d =0; d < painter->ndim; d ++ ) rel[d] = 0;
 
-    int s2 = painter->support;
+    int s2 = window->support;
     while(rel[0] != s2) {
         double kernel = 1.0;
         ptrdiff_t ind = 0;
         int d;
         for(d = 0; d < painter->ndim; d++) {
-            double * kd = &k[painter->support * d];
+            double * kd = &k[window->support * d];
             int r = rel[d];
             int targetpos = ipos[d] + r;
             kernel *= kd[r];
@@ -71,35 +74,37 @@ mkname(_generic_paint) (PMeshPainter * painter, double pos[], double weight)
 static double
 mkname(_generic_readout) (PMeshPainter * painter, double pos[])
 {
+    PMeshWindowInfo * window = &painter->window;
+
     /* Check for fast painting routines */
     paintfunc fastpaint;
     readoutfunc fastreadout;
 
     if(painter->getfastmethod &&
-       painter->getfastmethod(painter, &fastpaint, &fastreadout)) {
+       painter->getfastmethod(painter, window, &fastpaint, &fastreadout)) {
 
         return fastreadout(painter, pos);
     }
 
     double value = 0;
     int ipos[painter->ndim];
-    double k[painter->ndim * painter->support];
+    double k[painter->ndim * window->support];
 
     char * canvas = (char*) painter->canvas;
 
-    _fill_k(painter, pos, ipos, k);
+    _fill_k(painter, window, pos, ipos, k);
 
     int rel[painter->ndim];
     int d;
     for(d =0; d < painter->ndim; d++) rel[d] = 0;
 
-    int s2 = painter->support;
+    int s2 = window->support;
     while(rel[0] != s2) {
         double kernel = 1.0;
         ptrdiff_t ind = 0;
         int d;
         for(d = 0; d < painter->ndim; d++) {
-            double * kd = &k[painter->support * d];
+            double * kd = &k[window->support * d];
             int r = rel[d];
 
             kernel *= kd[r];

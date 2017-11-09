@@ -56,7 +56,7 @@ class ResampleWindow(_ResampleWindow):
         """ Change the support of the window, returning a new window. """
         return ResampleWindow(self.kind, support)
 
-    def paint(self, real, pos, mass=None, hsml=None, diffdir=None, transform=None):
+    def paint(self, real, pos, hsml=None, mass=None, diffdir=None, transform=None):
         """
             paint to a field.
 
@@ -71,7 +71,7 @@ class ResampleWindow(_ResampleWindow):
                 None for 1
 
             hsml: array_like or None
-                None for 1
+                scaling of the kernel. it is dimensionless; None for no scaling (default kernel support in grid units)
 
             diffdir: int or None
                 direction for differentiation kernel.
@@ -96,26 +96,24 @@ class ResampleWindow(_ResampleWindow):
         else:
             mass = numpy.asfarray(mass)
 
-        if hsml is None:
-            hsml = numpy.array(1.0, 'f8')
-        else:
-            hsml = numpy.asfarray(hsml)
-
         mass = _mkarr(mass, len(pos), mass.dtype)
-        hsml = _mkarr(hsml, len(pos), hsml.dtype)
-
         # workaround https://github.com/cython/cython/issues/1605
 
         if not pos.flags.writeable:
             pos = pos.copy()
         if not mass.flags.writeable:
             mass = mass.copy()
-        if not hsml.flags.writeable:
-            hsml = hsml.copy()
+
+        if hsml is not None:
+            hsml = numpy.asfarray(hsml)
+            hsml = _mkarr(hsml, len(pos), hsml.dtype)
+
+            if not hsml.flags.writeable:
+                hsml = hsml.copy()
 
         _ResampleWindow.paint(self, real, pos, hsml, mass, order, transform.scale, transform.translate, transform.period)
 
-    def readout(self, real, pos, out=None, hsml=None, diffdir=None, transform=None):
+    def readout(self, real, pos, hsml=None, out=None, diffdir=None, transform=None):
         """
             readout from a field.
 
@@ -124,6 +122,9 @@ class ResampleWindow(_ResampleWindow):
             real : array_like
 
             pos : array_like
+
+            hsml: array_like, or None
+                scaling of the kernel. it is dimensionless; None for no scaling (default kernel support in grid units)
 
             out : array_like
 
@@ -151,16 +152,18 @@ class ResampleWindow(_ResampleWindow):
         if out is None:
             out = numpy.zeros(pos.shape[:-1], dtype='f8')
 
-        if hsml is None:
-            hsml = numpy.array(1.0, 'f8')
-        else:
-            hsml = numpy.asfarray(hsml)
-        hsml = _mkarr(hsml, len(pos), hsml.dtype)
-
         # workaround https://github.com/cython/cython/issues/1605
 
         if not pos.flags.writeable:
             pos = pos.copy()
+
+        if hsml is not None:
+            hsml = numpy.asfarray(hsml)
+            hsml = _mkarr(hsml, len(pos), hsml.dtype)
+
+            if not hsml.flags.writeable:
+                hsml = hsml.copy()
+
 
         _ResampleWindow.readout(self, real, pos, hsml, out, order, transform.scale, transform.translate, transform.period)
 

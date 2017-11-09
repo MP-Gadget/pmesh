@@ -145,7 +145,10 @@ cdef class ResampleWindow(object):
             for d in range(painter.ndim):
                 x[d] = pos[i, d]
             m = mass[i]
-            h = hsml[i]
+            if hsml is not None:
+                h = hsml[i]
+            else:
+                h = 1.0
             pmesh_painter_paint(painter, x, m, h)
 
     def readout(self, numpy.ndarray real, postype [:, :] pos, hsmltype [:] hsml, masstype [:] out, order,
@@ -182,6 +185,9 @@ cdef class ResampleWindow(object):
         for i in range(pos.shape[0]):
             for d in range(painter.ndim):
                 x[d] = pos[i, d]
-            h = hsml[i]
+            if hsml is not None:
+                h = hsml[i]
+            else:
+                h = 1.0
             out[i] = pmesh_painter_readout(painter, x, h)
 

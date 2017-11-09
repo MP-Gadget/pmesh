@@ -32,7 +32,7 @@ def test_weighted():
         [3, 3],
     ]
     mass = [0, 1, 2, 3]
-    CIC.paint(real, pos, mass)
+    CIC.paint(real, pos, mass=mass)
     assert_array_equal(real,
         [[0, 0, 0, 0],
          [0, 1, 0, 0],
@@ -122,8 +122,24 @@ def test_scale():
     ]
     CIC.paint(real, pos, transform=affine)
     assert_array_equal(real,
-        [[1., 0.],
-         [0., 0.]])
+        [[1., 0.], [0, 0.]])
+
+def test_scale_hsml():
+    affine = Affine(ndim=1, translate=[0], scale=0.1)
+    real = numpy.zeros(10)
+    pos = [
+        [50., 0],
+    ]
+    CIC.paint(real, pos, hsml=1., transform=affine)
+    assert_array_equal(real, [ 0.,  0.,  0.,  0.,  0.,  1.,  0.,  0.,  0.,  0.])
+
+    affine = Affine(ndim=1, translate=[0], scale=1.)
+    real = numpy.zeros(10)
+    pos = [
+        [5., 0],
+    ]
+    CIC.paint(real, pos, hsml=None, transform=affine)
+    assert_array_equal(real, [ 0.,  0.,  0.,  0.,  0.,  1.,  0.,  0.,  0.,  0.])
 
 
 def test_strides():

@@ -526,7 +526,7 @@ class RealField(Field):
         """ Collective mean. Mean of the entire mesh. (Must be called collectively)"""
         return self.csum() / self.csize
 
-    def readout(self, pos, out=None, resampler=None, transform=None, gradient=None, layout=None):
+    def readout(self, pos, hsml=None, out=None, resampler=None, transform=None, gradient=None, layout=None):
         """
         Read out from real field at positions
 
@@ -534,6 +534,11 @@ class RealField(Field):
         ----------
         pos    : array_like (, ndim)
             position of particles in simulation  unit
+        hsml : array_like (, ndim)
+            scaling of the resampling window per particle; or None for the kernel intrinsic size.
+            (dimensionless)
+        out : array_like (, ndim)
+            output
         gradient : None or integer
             Direction to take the gradient of the window. The affine transformation
             is properly applied.
@@ -558,10 +563,12 @@ class RealField(Field):
         resampler = FindResampler(resampler)
 
         if layout is None:
-            return resampler.readout(self.value, pos, out=out, transform=transform, diffdir=gradient)
+            return resampler.readout(self.value, pos, hsml=hsml, out=out, transform=transform, diffdir=gradient)
         else:
             localpos = layout.exchange(pos)
-            localresult = self.readout(localpos, resampler=resampler,
+            localhsml = exchange(layout, hsml)
+
+            localresult = self.readout(localpos, hsml=localhsml, resampler=resampler,
                     transform=transform,
                     gradient=gradient,
                     out=None, layout=None)
@@ -895,6 +902,19 @@ def reindex(Nsrc, Ndest):
     reindex[Nsrc // 2 + 1: Ndest -Nsrc //2 + 1] = -1
     return reindex
 
+def exchange(layout, value):
+    if value is None:
+        return None
+
+    if numpy.isscalar(value):
+        value = numpy.array(value)
+
+    if value.ndim != 0:
+        localvalue = layout.exchange(value)
+    else:
+        localvalue = value
+    return localvalue
+
 class ParticleMesh(object):
     """
     ParticleMesh provides an interface to solver for forces
@@ -1186,12 +1206,13 @@ class ParticleMesh(object):
 
         # Transform from simulation unit to global grid unit.
         def transform0(x):
+            # shift is local per processor, thus do not use it.
             return transform.scale * x
 
         return self.domain.decompose(pos, smoothing=smoothing,
                 transform=transform0)
 
-    def paint(self, pos, mass=1.0, resampler=None, transform=None, hold=False, gradient=None, layout=None, out=None):
+    def paint(self, pos, hsml=None, mass=1.0, resampler=None, transform=None, hold=False, gradient=None, layout=None, out=None):
         """
         Paint particles into the internal real canvas.
 
@@ -1209,6 +1230,10 @@ class ParticleMesh(object):
         ----------
         pos    : array_like (, ndim)
             position of particles in simulation unit
+
+        hsml : array_like (, ndim)
+            scaling of the resampling window per particle; or None for the kernel intrinsic size.
+            (dimensionless)
 
         mass   : scalar or array_like (,)
             mass of particles in simulation unit
@@ -1248,17 +1273,15 @@ class ParticleMesh(object):
             out.value[...] = 0
 
         if layout is None:
-            resampler.paint(out.value, pos, mass, transform=transform, diffdir=gradient)
+            resampler.paint(out.value, pos, hsml=hsml, mass=mass, transform=transform, diffdir=gradient)
             return out
         else:
             localpos = layout.exchange(pos)
-            if numpy.isscalar(mass):
-                mass = numpy.array(mass)
-            if mass.ndim != 0:
-                localmass = layout.exchange(mass)
-            else:
-                localmass = mass
-            return self.paint(localpos, localmass,
+            localmass = exchange(layout, mass)
+            localhsml = exchange(layout, hsml)
+
+            return self.paint(localpos, mass=localmass,
+                    hsml=localhsml,
                     resampler=resampler,
                     transform=transform,
                     hold=hold,
@@ -1380,7 +1403,7 @@ class ParticleMesh(object):
             f *= (source.pm.Nmesh.prod() / source.pm.BoxSize.prod()) / (self.Nmesh.prod() / self.BoxSize.prod())
 
         # all are on the grid. NGB is faster, and no need to decompose
-        return self.paint(q, f, resampler='nnb', transform=self.affine_grid)
+        return self.paint(q, mass=f, resampler='nnb', transform=self.affine_grid)
 
     def downsample(self, source, resampler=None, keep_mean=False):
         """ Resample an image with the downsample method.
@@ -1424,4 +1447,4 @@ class ParticleMesh(object):
         #q1 = layout.exchange(q)
         #v1 = layout.exchange(f)
         #print(q1, v1)
-        return self.paint(q, f, layout=layout, resampler=resampler, transform=transform)
+        return self.paint(q, mass=f, layout=layout, resampler=resampler, transform=transform)

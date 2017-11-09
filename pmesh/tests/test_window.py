@@ -242,14 +242,28 @@ def test_cubic():
     CUBIC.paint(real, pos)
     assert_array_equal(real, [0, -0.0625, 0.5625, 0.5625, -0.0625, 0])
 
-def test_acg_hsml():
+def test_cubic_hsml():
+    real1 = numpy.zeros((10))
+    pos = [
+        [4.5],
+    ]
+    CUBIC.paint(real1, pos, hsml=2.0)
+
+    real2 = numpy.zeros((10))
+    pos = [
+        [4.5],
+    ]
+    CUBIC.resize(8).paint(real2, pos, hsml=1.0)
+
+    assert_array_equal(real1, real2)
+
+def test_acg():
     real = numpy.zeros((4))
     pos = [
         [2.1],
     ]
     ACG3.paint(real, pos, 1.0)
-    print(real)
-#    assert_array_equal(real, [0, -0.0625, 0.5625, 0.5625, -0.0625, 0])
+    assert_allclose(real, [ 0.  ,       0.21347228, 0.52014034 ,0.30805789 ])
 
 
 @skipif(True, "numerical details of wavelets undecided")

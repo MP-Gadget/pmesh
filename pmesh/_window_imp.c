@@ -13,14 +13,15 @@
 static void
 pmesh_window_info_init(PMeshWindowInfo * info, int ndim, int nativesupport, double support)
 {
-    info->support = support;
-    /* floating point rounding up */
-    info->support += (support != (double)info->support);
 
-    if(info->support <= 0) {
+    if(support <= 0) {
         info->support = nativesupport;
+        support = nativesupport;
+    } else {
+        info->support = support;
+        /* floating point rounding up */
+        info->support += (support != (double)info->support);
     }
-
     info->left = (info->support - 1) / 2;
 
     info->shift = support / 2.0 - info->support / 2;

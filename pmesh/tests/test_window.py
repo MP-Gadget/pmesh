@@ -1,6 +1,6 @@
 from pmesh.window import ResampleWindow, Affine
 from pmesh.window import (CIC, LANCZOS2, LANCZOS3,
-                          TSC, QUADRATIC, CUBIC,
+                          TSC, QUADRATIC, CUBIC, ACG3,
                           DB12, DB20, LINEAR, NEAREST)
 
 import numpy
@@ -241,6 +241,15 @@ def test_cubic():
     ]
     CUBIC.paint(real, pos)
     assert_array_equal(real, [0, -0.0625, 0.5625, 0.5625, -0.0625, 0])
+
+def test_acg_hsml():
+    real = numpy.zeros((4))
+    pos = [
+        [2.1],
+    ]
+    ACG3.paint(real, pos, 1.0)
+    print(real)
+#    assert_array_equal(real, [0, -0.0625, 0.5625, 0.5625, -0.0625, 0])
 
 
 @skipif(True, "numerical details of wavelets undecided")

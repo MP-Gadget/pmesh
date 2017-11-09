@@ -4,7 +4,8 @@
 static void
 mkname(_generic_paint) (PMeshPainter * painter, double pos[], double weight, double hsml)
 {
-    PMeshWindowInfo * window = &painter->window;
+    PMeshWindowInfo window[1];
+    pmesh_window_info_init(window, painter->ndim, painter->nativesupport, painter->support * hsml);
 
     /* Check for fast painting routines */
     paintfunc fastpaint;
@@ -74,7 +75,8 @@ mkname(_generic_paint) (PMeshPainter * painter, double pos[], double weight, dou
 static double
 mkname(_generic_readout) (PMeshPainter * painter, double pos[], double hsml)
 {
-    PMeshWindowInfo * window = &painter->window;
+    PMeshWindowInfo window[1];
+    pmesh_window_info_init(window, painter->ndim, painter->nativesupport, painter->support * hsml);
 
     /* Check for fast painting routines */
     paintfunc fastpaint;

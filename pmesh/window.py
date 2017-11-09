@@ -56,7 +56,7 @@ class ResampleWindow(_ResampleWindow):
         """ Change the support of the window, returning a new window. """
         return ResampleWindow(self.kind, support)
 
-    def paint(self, real, pos, mass=None, diffdir=None, transform=None):
+    def paint(self, real, pos, mass=None, hsml=None, diffdir=None, transform=None):
         """
             paint to a field.
 
@@ -68,6 +68,9 @@ class ResampleWindow(_ResampleWindow):
             pos : array_like
 
             mass : array_like or None
+                None for 1
+
+            hsml: array_like or None
                 None for 1
 
             diffdir: int or None
@@ -93,7 +96,13 @@ class ResampleWindow(_ResampleWindow):
         else:
             mass = numpy.asfarray(mass)
 
+        if hsml is None:
+            hsml = numpy.array(1.0, 'f8')
+        else:
+            hsml = numpy.asfarray(hsml)
+
         mass = _mkarr(mass, len(pos), mass.dtype)
+        hsml = _mkarr(hsml, len(pos), hsml.dtype)
 
         # workaround https://github.com/cython/cython/issues/1605
 
@@ -101,10 +110,12 @@ class ResampleWindow(_ResampleWindow):
             pos = pos.copy()
         if not mass.flags.writeable:
             mass = mass.copy()
+        if not hsml.flags.writeable:
+            hsml = hsml.copy()
 
-        _ResampleWindow.paint(self, real, pos, mass, order, transform.scale, transform.translate, transform.period)
+        _ResampleWindow.paint(self, real, pos, hsml, mass, order, transform.scale, transform.translate, transform.period)
 
-    def readout(self, real, pos, out=None, diffdir=None, transform=None):
+    def readout(self, real, pos, out=None, hsml=None, diffdir=None, transform=None):
         """
             readout from a field.
 
@@ -140,12 +151,18 @@ class ResampleWindow(_ResampleWindow):
         if out is None:
             out = numpy.zeros(pos.shape[:-1], dtype='f8')
 
+        if hsml is None:
+            hsml = numpy.array(1.0, 'f8')
+        else:
+            hsml = numpy.asfarray(hsml)
+        hsml = _mkarr(hsml, len(pos), hsml.dtype)
+
         # workaround https://github.com/cython/cython/issues/1605
 
         if not pos.flags.writeable:
             pos = pos.copy()
 
-        _ResampleWindow.readout(self, real, pos, out, order, transform.scale, transform.translate, transform.period)
+        _ResampleWindow.readout(self, real, pos, hsml, out, order, transform.scale, transform.translate, transform.period)
 
         return out
 
@@ -169,6 +186,11 @@ windows = dict(
     LANCZOS4 = ResampleWindow(kind="lanczos4"),
     LANCZOS5 = ResampleWindow(kind="lanczos5"),
     LANCZOS6 = ResampleWindow(kind="lanczos6"),
+    ACG2 = ResampleWindow(kind="acg2"),
+    ACG3 = ResampleWindow(kind="acg3"),
+    ACG4 = ResampleWindow(kind="acg4"),
+    ACG5 = ResampleWindow(kind="acg5"),
+    ACG6 = ResampleWindow(kind="acg6"),
     DB6 = ResampleWindow(kind="db6"),
     DB12 = ResampleWindow(kind="db12"),
     DB20 = ResampleWindow(kind="db20"),

@@ -8,13 +8,38 @@
 
 #include "_window_wavelets.h"
 #include "_window_lanczos.h"
+#include "_window_acg.h"
+
+static void
+pmesh_window_info_init(PMeshWindowInfo * info, int ndim, int nativesupport, double support)
+{
+    info->support = support;
+    /* floating point rounding up */
+    info->support += (support != (double)info->support);
+
+    if(info->support <= 0) {
+        info->support = nativesupport;
+    }
+
+    info->left = (info->support - 1) / 2;
+
+    info->shift = support / 2.0 - info->support / 2;
+
+    int nmax = 1;
+    int d;
+    for(d = 0; d < ndim; d++) {
+        nmax *= (info->support);
+    }
+    info->Npoints = nmax;
+    info->vfactor = nativesupport / (1. * support);
+}
+
 
 static void
 _fill_k(PMeshPainter * painter, PMeshWindowInfo * window, double pos[], int ipos[], double * k)
 {
     double gpos[painter->ndim];
     int d;
-
     for(d = 0; d < painter->ndim; d++) {
         double * kd = &k[window->support * d];
 
@@ -29,6 +54,7 @@ _fill_k(PMeshPainter * painter, PMeshWindowInfo * window, double pos[], int ipos
             } else {
                 kd[i] = painter->diff(x) * painter->scale[d] * window->vfactor * window->vfactor;
             }
+            //printf("i = %d x = %g kd[i] = %g\n", i, x, kd[i]);
         }
         /* Watch out: do not renormalize per particle */
 
@@ -180,30 +206,6 @@ _cubic_diff(double x) {
     return 0;
 }
 
-static void
-pmesh_window_info_init(PMeshWindowInfo * info, int ndim, int nativesupport, int support)
-{
-    info->support = support;
-
-    if(info->support <= 0) {
-        info->support = nativesupport;
-    }
-
-    info->left = (info->support - 1) / 2;
-    if (info->support % 2 == 0){
-        info->shift = 0;
-    } else {
-        info->shift = 0.5;
-    }
-    int nmax = 1;
-    int d;
-    for(d = 0; d < ndim; d++) {
-        nmax *= (info->support);
-    }
-    info->Npoints = nmax;
-    info->vfactor = nativesupport / (1. * info->support);
-}
-
 void
 pmesh_painter_init(PMeshPainter * painter)
 {
@@ -262,6 +264,31 @@ pmesh_painter_init(PMeshPainter * painter)
             painter->kernel = _lanczos6_kernel;
             painter->diff = _lanczos6_diff;
             painter->nativesupport = _lanczos6_nativesupport;
+        break;
+        case PMESH_PAINTER_ACG2:
+            painter->kernel = _acg2_kernel;
+            painter->diff = _acg2_diff;
+            painter->nativesupport = _acg2_nativesupport;
+        break;
+        case PMESH_PAINTER_ACG3:
+            painter->kernel = _acg3_kernel;
+            painter->diff = _acg3_diff;
+            painter->nativesupport = _acg3_nativesupport;
+        break;
+        case PMESH_PAINTER_ACG4:
+            painter->kernel = _acg4_kernel;
+            painter->diff = _acg4_diff;
+            painter->nativesupport = _acg4_nativesupport;
+        break;
+        case PMESH_PAINTER_ACG5:
+            painter->kernel = _acg5_kernel;
+            painter->diff = _acg5_diff;
+            painter->nativesupport = _acg5_nativesupport;
+        break;
+        case PMESH_PAINTER_ACG6:
+            painter->kernel = _acg6_kernel;
+            painter->diff = _acg6_diff;
+            painter->nativesupport = _acg6_nativesupport;
         break;
         case PMESH_PAINTER_DB6:
             painter->kernel = _db6_kernel;

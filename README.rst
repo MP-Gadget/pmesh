@@ -4,6 +4,11 @@ pmesh: Particle Mesh in Python
 The `pmesh` package lays out the fundation of a parallel
 Fourier transform particle mesh solver in Python. 
 
+To cide pmesh, use
+
+.. image:: https://zenodo.org/badge/28099917.svg
+   :target: https://zenodo.org/badge/latestdoi/28099917
+   
 Build Status
 ------------
 .. image:: https://api.travis-ci.org/rainwoodman/pmesh.svg

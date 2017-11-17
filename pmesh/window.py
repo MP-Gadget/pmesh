@@ -56,7 +56,7 @@ class ResampleWindow(_ResampleWindow):
         """ Change the support of the window, returning a new window. """
         return ResampleWindow(self.kind, support)
 
-    def paint(self, real, pos, mass=None, diffdir=None, transform=None):
+    def paint(self, real, pos, hsml=None, mass=None, diffdir=None, transform=None):
         """
             paint to a field.
 
@@ -69,6 +69,9 @@ class ResampleWindow(_ResampleWindow):
 
             mass : array_like or None
                 None for 1
+
+            hsml: array_like or None
+                scaling of the kernel. it is dimensionless; None for no scaling (default kernel support in grid units)
 
             diffdir: int or None
                 direction for differentiation kernel.
@@ -94,7 +97,6 @@ class ResampleWindow(_ResampleWindow):
             mass = numpy.asfarray(mass)
 
         mass = _mkarr(mass, len(pos), mass.dtype)
-
         # workaround https://github.com/cython/cython/issues/1605
 
         if not pos.flags.writeable:
@@ -102,9 +104,16 @@ class ResampleWindow(_ResampleWindow):
         if not mass.flags.writeable:
             mass = mass.copy()
 
-        _ResampleWindow.paint(self, real, pos, mass, order, transform.scale, transform.translate, transform.period)
+        if hsml is not None:
+            hsml = numpy.asfarray(hsml)
+            hsml = _mkarr(hsml, len(pos), hsml.dtype)
 
-    def readout(self, real, pos, out=None, diffdir=None, transform=None):
+            if not hsml.flags.writeable:
+                hsml = hsml.copy()
+
+        _ResampleWindow.paint(self, real, pos, hsml, mass, order, transform.scale, transform.translate, transform.period)
+
+    def readout(self, real, pos, hsml=None, out=None, diffdir=None, transform=None):
         """
             readout from a field.
 
@@ -113,6 +122,9 @@ class ResampleWindow(_ResampleWindow):
             real : array_like
 
             pos : array_like
+
+            hsml: array_like, or None
+                scaling of the kernel. it is dimensionless; None for no scaling (default kernel support in grid units)
 
             out : array_like
 
@@ -145,7 +157,15 @@ class ResampleWindow(_ResampleWindow):
         if not pos.flags.writeable:
             pos = pos.copy()
 
-        _ResampleWindow.readout(self, real, pos, out, order, transform.scale, transform.translate, transform.period)
+        if hsml is not None:
+            hsml = numpy.asfarray(hsml)
+            hsml = _mkarr(hsml, len(pos), hsml.dtype)
+
+            if not hsml.flags.writeable:
+                hsml = hsml.copy()
+
+
+        _ResampleWindow.readout(self, real, pos, hsml, out, order, transform.scale, transform.translate, transform.period)
 
         return out
 
@@ -169,6 +189,11 @@ windows = dict(
     LANCZOS4 = ResampleWindow(kind="lanczos4"),
     LANCZOS5 = ResampleWindow(kind="lanczos5"),
     LANCZOS6 = ResampleWindow(kind="lanczos6"),
+    ACG2 = ResampleWindow(kind="acg2"),
+    ACG3 = ResampleWindow(kind="acg3"),
+    ACG4 = ResampleWindow(kind="acg4"),
+    ACG5 = ResampleWindow(kind="acg5"),
+    ACG6 = ResampleWindow(kind="acg6"),
     DB6 = ResampleWindow(kind="db6"),
     DB12 = ResampleWindow(kind="db12"),
     DB20 = ResampleWindow(kind="db20"),

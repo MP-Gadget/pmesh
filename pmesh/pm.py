@@ -1101,7 +1101,7 @@ class ParticleMesh(object):
                             Nmesh=Nmesh_,
                             dtype=self.dtype, comm=self.comm)
 
-    def create(self, mode, base=None, zeros=False):
+    def create(self, mode, base=None, value=None, zeros=False):
         """
             Create a field object.
 
@@ -1112,8 +1112,15 @@ class ParticleMesh(object):
 
             base : object, None
                 Reusing the base attribute (physical memory) of an existing field
-                object. Provide the attribute, not the field object.
+                object. Provide the attribute, not the field object. (`obj.base` not `obj`)
+
+            value : array_like, None
+                initialize the field with the values.
         """
+
+        if zeros:
+            warnings.warn("argument zeros is deprecated. use value=0 instead", DeprecationWarning)
+            value = 0
 
         if mode == 'real':
             r = RealField(self, base=base)
@@ -1121,8 +1128,9 @@ class ParticleMesh(object):
             r = ComplexField(self, base=base)
         else:
             raise ValueError('mode must be real or complex')
-        if zeros:
-            r[...] = 0
+
+        if value is not None:
+            r[...] = value
         return r
 
     def generate_whitenoise(self, seed, unitary=False, mode='complex', base=None):

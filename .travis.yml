@@ -21,8 +21,8 @@ before_install:
 install:
     - conda create --yes -n test python=$TRAVIS_PYTHON_VERSION
     - source activate test
-    - conda install --yes numpy=$NUMPY_VERSION nose cython mpi4py numba
-    - conda install --yes -c bccp pfft-python mpsort
+    - conda install --yes numpy=$NUMPY_VERSION nose cython numba
+    - conda install --yes -c bccp pfft-python mpsort mpi4py
     - python setup.py install
 
 script:

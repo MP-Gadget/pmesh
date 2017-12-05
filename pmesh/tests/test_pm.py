@@ -538,3 +538,9 @@ def test_grid_shifted(comm):
     layout = pm.decompose(grid)
     real = pm.paint(grid, layout=layout)
     assert_allclose(real, 1.0)
+
+@MPITest(commsize=(1))
+def test_leak(comm):
+    a = []
+    for i in range(1024):
+        a.append(ParticleMesh(BoxSize=8.0, Nmesh=[128, 128, 128], comm=comm, dtype='f8'))

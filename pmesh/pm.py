@@ -915,6 +915,10 @@ def exchange(layout, value):
         localvalue = value
     return localvalue
 
+from weakref import WeakValueDictionary
+
+_pm_cache = WeakValueDictionary()
+
 class ParticleMesh(object):
     """
     ParticleMesh provides an interface to solver for forces
@@ -989,11 +993,37 @@ class ParticleMesh(object):
         else:
             raise ValueError("dtype must be f8 or f4")
 
-        self.procmesh = pfft.ProcMesh(np, comm=comm)
         self.Nmesh = numpy.array(Nmesh, dtype='i8')
         self.ndim = len(self.Nmesh)
         self.BoxSize = numpy.empty(len(Nmesh), dtype='f8')
         self.BoxSize[:] = BoxSize
+
+        # if a similar ParticleMesh exists, use its
+        # procmesh and plans,
+        # this is to avoid creating too many MPI communicators,
+        # which are a limited resource. (Intel has 16381, e.g.)
+        # also see below where the instance self is inserted
+        # to the weak dict.
+        # the use of _addressof(comm) should be OK,
+        # if we find a pm in the cache then the pm object
+        # must have been holding a reference to the comm, so it
+        # is alive.
+        # if we don't find a pm then we'll create a new one anyways.
+
+        _cache_args = (tuple(self.Nmesh), tuple(self.BoxSize),
+                       MPI._addressof(comm), comm.rank, comm.size,
+                       tuple(np), self.dtype, plan_method)
+
+        if _cache_args in _pm_cache:
+            template = _pm_cache[_cache_args]
+        else:
+            template = None
+
+        if template is not None:
+            self.procmesh = template.procmesh
+        else:
+            self.procmesh = pfft.ProcMesh(np, comm=comm)
+
         self.partition = pfft.Partition(forward,
             self.Nmesh,
             self.procmesh,
@@ -1008,19 +1038,25 @@ class ParticleMesh(object):
             "exhaustive": pfft.Flags.PFFT_EXHAUSTIVE,
             } [plan_method]
 
-        self.forward = pfft.Plan(self.partition, pfft.Direction.PFFT_FORWARD,
-                bufferin, bufferout, forward,
-                plan_method | pfft.Flags.PFFT_TRANSPOSED_OUT | pfft.Flags.PFFT_TUNE | pfft.Flags.PFFT_PADDED_R2C)
-        self.backward = pfft.Plan(self.partition, pfft.Direction.PFFT_BACKWARD,
-                bufferout, bufferin, backward,
-                plan_method | pfft.Flags.PFFT_TRANSPOSED_IN | pfft.Flags.PFFT_TUNE | pfft.Flags.PFFT_PADDED_C2R)
+        if template is not None:
+            self.forward = template.forward
+            self.backward = template.backward
+            self.ipforward = template.ipforward
+            self.ipbackward = template.ipbackward
+        else:
+            self.forward = pfft.Plan(self.partition, pfft.Direction.PFFT_FORWARD,
+                    bufferin, bufferout, forward,
+                    plan_method | pfft.Flags.PFFT_TRANSPOSED_OUT | pfft.Flags.PFFT_TUNE | pfft.Flags.PFFT_PADDED_R2C)
+            self.backward = pfft.Plan(self.partition, pfft.Direction.PFFT_BACKWARD,
+                    bufferout, bufferin, backward,
+                    plan_method | pfft.Flags.PFFT_TRANSPOSED_IN | pfft.Flags.PFFT_TUNE | pfft.Flags.PFFT_PADDED_C2R)
 
-        self.ipforward = pfft.Plan(self.partition, pfft.Direction.PFFT_FORWARD,
-                bufferin, bufferin, forward,
-                plan_method | pfft.Flags.PFFT_TRANSPOSED_OUT | pfft.Flags.PFFT_TUNE | pfft.Flags.PFFT_PADDED_R2C)
-        self.ipbackward = pfft.Plan(self.partition, pfft.Direction.PFFT_BACKWARD,
-                bufferout, bufferout, backward,
-                plan_method | pfft.Flags.PFFT_TRANSPOSED_IN | pfft.Flags.PFFT_TUNE | pfft.Flags.PFFT_PADDED_C2R)
+            self.ipforward = pfft.Plan(self.partition, pfft.Direction.PFFT_FORWARD,
+                    bufferin, bufferin, forward,
+                    plan_method | pfft.Flags.PFFT_TRANSPOSED_OUT | pfft.Flags.PFFT_TUNE | pfft.Flags.PFFT_PADDED_R2C)
+            self.ipbackward = pfft.Plan(self.partition, pfft.Direction.PFFT_BACKWARD,
+                    bufferout, bufferout, backward,
+                    plan_method | pfft.Flags.PFFT_TRANSPOSED_IN | pfft.Flags.PFFT_TUNE | pfft.Flags.PFFT_PADDED_C2R)
 
         self.domain = domain.GridND(self.partition.i_edges, comm=self.comm)
 
@@ -1077,6 +1113,8 @@ class ParticleMesh(object):
                     period = self.Nmesh)
 
         self.resampler = FindResampler(resampler)
+
+        _pm_cache[_cache_args] = self
 
     def resize(self, Nmesh):
         """

@@ -541,6 +541,7 @@ def test_grid_shifted(comm):
 
 @MPITest(commsize=(1))
 def test_leak(comm):
+    # 1024 is long enough to crash MPICH.
     a = []
     for i in range(1024):
         a.append(ParticleMesh(BoxSize=8.0, Nmesh=[128, 128, 128], comm=comm, dtype='f8'))

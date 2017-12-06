@@ -18,6 +18,7 @@ extensions = [
         Extension("pmesh._domain", ["pmesh/_domain.pyx"], include_dirs=["./", numpy.get_include()]),
         Extension("pmesh._window", ["pmesh/_window.pyx", "pmesh/_window_imp.c"],
                 depends=["pmesh/_window_imp.h",
+                         "pmesh/_window_tuned_pcs.h",
                          "pmesh/_window_tuned_tsc.h",
                          "pmesh/_window_tuned_cic.h",
                          "pmesh/_window_tuned_nnb.h",

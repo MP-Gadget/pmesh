@@ -77,6 +77,7 @@ _fill_k(PMeshPainter * painter, PMeshWindowInfo * window, double pos[], int ipos
 #include "_window_tuned_nnb.h"
 #include "_window_tuned_cic.h"
 #include "_window_tuned_tsc.h"
+#include "_window_tuned_pcs.h"
 #undef FLOAT
 #undef mkname
 #undef ACCESS3
@@ -87,6 +88,7 @@ _fill_k(PMeshPainter * painter, PMeshWindowInfo * window, double pos[], int ipos
 #include "_window_tuned_nnb.h"
 #include "_window_tuned_cic.h"
 #include "_window_tuned_tsc.h"
+#include "_window_tuned_pcs.h"
 #undef FLOAT
 #undef mkname
 #undef ACCESS3
@@ -194,7 +196,7 @@ _cubic_diff(double x) {
         return factor * (1.0 / 6.0) * (- 12 * x + 9 * xx);
     }
     if(x < 2.0) {
-        return factor * (1.0 / 6.0) * 3 * (2 - x) * (2 - x) * (-1);
+        return factor * (- 1.0 / 2.0) * (2 - x) * (2 - x);
     }
     return 0;
 }
@@ -322,7 +324,6 @@ pmesh_painter_init(PMeshPainter * painter)
             if(painter->order[0] > 1) break;
             if(painter->ndim > 1 && painter->order[1] > 1) break;
             if(painter->ndim > 2 && painter->order[2] > 1) break;
-            if(painter->ndim == 1) break;
             if(painter->ndim > 3) break;
 
             if(painter->canvas_dtype_elsize == 8) {
@@ -340,7 +341,6 @@ pmesh_painter_init(PMeshPainter * painter)
             if(painter->order[0] > 1) break;
             if(painter->ndim > 1 && painter->order[1] > 1) break;
             if(painter->ndim > 2 && painter->order[2] > 1) break;
-            if(painter->ndim == 1) break;
             if(painter->ndim > 3) break;
 
             if(painter->canvas_dtype_elsize == 8) {
@@ -358,7 +358,6 @@ pmesh_painter_init(PMeshPainter * painter)
             if(painter->order[0] > 1) break;
             if(painter->ndim > 1 && painter->order[1] > 1) break;
             if(painter->ndim > 2 && painter->order[2] > 1) break;
-            if(painter->ndim == 1) break;
             if(painter->ndim > 3) break;
 
             if(painter->canvas_dtype_elsize == 8) {
@@ -369,18 +368,21 @@ pmesh_painter_init(PMeshPainter * painter)
         break;
         case PMESH_PAINTER_TUNED_PCS:
             /* fall back to use cubic kernel*/
-            painter->kernel = _nearest_kernel;
-            painter->diff = _nearest_diff;
-            painter->nativesupport = 1;
+            painter->kernel = _cubic_kernel;
+            painter->diff = _cubic_diff;
+            painter->nativesupport = 4;
 
             if(painter->order[0] > 1) break;
             if(painter->ndim > 1 && painter->order[1] > 1) break;
             if(painter->ndim > 2 && painter->order[2] > 1) break;
-            if(painter->ndim == 1) break;
             if(painter->ndim > 3) break;
 
             /* nothing implemented yet */
-            painter->getfastmethod = NULL;
+            if(painter->canvas_dtype_elsize == 8) {
+                painter->getfastmethod = _getfastmethod_pcs_double;
+            } else {
+                painter->getfastmethod = _getfastmethod_pcs_float;
+            }
         break;
     }
     pmesh_window_info_init(&painter->window, painter->ndim, painter->nativesupport, painter->support);

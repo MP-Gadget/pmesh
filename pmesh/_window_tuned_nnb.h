@@ -33,7 +33,7 @@ mkname(_nnb_tuned_paint3) (PMeshPainter * painter, double pos[], double weight, 
 
     SETUP_KERNEL_NNB(3);
 
-    V0[1] *= weight;
+    V0[0] *= weight;
 
     ACCESS3(_WRtPlus3, 0, 0, 0);
 }
@@ -57,7 +57,7 @@ mkname(_nnb_tuned_paint2) (PMeshPainter * painter, double pos[], double weight, 
     FLOAT * canvas = painter->canvas;
 
     SETUP_KERNEL_NNB(2);
-    V0[1] *= weight;
+    V0[0] *= weight;
 
     ACCESS2(_WRtPlus2, 0, 0);
 }
@@ -75,11 +75,41 @@ mkname(_nnb_tuned_readout2) (PMeshPainter * painter, double pos[], double hsml)
     return value;
 }
 
+static void
+mkname(_nnb_tuned_paint1) (PMeshPainter * painter, double pos[], double weight, double hsml)
+{
+    FLOAT * canvas = painter->canvas;
+
+    SETUP_KERNEL_NNB(1);
+    V0[0] *= weight;
+
+    ACCESS1(_WRtPlus1, 0);
+}
+
+static double
+mkname(_nnb_tuned_readout1) (PMeshPainter * painter, double pos[], double hsml)
+{
+    FLOAT * canvas = painter->canvas;
+
+    SETUP_KERNEL_NNB(1);
+
+    double value = 0;
+
+    value += ACCESS1(_REd1, 0);
+    return value;
+}
+
+
 static int
 mkname(_getfastmethod_nnb) (PMeshPainter * painter, PMeshWindowInfo * window, paintfunc * fastpaint, readoutfunc * fastreadout)
 {
     if(window->support != 1) return 0;
 
+    if(painter->ndim == 1) {
+        *fastpaint = mkname(_nnb_tuned_paint1); \
+        *fastreadout = mkname(_nnb_tuned_readout1); \
+        return 1;
+    } 
     if(painter->ndim == 2) {
         *fastpaint = mkname(_nnb_tuned_paint2); \
         *fastreadout = mkname(_nnb_tuned_readout2); \

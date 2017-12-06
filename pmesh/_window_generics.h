@@ -189,9 +189,32 @@ mkname (_REd2) (FLOAT const * const canvas, const int i, const int j, const doub
     return (* (FLOAT*) ((char*) canvas + ind)) * w;
 }
 
+static inline void
+mkname (_WRtPlus1) (FLOAT * canvas, 
+        const int i, const double f, const PMeshPainter * const painter)
+{
+    if(UNLIKELY(0 > i || painter->size[0] <= i)) return;
+    ptrdiff_t ind = i * painter->strides[0];
+#ifdef _OPENMP
+#pragma omp atomic
+#endif
+    * (FLOAT*) ((char*) canvas + ind) += f;
+    return;
+}
+
+static inline double 
+mkname (_REd1) (FLOAT const * const canvas, const int i, const double w, const PMeshPainter * const painter)
+{
+    if(UNLIKELY(0 > i || painter->size[0] <= i)) return 0;
+    ptrdiff_t ind = i * painter->strides[0];
+    return (* (FLOAT*) ((char*) canvas + ind)) * w;
+}
 
 #define ACCESS3(func, a, b, c) \
     mkname(func)(canvas, IJK ## a [0], IJK ## b [1], IJK ## c [2], V ## a [0] * V ## b [1] * V ## c [2], painter)
 
 #define ACCESS2(func, a, b) \
     mkname(func)(canvas, IJK ## a [0], IJK ## b [1], V ## a [0] * V ## b [1], painter)
+
+#define ACCESS1(func, a) \
+    mkname(func)(canvas, IJK ## a [0], V ## a [0], painter)

@@ -43,9 +43,9 @@ mkname(_tsc_tuned_paint3) (PMeshPainter * painter, double pos[], double weight, 
 
     SETUP_KERNEL_TSC(3);
 
-    V0[1] *= weight;
-    V1[1] *= weight;
-    V2[1] *= weight;
+    V0[0] *= weight;
+    V1[0] *= weight;
+    V2[0] *= weight;
 
     ACCESS3(_WRtPlus3, 0, 0, 0);
     ACCESS3(_WRtPlus3, 0, 0, 1);
@@ -120,9 +120,9 @@ mkname(_tsc_tuned_paint2) (PMeshPainter * painter, double pos[], double weight, 
 
     SETUP_KERNEL_TSC(2);
 
-    V0[1] *= weight;
-    V1[1] *= weight;
-    V2[1] *= weight;
+    V0[0] *= weight;
+    V1[0] *= weight;
+    V2[0] *= weight;
 
     ACCESS2(_WRtPlus2, 0, 0);
     ACCESS2(_WRtPlus2, 0, 1);
@@ -155,11 +155,46 @@ mkname(_tsc_tuned_readout2) (PMeshPainter * painter, double pos[], double hsml)
     return value;
 }
 
+static void
+mkname(_tsc_tuned_paint1) (PMeshPainter * painter, double pos[], double weight, double hsml)
+{
+    FLOAT * canvas = painter->canvas;
+
+    SETUP_KERNEL_TSC(1);
+
+    V0[0] *= weight;
+    V1[0] *= weight;
+    V2[0] *= weight;
+
+    ACCESS1(_WRtPlus1, 0);
+    ACCESS1(_WRtPlus1, 1);
+    ACCESS1(_WRtPlus1, 2);
+}
+
+static double
+mkname(_tsc_tuned_readout1) (PMeshPainter * painter, double pos[], double hsml)
+{
+    FLOAT * canvas = painter->canvas;
+
+    SETUP_KERNEL_TSC(1);
+
+    double value = 0;
+    value += ACCESS1(_REd1, 0);
+    value += ACCESS1(_REd1, 1);
+    value += ACCESS1(_REd1, 2);
+    return value;
+}
+
 static int
 mkname(_getfastmethod_tsc) (PMeshPainter * painter, PMeshWindowInfo * window, paintfunc * fastpaint, readoutfunc * fastreadout)
 {
     if(window->support != 3) return 0;
 
+    if(painter->ndim == 1) {
+        *fastpaint = mkname(_tsc_tuned_paint1); \
+        *fastreadout = mkname(_tsc_tuned_readout1); \
+        return 1;
+    } 
     if(painter->ndim == 2) {
         *fastpaint = mkname(_tsc_tuned_paint2); \
         *fastreadout = mkname(_tsc_tuned_readout2); \

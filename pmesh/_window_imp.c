@@ -108,6 +108,7 @@ _nearest_diff(double x) {
 
 static double
 _linear_kernel(double x) {
+    /* CIC */
     x = fabs(x);
     if(x < 1.0)
         return 1.0 - x;
@@ -132,7 +133,7 @@ _linear_diff(double x) {
 static double
 _quadratic_kernel(double x) {
     /*
-     * Take from https://arxiv.org/abs/0804.0070
+     * Take from https://arxiv.org/abs/0804.0070 TSC
      * */
     x = fabs(x);
     if(x <= 0.5) {
@@ -166,29 +167,20 @@ _quadratic_diff(double x) {
 
 static double
 _cubic_kernel(double x) {
-    const double alpha = -0.5;
-    /*
-     * alpha = -0.5 is good. taken from
-     * http://www.ipol.im/pub/art/2011/g_lmii/revisions/2011-09-27/g_lmii.html
-     * */
+    /* Take from eq 18 https://arxiv.org/pdf/1512.07295.pdf, PCS */
     x = fabs(x);
     double xx = x * x;
     if(x < 1.0) {
-        return (alpha + 2) * xx * x - (alpha + 3) * xx + 1;
+        return 1.0 / 6.0 * (4 - 6 * xx + 3 * xx * x);
     }
     if (x < 2) {
-        return (alpha * xx * x) - 5 * alpha * xx + 8 * alpha * x - 4 * alpha;
+        return 1.0 / 6.0 * (2 - x) * (2 - x) * (2 - x);
     }
     return 0;
 }
 
 static double
 _cubic_diff(double x) {
-    const double alpha = -0.5;
-    /*
-     * alpha = -0.5 is good. taken from
-     * http://www.ipol.im/pub/art/2011/g_lmii/revisions/2011-09-27/g_lmii.html
-     * */
     double factor;
     if (x < 0) {
         factor = -1;
@@ -199,10 +191,10 @@ _cubic_diff(double x) {
 
     double xx = x * x;
     if(x < 1.0) {
-        return factor * (3 * (alpha + 2) * xx - 2 * (alpha + 3) * x);
+        return factor * (1.0 / 6.0) * (- 12 * x + 9 * xx);
     }
     if(x < 2.0) {
-        return factor * (3 * (alpha * xx) - 10 * alpha * x + 8 * alpha);
+        return factor * (1.0 / 6.0) * 3 * (2 - x) * (2 - x) * (-1);
     }
     return 0;
 }

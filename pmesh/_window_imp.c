@@ -367,6 +367,21 @@ pmesh_painter_init(PMeshPainter * painter)
                 painter->getfastmethod = _getfastmethod_tsc_float;
             }
         break;
+        case PMESH_PAINTER_TUNED_PCS:
+            /* fall back to use cubic kernel*/
+            painter->kernel = _nearest_kernel;
+            painter->diff = _nearest_diff;
+            painter->nativesupport = 1;
+
+            if(painter->order[0] > 1) break;
+            if(painter->ndim > 1 && painter->order[1] > 1) break;
+            if(painter->ndim > 2 && painter->order[2] > 1) break;
+            if(painter->ndim == 1) break;
+            if(painter->ndim > 3) break;
+
+            /* nothing implemented yet */
+            painter->getfastmethod = NULL;
+        break;
     }
     pmesh_window_info_init(&painter->window, painter->ndim, painter->nativesupport, painter->support);
 

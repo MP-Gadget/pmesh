@@ -256,7 +256,10 @@ def test_cubic():
         [2.5],
     ]
     CUBIC.paint(real, pos)
-    assert_array_equal(real, [0, -0.0625, 0.5625, 0.5625, -0.0625, 0])
+    print(real)
+    assert_allclose(real, [ 0., 0.02083333, 0.47916667, 0.47916667, 0.02083333, 0.], rtol=1e-6)
+
+
 
 def test_cubic_hsml():
     real1 = numpy.zeros((10))

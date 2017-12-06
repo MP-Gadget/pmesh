@@ -21,9 +21,10 @@ typedef enum { PMESH_PAINTER_NEAREST,
                PMESH_PAINTER_SYM6,
                PMESH_PAINTER_SYM12,
                PMESH_PAINTER_SYM20,
+               PMESH_PAINTER_TUNED_NNB,
                PMESH_PAINTER_TUNED_CIC,
                PMESH_PAINTER_TUNED_TSC,
-               PMESH_PAINTER_TUNED_NNB,
+               PMESH_PAINTER_TUNED_PCS,
 } PMeshPainterType;
 
 typedef struct PMeshWindowInfo {

@@ -182,6 +182,7 @@ windows = dict(
     NNB = ResampleWindow(kind="tunednnb"),
     CIC = ResampleWindow(kind="tunedcic"),
     TSC = ResampleWindow(kind="tunedtsc"),
+    PCS = ResampleWindow(kind="tunedpcs"),
     QUADRATIC = ResampleWindow(kind="quadratic"),
     CUBIC = ResampleWindow(kind="cubic"),
     LANCZOS2 = ResampleWindow(kind="lanczos2"),

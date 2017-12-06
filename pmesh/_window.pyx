@@ -38,9 +38,10 @@ cdef extern from "_window_imp.h":
         PMESH_PAINTER_SYM6
         PMESH_PAINTER_SYM12
         PMESH_PAINTER_SYM20
+        PMESH_PAINTER_TUNED_NNB
         PMESH_PAINTER_TUNED_CIC
         PMESH_PAINTER_TUNED_TSC
-        PMESH_PAINTER_TUNED_NNB
+        PMESH_PAINTER_TUNED_PCS
 
     ctypedef struct PMeshPainter:
         PMeshPainterType type
@@ -71,10 +72,11 @@ cdef class ResampleWindow(object):
                 'tunednnb' : PMESH_PAINTER_TUNED_NNB,
                 'tunedcic' : PMESH_PAINTER_TUNED_CIC,
                 'tunedtsc' : PMESH_PAINTER_TUNED_TSC,
+                'tunedpcs' : PMESH_PAINTER_TUNED_PCS,
                 'nearest' : PMESH_PAINTER_NEAREST,
                 'linear' : PMESH_PAINTER_LINEAR,
-                'cubic' : PMESH_PAINTER_CUBIC,
                 'quadratic' : PMESH_PAINTER_QUADRATIC,
+                'cubic' : PMESH_PAINTER_CUBIC,
                 'lanczos2' : PMESH_PAINTER_LANCZOS2,
                 'lanczos3' : PMESH_PAINTER_LANCZOS3,
                 'lanczos4' : PMESH_PAINTER_LANCZOS4,

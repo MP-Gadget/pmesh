@@ -156,7 +156,7 @@ mkname(_tsc_tuned_readout2) (PMeshPainter * painter, double pos[], double hsml)
 }
 
 static int
-mkname(_getfastmethod_tsc) (PMeshPainter * painter, PMeshWindowInfo * window, paintfunc * fastpaint, readoutfunc * fastreadout, double hsml)
+mkname(_getfastmethod_tsc) (PMeshPainter * painter, PMeshWindowInfo * window, paintfunc * fastpaint, readoutfunc * fastreadout)
 {
     if(window->support != 3) return 0;
 

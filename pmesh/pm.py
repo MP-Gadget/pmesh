@@ -1014,10 +1014,17 @@ class ParticleMesh(object):
                        MPI._addressof(comm), comm.rank, comm.size,
                        tuple(np), self.dtype, plan_method)
 
-        if _cache_args in _pm_cache:
-            template = _pm_cache[_cache_args]
-        else:
+        template = _pm_cache.get(_cache_args, None)
+
+        hastemplate = comm.allgather(template is not None)
+        if not all(hastemplate):
+            # some ranks the GC has already killed the cache; so we need to recreate
+            # everything
             template = None
+
+#        if comm.rank == 0:
+#            print('hastemplate', hastemplate)
+#            print(template, type(template), _cache_args)
 
         if template is not None:
             self.procmesh = template.procmesh

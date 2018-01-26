@@ -69,7 +69,7 @@ def get_mass(mass, ind, comm):
 def test_c2r_vjp(comm):
     pm = ParticleMesh(BoxSize=8.0, Nmesh=[4, 4], comm=comm, dtype='f8')
 
-    real = pm.generate_whitenoise(1234, mode='real')
+    real = pm.generate_whitenoise(1234, mode='real', mean=1.0)
     comp = real.r2c()
 
     def objective(comp):
@@ -260,17 +260,23 @@ def test_paint_gradients(comm):
 
 @MPITest([1, 4])
 def test_cdot_grad(comm):
-    pm = ParticleMesh(BoxSize=8.0, Nmesh=[4, 4, 4], comm=comm, dtype='f8')
+    pm = ParticleMesh(BoxSize=8.0, Nmesh=[4, 4], comm=comm, dtype='f8')
 
-    comp1 = pm.generate_whitenoise(1234, mode='complex')
-    comp2 = pm.generate_whitenoise(1235, mode='complex')
+    comp1 = pm.generate_whitenoise(1234, mode='complex', mean=1)
+    comp2 = pm.generate_whitenoise(1235, mode='complex', mean=1)
 
     def objective(comp1, comp2):
-        return comp1.cdot(comp2)
+        return comp1.cdot(comp2).real
+
+    y = objective(comp1, comp2)
 
     grad_comp2 = comp1.cdot_vjp(1.0)
     grad_comp1 = comp2.cdot_vjp(1.0)
 
+    grad_comp1.decompress_vjp(grad_comp1)
+    grad_comp2.decompress_vjp(grad_comp2)
+
+    print(grad_comp1)
     print("comp1")
     ng = []
     ag = []

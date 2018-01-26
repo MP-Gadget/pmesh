@@ -756,7 +756,8 @@ class ComplexField(Field):
         return self.pm.comm.allreduce(r.value.sum())
 
     def cdot_vjp(self, v, metric=None):
-        """ backtrace gradient of cdot against other. This is a partial gradient, and looks incorrect.
+        """ backtrace gradient of cdot against other. This is a partial gradient.
+            This is currently only correct for cdot().real.
         """
         r = self * v
 

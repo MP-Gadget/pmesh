@@ -1192,7 +1192,7 @@ class ParticleMesh(object):
         # add mean
         def filter(k, v):
             mask = numpy.bitwise_and.reduce([ki == 0 for ki in k])
-            v[mask] += mean
+            v[mask] = mean
             return v
 
         complex.apply(filter, out=Ellipsis)

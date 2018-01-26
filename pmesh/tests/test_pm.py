@@ -439,6 +439,7 @@ def test_whitenoise_mean(comm):
     pm0 = ParticleMesh(BoxSize=8.0, Nmesh=[8, 8, 8], comm=comm, dtype='f8')
 
     complex1 = pm0.generate_whitenoise(seed=8, unitary=True, mean=1.0)
+
     assert_allclose(complex1.c2r().cmean(), 1.0)
 
 @MPITest(commsize=(1, 4))

@@ -121,7 +121,7 @@ class Field(object):
         return r
 
     def __eq__(self, other):
-        return self[...] == other[...]
+        return self[...] == other
 
     def copy(self):
         other = self.__class__(self.pm)
@@ -689,8 +689,10 @@ class ComplexField(Field):
     def __init__(self, pm, base=None):
         Field.__init__(self, pm, base)
 
-    def cnorm(self, metric=None):
+    def cnorm(self, metric=None, norm=lambda x: x.real **2 + x.imag**2):
         r"""compute the norm collectively. The conjugates are added too.
+
+            This is effectively cdot(self).
 
             NORM = Self-conj + lower + upper
 
@@ -709,9 +711,7 @@ class ComplexField(Field):
             return y
 
         def filter2(k, y):
-            y = y.copy()
-            y.real **= 2
-            y.imag **= 2
+            y = norm(y)
             if metric is not None:
                 k = sum([ki ** 2 for ki in k]) ** 0.5
                 y *= metric(k)
@@ -720,17 +720,14 @@ class ComplexField(Field):
         return self.pm.comm.allreduce(self\
                 .apply(filter2)\
                 .apply(filter, kind='index', out=Ellipsis)\
-                .plain.sum())
+                .value.sum())
 
     def cdot(self, other, metric=None):
         r""" Collective inner product between the independent modes of two Complex Fields.
 
-            This is the only reasonable way to define a real inner product of two complex fields.
+            The real part of the result is effectively self.c2r().cdot(other.c2r()) / Nmesh.prod().
 
-            when other == self,
-
-            cdot = Self-conj + lower
-            cdot = Self-conj + upper
+            FIXME: what does the imag part mean?
 
             Parameters
             ----------
@@ -740,20 +737,15 @@ class ComplexField(Field):
                 metric(k) gives the metric of each mode.
 
         """
-        r = self.copy()
-        r.plain[...] *= other.plain
+        r = self.pm.create(mode='complex', value=0)
 
+        r.value[...] = (self.value * numpy.conj(other.value))
         def filter(i, y):
             y = y.copy()
-            mask = numpy.ones_like(y, '?')
-            # if a conjugate is stored and not self, reduce the weight
-            # because we should have used only one of them (independent)
-            mask &= (i[-1] == 0) | (i[-1] == self.Nmesh[-1] // 2)
-            mask1 = numpy.ones_like(y, '?')
-            for ii, n in zip(i, self.Nmesh):
-                mask1 &= (n - ii) % n == ii
-            mask &= ~mask1
-            y[mask] *= 0.5
+            # if a conjugate is not stored and not self, increase the weight
+            # because we shall add it.
+            mask = (i[-1] != 0) & (i[-1] != self.Nmesh[-1] // 2)
+            y += mask * y
             return y
 
         r.apply(filter, kind='index', out=Ellipsis)
@@ -761,10 +753,10 @@ class ComplexField(Field):
         if metric is not None:
             r.apply(lambda k, y: y * metric(sum(ki**2 for ki in k) ** 0.5), out=Ellipsis)
 
-        return self.pm.comm.allreduce(r.plain.sum(dtype=self.plain.dtype))
+        return self.pm.comm.allreduce(r.value.sum())
 
     def cdot_vjp(self, v, metric=None):
-        """ backtrace gradient of cdot against other. This is a partial gradient.
+        """ backtrace gradient of cdot against other. This is a partial gradient, and looks incorrect.
         """
         r = self * v
 
@@ -1178,7 +1170,7 @@ class ParticleMesh(object):
             r[...] = value
         return r
 
-    def generate_whitenoise(self, seed, unitary=False, mode='complex', base=None):
+    def generate_whitenoise(self, seed, unitary=False, mean=0, mode='complex', base=None):
         """ Generate white noise to the field with the given seed.
 
             The scheme is supposed to be compatible with Gadget when the field is three-dimensional.
@@ -1187,6 +1179,8 @@ class ParticleMesh(object):
             ----------
             seed : int
                 The random seed
+            mean : float
+                the mean of the field
             unitary : bool
                 True to generate a unitary white noise where the amplitude is fixed to 1 and
                 only the phase is random.
@@ -1194,6 +1188,14 @@ class ParticleMesh(object):
         from .whitenoise import generate
         complex = ComplexField(self, base=base)
         generate(complex.value, complex.start, complex.Nmesh, seed, bool(unitary))
+
+        # add mean
+        def filter(k, v):
+            mask = numpy.bitwise_and.reduce([ki == 0 for ki in k])
+            v[mask] += mean
+            return v
+
+        complex.apply(filter, out=Ellipsis)
 
         if mode == 'complex':
             return complex

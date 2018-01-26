@@ -1,7 +1,7 @@
 """
     CoArray/MPI in Python
 
-    This is a simple example implements the CoArray 1.0 standard:
+    This is a failed attempt to implement the CoArray 1.0 standard:
 
         http://caf.rice.edu/documentation/index.html
 
@@ -26,7 +26,9 @@
 
     default attributes from numpy refers to local properties.
 
-    No methods are provided for the global shape, global ndims yet.
+    No methods are provided for the global shape, global ndims.
+
+    What doesn't work:
 
     Currently the co-ndims is limited to 1:
 
@@ -36,7 +38,20 @@
     reshaping the co-ndims will be difficult if we hold MPI Cart Comm objects
     inside coarrays; unless we don't care about correctness.
 
-    Broadcast and Gather are not supported yet.
+    Broadcast and Gather are not supported.
+
+    Treating the coarray dimension as an array dimension (co-transpose) doesn't
+    work neither.
+
+    Currently there is no way to notify the source rank which coarray to use
+    for the send operation.
+
+    We need to add all coarrays to a central repo to
+    do that; and then may need to crawl a dependency graph. I think there will
+    be a lot of trouble ahead.
+
+    But things may be simplified if we make use of the fact that all operations
+    are ran symmetrically.
 
     Yu Feng <rainwoodman@gmail.com>
 """
@@ -75,13 +90,20 @@ class coaproxy(object):
             self = self.parent
         return list(reversed(indices))
 
+    @property
+    def isgroup(self):
+        return self.coindex is Ellipsis
+
     def __getitem__(self, index):
         return coaproxy.fancyindex(self, index)
 
     def __setitem__(self, index, value):
         proxy = self[index]
 
-        self.__coameta__.operations.append(Push(proxy, value))
+        if self.isgroup:
+            self.__coameta__.operations.append(Scatter(proxy, value))
+        else:
+            self.__coameta__.operations.append(Push(proxy, value))
 
     def __repr__(self):
         return 'coaproxy:%d/%d %s' % (self.coindex, self.comm.size, self.indices)
@@ -112,7 +134,7 @@ class Pull(Op):
 class Push(Op):
     def __init__(self, proxy, value):
         self.proxy = proxy
-        self.buffer = value.copy()
+        self.buffer = value
         self.done = False
 
     def start(self):
@@ -248,7 +270,7 @@ class coarray(numpy.ndarray):
             for index in sendindices:
                 value = value[index]
 
-    #        print('sending to', senddest, value.data)
+            print('sending to', senddest, value.data, value, self)
             comm.Send(value, dest=senddest)
 
         for recvindices, recvsource in recvactions:
@@ -259,7 +281,7 @@ class coarray(numpy.ndarray):
             for index in recvindices[:-1]:
                 value = value[index]
 
-    #        print('receiving from ', recvsource, value.data)
+            print('receiving from ', recvsource, value.data)
             # trigger setitem
             buf = numpy.zeros_like(value[recvindices[-1]])
             comm.Recv(buf, recvsource)
@@ -307,6 +329,20 @@ def test_coarray(comm):
 
 #    coa(right)[3:4, :2] = coa[3:4, :2]
 
+def test_cotranspose(comm):
+    coa1 = coarray.zeros(comm, (comm.size, 3), dtype='f8')
+    coa2 = coarray.zeros(comm, (comm.size, 3), dtype='f8')
+
+    coa2[...] = coa2.thisimage
+
+    for i in range(coa1.num_images):
+        coa1[i] = coa2(i)[coa1.thisimage]
+
+    coa1.sync()
+
+    print(coa1)
+
 if __name__ == '__main__':
-    test_coarray(MPI.COMM_WORLD)
+#    test_coarray(MPI.COMM_WORLD)
+    test_cotranspose(MPI.COMM_WORLD)
 

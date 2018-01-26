@@ -434,6 +434,14 @@ def test_whitenoise(comm):
     assert_array_equal(complex1_down.value, complex2_down.value)
 
 @MPITest(commsize=(1, 4))
+def test_whitenoise_mean(comm):
+    # the whitenoise shall preserve the large scale.
+    pm0 = ParticleMesh(BoxSize=8.0, Nmesh=[8, 8, 8], comm=comm, dtype='f8')
+
+    complex1 = pm0.generate_whitenoise(seed=8, unitary=True, mean=1.0)
+    assert_allclose(complex1.c2r().cmean(), 1.0)
+
+@MPITest(commsize=(1, 4))
 def test_readout(comm):
     pm = ParticleMesh(BoxSize=8.0, Nmesh=[8, 8], comm=comm, dtype='f8')
     real = RealField(pm)
@@ -459,22 +467,32 @@ def test_cdot_cnorm(comm):
     norm2 = comp1.cnorm()
     norm3 = (abs(numpy.fft.fftn(numpy.fft.irfftn(comp1.value))) ** 2).sum()
     assert_allclose(norm2, norm3)
+    assert_allclose(norm2, norm1)
 
-    # p-2 norm of the full complex matrix (norm2) is
-    # NORM = Self + Lower + Upper
-    # CDOT = Self + Lower
-    # Upper = Lower
+@MPITest(commsize=(1))
+def test_cnorm_log(comm):
+    pm = ParticleMesh(BoxSize=8.0, Nmesh=[4, 4, 4], comm=comm, dtype='f8')
+    comp1 = pm.generate_whitenoise(1234, mode='complex', mean=1.0)
 
-    self_conj_sum = 0
-    for ind1 in numpy.ndindex(*(list(comp1.cshape))):
-        c = [(4 - i) % 4 for i, n in zip(ind1, comp1.cshape)]
-        ci = numpy.ravel_multi_index(c, comp1.Nmesh)
-        ii = numpy.ravel_multi_index(ind1, comp1.Nmesh)
-        v = comp1.cgetitem(ind1)
-        if ci == ii:
-            self_conj_sum += abs(v) ** 2
+    norm2 = comp1.cnorm(norm = lambda x: numpy.log(x.real ** 2 + x.imag ** 2))
+    norm3 = (numpy.log(abs(numpy.fft.fftn(numpy.fft.irfftn(comp1.value))) ** 2)).sum()
+    assert_allclose(norm2, norm3)
 
-    assert_allclose(norm1 * 2, norm2 + self_conj_sum)
+@MPITest(commsize=(1))
+def test_cdot(comm):
+    pm = ParticleMesh(BoxSize=8.0, Nmesh=[4, 4, 4], comm=comm, dtype='f8')
+    comp1 = pm.generate_whitenoise(1234, mode='complex')
+    comp2 = pm.generate_whitenoise(1239, mode='complex')
+
+    norm1 = comp1.cdot(comp2)
+    norm2 = comp2.cdot(comp1)
+
+    norm_r = comp1.c2r().cdot(comp2.c2r()) / pm.Nmesh.prod()
+
+    assert_allclose(norm2.real, norm_r)
+    assert_allclose(norm1.real, norm_r)
+    assert_allclose(norm1.real, norm2.real)
+    assert_allclose(norm1.imag, -norm2.imag)
 
 @MPITest(commsize=(1, 4))
 def test_preview(comm):

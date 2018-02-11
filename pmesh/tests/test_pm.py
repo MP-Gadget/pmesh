@@ -124,7 +124,6 @@ def test_c2c(comm):
     real.readout(npos)
     assert_almost_equal(numpy.asarray(real), numpy.asarray(real2), decimal=7)
 
-
 @MPITest(commsize=(1,4))
 def test_decompose(comm):
     pm = ParticleMesh(BoxSize=4.0, Nmesh=[4, 4, 4], comm=comm, dtype='f8')
@@ -164,11 +163,20 @@ def test_decompose(comm):
 
 @MPITest(commsize=(1))
 def test_indices(comm):
-    pm = ParticleMesh(BoxSize=8.0, Nmesh=[2, 2], comm=comm, dtype='f8')
-    assert_almost_equal(pm.k[0], [[0], [-0.785398]], decimal=3)
-    assert_almost_equal(pm.k[1], [[0, -0.785398]], decimal=3)
-    assert_almost_equal(pm.x[0], [[0], [-4]], decimal=3)
-    assert_almost_equal(pm.x[1], [[0, -4]], decimal=3)
+    pm = ParticleMesh(BoxSize=8.0, Nmesh=[4, 4], comm=comm, dtype='f8')
+    assert_almost_equal(pm.k[0], [[0], [0.785], [-1.571], [-0.785]], decimal=3)
+    assert_almost_equal(pm.k[1], [[0, 0.785, -1.571]], decimal=3)
+    assert_almost_equal(pm.x[0], [[0], [2], [-4], [-2]], decimal=3)
+    assert_almost_equal(pm.x[1], [[0, 2, -4, -2]], decimal=3)
+
+@MPITest(commsize=(1))
+def test_indices_c2c(comm):
+    pm = ParticleMesh(BoxSize=8.0, Nmesh=[4, 4], comm=comm, dtype='c16')
+    assert_almost_equal(pm.k[0], [[0], [0.785], [-1.571], [-0.785]], decimal=3)
+    assert_almost_equal(pm.k[1], [[0, 0.785, -1.571, -0.785]], decimal=3)
+    assert_almost_equal(pm.x[0], [[0], [2], [-4], [-2]], decimal=3)
+    assert_almost_equal(pm.x[1], [[0, 2, -4, -2]], decimal=3)
+
 def assert_same_base(a1, a2):
     def find_base(a):
         base = a

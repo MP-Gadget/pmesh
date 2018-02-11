@@ -537,6 +537,24 @@ def test_cdot(comm):
     assert_allclose(norm1.real, norm2.real)
     assert_allclose(norm1.imag, -norm2.imag)
 
+@MPITest(commsize=(1))
+def test_cdot_c2c(comm):
+    pm = ParticleMesh(BoxSize=8.0, Nmesh=[4, 4, 4], comm=comm, dtype='c16')
+    comp1 = pm.generate_whitenoise(1234, mode='complex')
+    comp2 = pm.generate_whitenoise(1239, mode='complex')
+
+    norm1 = comp1.cdot(comp2)
+    norm2 = comp2.cdot(comp1)
+
+    r1 = comp1.c2r()
+
+    norm_r = comp1.c2r().cdot(comp2.c2r()) / pm.Nmesh.prod()
+
+    assert_allclose(norm2.real, norm_r)
+    assert_allclose(norm1.real, norm_r)
+    assert_allclose(norm1.real, norm2.real)
+    assert_allclose(norm1.imag, -norm2.imag)
+
 @MPITest(commsize=(1, 4))
 def test_preview(comm):
     pm = ParticleMesh(BoxSize=8.0, Nmesh=[4, 4, 4], comm=comm, dtype='f8')

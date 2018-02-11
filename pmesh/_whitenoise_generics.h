@@ -1,4 +1,22 @@
 static void
+mkname(_set_mode)(PMeshWhiteNoiseGenerator * self, ptrdiff_t * iabs, char * delta_k, FLOAT re, FLOAT im)
+{
+    ptrdiff_t ip = 0;
+    ptrdiff_t irel[3];
+    int d;
+    for(d = 0; d < 3; d ++) {
+        irel[d] = iabs[d] - self->start[d];
+        ip += self->strides[d] * irel[d];
+    }
+
+    if(irel[2] >= 0 && irel[2] < self->size[2]) {
+
+        ((FLOAT*) (delta_k + ip))[0] = re;
+        ((FLOAT*) (delta_k + ip))[1] = im;
+    }
+}
+
+static void
 mkname(_generic_fill)(PMeshWhiteNoiseGenerator * self, void * delta_k, int seed)
 {
     /* Fill delta_k with gadget scheme */
@@ -28,7 +46,6 @@ mkname(_generic_fill)(PMeshWhiteNoiseGenerator * self, void * delta_k, int seed)
     }
     gsl_rng_free(rng);
 
-    ptrdiff_t irel[3];
     for(i = self->start[0];
         i < self->start[0] + self->size[0];
         i ++) {
@@ -56,68 +73,77 @@ mkname(_generic_fill)(PMeshWhiteNoiseGenerator * self, void * delta_k, int seed)
                 d2 = 1;
             }
 
-            unsigned int seed_conj, seed_this;
-            /* the lower quadrant generator */
-            seed_conj = GETSEED(self, i, j, d1, d2);
-            gsl_rng_set(lower_rng, seed_conj);
+            int sign;   /* sign in the k plane */
+            for(sign = -1; sign <= 1; sign += 2) {
 
-            seed_this = GETSEED(self, i, j, 0, 0);
-            gsl_rng_set(this_rng, seed_this);
+                unsigned int seed_lower, seed_this;
 
-            for(k = 0; k <= self->Nmesh[2] / 2; k ++) {
-                int use_conj = (d1 != 0 || d2 != 0) && (k == 0 || k == self->Nmesh[2] / 2);
-                /*if(use_conj)
-                    printf("use_conj = %d, %d %d %d %d %d sl %d st %d\n", use_conj, i, j, k, d1, d2, seed_conj, seed_this);*/
-                double ampl, phase;
-                if(use_conj) {
-                    /* on k = 0 and Nmesh/2 plane, we use the lower quadrant generator, 
-                     * then hermit transform the result if it is nessessary */
-                    SAMPLE(this_rng, &ampl, &phase);
-                    SAMPLE(lower_rng, &ampl, &phase);
+                /* the lower quadrant generator */
+                seed_lower = GETSEED(self, i, j, d1, d2);
+                gsl_rng_set(lower_rng, seed_lower);
+
+                if(sign == 1) {
+                    seed_this = GETSEED(self, i, j, 0, 0);
                 } else {
-                    SAMPLE(lower_rng, &ampl, &phase);
-                    SAMPLE(this_rng, &ampl, &phase);
+                    /* the negative half of k, sample from the conjugate quadrant */
+                    seed_this = GETSEED(self, i, j, 1, 1);
                 }
+                gsl_rng_set(this_rng, seed_this);
 
-                ptrdiff_t iabs[3] = {i, j, k};
-                ptrdiff_t ip = 0;
-                for(d = 0; d < 3; d ++) {
-                    irel[d] = iabs[d] - self->start[d];
-                    ip += self->strides[d] * irel[d];
+                for(k = 0; k <= self->Nmesh[2] / 2; k ++) {
+                    int use_conj = (d1 != 0 || d2 != 0) && (k == 0 || k == self->Nmesh[2] / 2);
+
+                    /*if(use_conj)
+                        printf("use_conj = %d, %d %d %d %d %d sl %d st %d\n", use_conj, i, j, k, d1, d2, seed_lower, seed_this);*/
+                    double ampl, phase;
+                    if(use_conj) {
+                        /* on k = 0 and Nmesh/2 plane, we use the lower quadrant generator, 
+                         * then hermit transform the result if it is nessessary */
+                        SAMPLE(this_rng, &ampl, &phase);
+                        SAMPLE(lower_rng, &ampl, &phase);
+                    } else {
+                        SAMPLE(lower_rng, &ampl, &phase);
+                        SAMPLE(this_rng, &ampl, &phase);
+                    }
+
+                    /* we want two numbers that are of std ~ 1/sqrt(2) */
+                    ampl = sqrt(- log(ampl));
+
+                    /* Unitary gaussian, the norm of real and imag is fixed to 1/sqrt(2) */
+                    if(self->unitary)
+                        ampl = 1.0;
+
+                    ptrdiff_t iabs[3] = {i, j, k};
+
+                    FLOAT re = ampl * cos(phase);
+                    FLOAT im = ampl * sin(phase);
+
+                    if(sign == -1) {
+                        iabs[2] = self->Nmesh[2] - k;
+                        im = - im;
+                    }
+
+                    if(use_conj) {
+                        im *= -1;
+                    }
+
+                    if((self->Nmesh[0] - iabs[0]) % self->Nmesh[0] == iabs[0] &&
+                       (self->Nmesh[1] - iabs[1]) % self->Nmesh[1] == iabs[1] &&
+                       (self->Nmesh[2] - iabs[2]) % self->Nmesh[2] == iabs[2]) {
+                        /* The mode is self conjuguate, thus imaginary mode must be zero */
+                        im = 0;
+                        if(self->unitary)  /* real part must be 1 then*/
+                            re = 1;
+                    }
+
+                    if(iabs[0] == 0 && iabs[1] == 0 && iabs[2] == 0) {
+                        /* the mean is zero */
+                        re = im = 0;
+                    }
+
+                    mkname(_set_mode)(self, iabs, delta_k, re, im);
+
                 }
-
-                if(irel[2] < 0) continue;
-                if(irel[2] >= self->size[2]) continue;
-
-                /* we want two numbers that are of std ~ 1/sqrt(2) */
-                ampl = sqrt(- log(ampl));
-
-                /* Unitary gaussian, the norm of real and imag is fixed to 1/sqrt(2) */
-                if(self->unitary)
-                    ampl = 1.0;
-
-                ((FLOAT*) (delta_k + ip))[0] = ampl * cos(phase);
-                ((FLOAT*) (delta_k + ip))[1] = ampl * sin(phase);
-
-                if(use_conj) {
-                    ((FLOAT*) (delta_k + ip))[1] *= -1;
-                }
-
-                if((self->Nmesh[0] - iabs[0]) % self->Nmesh[0] == iabs[0] &&
-                   (self->Nmesh[1] - iabs[1]) % self->Nmesh[1] == iabs[1] &&
-                   (self->Nmesh[2] - iabs[2]) % self->Nmesh[2] == iabs[2]) {
-                    /* The mode is self conjuguate, thus imaginary mode must be zero */
-                    ((FLOAT*) (delta_k + ip))[1] = 0;
-                    if(self->unitary)  /* real part must be 1 then*/
-                        ((FLOAT*) (delta_k + ip))[0] = 1;
-                }
-
-                if(iabs[0] == 0 && iabs[1] == 0 && iabs[2] == 0) {
-                    /* the mean is zero */
-                    ((FLOAT*) (delta_k + ip))[0] = 0;
-                    ((FLOAT*) (delta_k + ip))[1] = 0;
-                }
-
             }
         }
         gsl_rng_free(lower_rng);

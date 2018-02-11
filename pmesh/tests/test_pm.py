@@ -92,6 +92,40 @@ def test_inplace_fft(comm):
     assert_almost_equal(numpy.asarray(real), numpy.asarray(real2), decimal=7)
 
 @MPITest(commsize=(1,4))
+def test_c2c(comm):
+    # this test requires pfft-python 0.1.16.
+
+    pm = ParticleMesh(BoxSize=8.0, Nmesh=[8, 8], comm=comm, dtype='complex128')
+    numpy.random.seed(1234)
+    if comm.rank == 0:
+        Npar = 100
+    else:
+        Npar = 0
+
+    pos = 1.0 * (numpy.arange(Npar * len(pm.Nmesh))).reshape(-1, len(pm.Nmesh)) * (7, 7)
+    pos %= (pm.Nmesh + 1)
+    layout = pm.decompose(pos)
+
+    npos = layout.exchange(pos)
+    real = pm.paint(npos)
+
+    complex = real.r2c()
+
+    real2 = complex.c2r()
+
+    assert numpy.iscomplexobj(real)
+    assert numpy.iscomplexobj(real2)
+    assert numpy.iscomplexobj(complex)
+
+    assert_array_equal(complex.cshape, pm.Nmesh)
+    assert_array_equal(real2.cshape, pm.Nmesh)
+    assert_array_equal(real.cshape, pm.Nmesh)
+
+    real.readout(npos)
+    assert_almost_equal(numpy.asarray(real), numpy.asarray(real2), decimal=7)
+
+
+@MPITest(commsize=(1,4))
 def test_decompose(comm):
     pm = ParticleMesh(BoxSize=4.0, Nmesh=[4, 4, 4], comm=comm, dtype='f8')
     numpy.random.seed(1234)

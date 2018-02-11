@@ -143,14 +143,13 @@ class Field(object):
         if isinstance(self, RealField):
             self.value = self.base.view_input()
             self.start = self.partition.local_i_start
-            self.cshape = pm.Nmesh
+            self.cshape = numpy.array([e[-1] for e in self.partition.i_edges], dtype='intp')
             self.x = pm.x
             self.i = pm.i_ind
         elif isinstance(self, ComplexField):
             self.value = self.base.view_output()
             self.start = self.partition.local_o_start
-            self.cshape = pm.Nmesh.copy()
-            self.cshape[-1] = self.cshape[-1] // 2 + 1
+            self.cshape = numpy.array([e[-1] for e in self.partition.o_edges], dtype='intp')
             self.x = pm.k
             self.i = pm.o_ind
             self.real = self.value.real
@@ -680,7 +679,7 @@ class RealField(Field):
         return out
 
     def cdot(self, other):
-        return self.pm.comm.allreduce(numpy.sum(self[...] * other[...], dtype='f8'))
+        return self.pm.comm.allreduce(numpy.sum(self[...] * other[...]))
 
     def cnorm(self):
         return self.cdot(self)
@@ -983,8 +982,14 @@ class ParticleMesh(object):
         elif dtype == numpy.dtype('f4'):
             forward = pfft.Type.PFFTF_R2C
             backward = pfft.Type.PFFTF_C2R
+        elif dtype == numpy.dtype('complex128'):
+            forward = pfft.Type.PFFT_C2C
+            backward = pfft.Type.PFFT_C2C
+        elif dtype == numpy.dtype('complex64'):
+            forward = pfft.Type.PFFTF_C2C
+            backward = pfft.Type.PFFTF_C2C
         else:
-            raise ValueError("dtype must be f8 or f4")
+            raise ValueError("dtype must be f8, f4, c16 or c8")
 
         self.Nmesh = numpy.array(Nmesh, dtype='i8')
         self.ndim = len(self.Nmesh)

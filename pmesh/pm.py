@@ -688,6 +688,19 @@ class ComplexField(Field):
     def __init__(self, pm, base=None):
         Field.__init__(self, pm, base)
 
+    def _expand_hermitian(self, i, y):
+        # is the field compressed?
+        if self.Nmesh[-1] == self.cshape[-1]:
+            return y
+
+        y = y.copy()
+        # if a conjugate is not stored and not self, increase the weight
+        # because we shall add it.
+        mask = (i[-1] != 0) & (i[-1] != self.Nmesh[-1] // 2)
+        y += mask * y
+        return y
+
+
     def cnorm(self, metric=None, norm=lambda x: x.real **2 + x.imag**2):
         r"""compute the norm collectively. The conjugates are added too.
 
@@ -701,14 +714,6 @@ class ComplexField(Field):
                             +   conjugate(self[m]) * other[m])
                              *  0.5  metric(k[m])
         """
-        def filter(i, y):
-            y = y.copy()
-            # if a conjugate is not stored and not self, increase the weight
-            # because we shall add it.
-            mask = (i[-1] != 0) & (i[-1] != self.Nmesh[-1] // 2)
-            y += mask * y
-            return y
-
         def filter2(k, y):
             y = norm(y)
             if metric is not None:
@@ -718,7 +723,7 @@ class ComplexField(Field):
 
         return self.pm.comm.allreduce(self\
                 .apply(filter2)\
-                .apply(filter, kind='index', out=Ellipsis)\
+                .apply(self._expand_hermitian, kind='index', out=Ellipsis)\
                 .value.sum())
 
     def cdot(self, other, metric=None):
@@ -739,15 +744,8 @@ class ComplexField(Field):
         r = self.pm.create(mode='complex', value=0)
 
         r.value[...] = (self.value * numpy.conj(other.value))
-        def filter(i, y):
-            y = y.copy()
-            # if a conjugate is not stored and not self, increase the weight
-            # because we shall add it.
-            mask = (i[-1] != 0) & (i[-1] != self.Nmesh[-1] // 2)
-            y += mask * y
-            return y
 
-        r.apply(filter, kind='index', out=Ellipsis)
+        r.apply(self._expand_hermitian, kind='index', out=Ellipsis)
 
         if metric is not None:
             r.apply(lambda k, y: y * metric(sum(ki**2 for ki in k) ** 0.5), out=Ellipsis)

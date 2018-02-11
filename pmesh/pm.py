@@ -936,7 +936,10 @@ class ParticleMesh(object):
         number of mesh points per side. The length decides the number of dimensions.
 
     dtype : dtype
-        dtype of the buffers
+        dtype of the buffers; if a complex dtype is given, the transforms will be c2c.
+        the type of fields are still 'RealField' and 'ComplexField', though the RealField
+        is actually made of complex numbers, and the ComplexField is no longer hermitian
+        compressed.
 
     BoxSize : float
         size of box

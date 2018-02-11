@@ -590,6 +590,15 @@ def test_preview(comm):
 
     preview6 = comp1.preview(Nmesh=8, axes=(0,))
 
+@MPITest(commsize=(1, 4))
+def test_c2c_r2c_edges(comm):
+    pm1 = ParticleMesh(BoxSize=8.0, Nmesh=[5, 7, 9], comm=comm, dtype='c16')
+    pm2 = ParticleMesh(BoxSize=8.0, Nmesh=[5, 7, 9], comm=comm, dtype='f8')
+
+    assert_allclose(pm1.x[0], pm2.x[0])
+    assert_allclose(pm1.x[1], pm2.x[1])
+    assert_allclose(pm1.x[2], pm2.x[2])
+
 @MPITest(commsize=(1))
 def test_grid(comm):
     pm = ParticleMesh(BoxSize=8.0, Nmesh=[4, 4, 4], comm=comm, dtype='f8')

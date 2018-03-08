@@ -25,6 +25,17 @@ def test_asarray(comm):
     assert a is real.value
 
 @MPITest(commsize=(1,))
+def test_negnyquist(comm):
+    # the nyquist mode wave number in the hermitian complex field must be negative.
+    # nbodykit depends on this behavior.
+    # see https://github.com/bccp/nbodykit/pull/459
+    pm = ParticleMesh(BoxSize=8.0, Nmesh=[8, 8], comm=comm, dtype='f8')
+
+    c = pm.create(mode='complex')
+    assert (c.x[-1][0][-1] < 0).all()
+    assert (c.x[-1][0][:-1] >= 0).all()
+
+@MPITest(commsize=(1,))
 @skipif(True, "1d is not supported")
 def test_1d(comm):
     pm = ParticleMesh(BoxSize=8.0, Nmesh=[8], comm=comm, dtype='f8')

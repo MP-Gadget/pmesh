@@ -3,6 +3,12 @@ import numpy
 
 def generate(complex, start, Nmesh, seed, unitary):
     """
+        The result is always hermitian.
+
+        Depending on the shape of complex, the routine will fill
+        either the half or the full representation of the field.
+
+
         unitary : bool
             True for a unitary gaussian field (amplitude is fixed to 1)
             False for a true gaussian field
@@ -20,7 +26,7 @@ def generate(complex, start, Nmesh, seed, unitary):
         # may be good enough.
         rng = numpy.random.RandomState(seed)
         real = rng.normal(size=_Nmesh)
-        full = numpy.fft.rfftn(real)
+        full = numpy.fft.fftn(real)
         full[...] *= numpy.prod(_Nmesh) ** -0.5
         slices = tuple([slice(a, a + b) for a, b in zip(_start, complex.shape)])
         complex[...] = full[slices]

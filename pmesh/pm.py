@@ -143,14 +143,13 @@ class Field(object):
         if isinstance(self, RealField):
             self.value = self.base.view_input()
             self.start = self.partition.local_i_start
-            self.cshape = pm.Nmesh
+            self.cshape = numpy.array([e[-1] for e in self.partition.i_edges], dtype='intp')
             self.x = pm.x
             self.i = pm.i_ind
         elif isinstance(self, ComplexField):
             self.value = self.base.view_output()
             self.start = self.partition.local_o_start
-            self.cshape = pm.Nmesh.copy()
-            self.cshape[-1] = self.cshape[-1] // 2 + 1
+            self.cshape = numpy.array([e[-1] for e in self.partition.o_edges], dtype='intp')
             self.x = pm.k
             self.i = pm.o_ind
             self.real = self.value.real
@@ -680,7 +679,7 @@ class RealField(Field):
         return out
 
     def cdot(self, other):
-        return self.pm.comm.allreduce(numpy.sum(self[...] * other[...], dtype='f8'))
+        return self.pm.comm.allreduce(numpy.sum(self[...] * other[...]))
 
     def cnorm(self):
         return self.cdot(self)
@@ -688,6 +687,19 @@ class RealField(Field):
 class ComplexField(Field):
     def __init__(self, pm, base=None):
         Field.__init__(self, pm, base)
+
+    def _expand_hermitian(self, i, y):
+        # is the field compressed?
+        if self.Nmesh[-1] == self.cshape[-1]:
+            return y
+
+        y = y.copy()
+        # if a conjugate is not stored and not self, increase the weight
+        # because we shall add it.
+        mask = (i[-1] != 0) & (i[-1] != self.Nmesh[-1] // 2)
+        y += mask * y
+        return y
+
 
     def cnorm(self, metric=None, norm=lambda x: x.real **2 + x.imag**2):
         r"""compute the norm collectively. The conjugates are added too.
@@ -702,14 +714,6 @@ class ComplexField(Field):
                             +   conjugate(self[m]) * other[m])
                              *  0.5  metric(k[m])
         """
-        def filter(i, y):
-            y = y.copy()
-            # if a conjugate is not stored and not self, increase the weight
-            # because we shall add it.
-            mask = (i[-1] != 0) & (i[-1] != self.Nmesh[-1] // 2)
-            y += mask * y
-            return y
-
         def filter2(k, y):
             y = norm(y)
             if metric is not None:
@@ -719,7 +723,7 @@ class ComplexField(Field):
 
         return self.pm.comm.allreduce(self\
                 .apply(filter2)\
-                .apply(filter, kind='index', out=Ellipsis)\
+                .apply(self._expand_hermitian, kind='index', out=Ellipsis)\
                 .value.sum())
 
     def cdot(self, other, metric=None):
@@ -740,15 +744,8 @@ class ComplexField(Field):
         r = self.pm.create(mode='complex', value=0)
 
         r.value[...] = (self.value * numpy.conj(other.value))
-        def filter(i, y):
-            y = y.copy()
-            # if a conjugate is not stored and not self, increase the weight
-            # because we shall add it.
-            mask = (i[-1] != 0) & (i[-1] != self.Nmesh[-1] // 2)
-            y += mask * y
-            return y
 
-        r.apply(filter, kind='index', out=Ellipsis)
+        r.apply(self._expand_hermitian, kind='index', out=Ellipsis)
 
         if metric is not None:
             r.apply(lambda k, y: y * metric(sum(ki**2 for ki in k) ** 0.5), out=Ellipsis)
@@ -937,7 +934,10 @@ class ParticleMesh(object):
         number of mesh points per side. The length decides the number of dimensions.
 
     dtype : dtype
-        dtype of the buffers
+        dtype of the buffers; if a complex dtype is given, the transforms will be c2c.
+        the type of fields are still 'RealField' and 'ComplexField', though the RealField
+        is actually made of complex numbers, and the ComplexField is no longer hermitian
+        compressed.
 
     BoxSize : float
         size of box
@@ -983,8 +983,14 @@ class ParticleMesh(object):
         elif dtype == numpy.dtype('f4'):
             forward = pfft.Type.PFFTF_R2C
             backward = pfft.Type.PFFTF_C2R
+        elif dtype == numpy.dtype('complex128'):
+            forward = pfft.Type.PFFT_C2C
+            backward = pfft.Type.PFFT_C2C
+        elif dtype == numpy.dtype('complex64'):
+            forward = pfft.Type.PFFTF_C2C
+            backward = pfft.Type.PFFTF_C2C
         else:
-            raise ValueError("dtype must be f8 or f4")
+            raise ValueError("dtype must be f8, f4, c16 or c8")
 
         self.Nmesh = numpy.array(Nmesh, dtype='i8')
         self.ndim = len(self.Nmesh)

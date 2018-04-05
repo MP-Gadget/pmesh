@@ -103,6 +103,39 @@ def test_inplace_fft(comm):
     assert_almost_equal(numpy.asarray(real), numpy.asarray(real2), decimal=7)
 
 @MPITest(commsize=(1,4))
+def test_c2c(comm):
+    # this test requires pfft-python 0.1.16.
+
+    pm = ParticleMesh(BoxSize=8.0, Nmesh=[8, 8], comm=comm, dtype='complex128')
+    numpy.random.seed(1234)
+    if comm.rank == 0:
+        Npar = 100
+    else:
+        Npar = 0
+
+    pos = 1.0 * (numpy.arange(Npar * len(pm.Nmesh))).reshape(-1, len(pm.Nmesh)) * (7, 7)
+    pos %= (pm.Nmesh + 1)
+    layout = pm.decompose(pos)
+
+    npos = layout.exchange(pos)
+    real = pm.paint(npos)
+
+    complex = real.r2c()
+
+    real2 = complex.c2r()
+
+    assert numpy.iscomplexobj(real)
+    assert numpy.iscomplexobj(real2)
+    assert numpy.iscomplexobj(complex)
+
+    assert_array_equal(complex.cshape, pm.Nmesh)
+    assert_array_equal(real2.cshape, pm.Nmesh)
+    assert_array_equal(real.cshape, pm.Nmesh)
+
+    real.readout(npos)
+    assert_almost_equal(numpy.asarray(real), numpy.asarray(real2), decimal=7)
+
+@MPITest(commsize=(1,4))
 def test_decompose(comm):
     pm = ParticleMesh(BoxSize=4.0, Nmesh=[4, 4, 4], comm=comm, dtype='f8')
     numpy.random.seed(1234)
@@ -141,11 +174,20 @@ def test_decompose(comm):
 
 @MPITest(commsize=(1))
 def test_indices(comm):
-    pm = ParticleMesh(BoxSize=8.0, Nmesh=[2, 2], comm=comm, dtype='f8')
-    assert_almost_equal(pm.k[0], [[0], [-0.785398]], decimal=3)
-    assert_almost_equal(pm.k[1], [[0, -0.785398]], decimal=3)
-    assert_almost_equal(pm.x[0], [[0], [-4]], decimal=3)
-    assert_almost_equal(pm.x[1], [[0, -4]], decimal=3)
+    pm = ParticleMesh(BoxSize=8.0, Nmesh=[4, 4], comm=comm, dtype='f8')
+    assert_almost_equal(pm.k[0], [[0], [0.785], [-1.571], [-0.785]], decimal=3)
+    assert_almost_equal(pm.k[1], [[0, 0.785, -1.571]], decimal=3)
+    assert_almost_equal(pm.x[0], [[0], [2], [-4], [-2]], decimal=3)
+    assert_almost_equal(pm.x[1], [[0, 2, -4, -2]], decimal=3)
+
+@MPITest(commsize=(1))
+def test_indices_c2c(comm):
+    pm = ParticleMesh(BoxSize=8.0, Nmesh=[4, 4], comm=comm, dtype='c16')
+    assert_almost_equal(pm.k[0], [[0], [0.785], [-1.571], [-0.785]], decimal=3)
+    assert_almost_equal(pm.k[1], [[0, 0.785, -1.571, -0.785]], decimal=3)
+    assert_almost_equal(pm.x[0], [[0], [2], [-4], [-2]], decimal=3)
+    assert_almost_equal(pm.x[1], [[0, 2, -4, -2]], decimal=3)
+
 def assert_same_base(a1, a2):
     def find_base(a):
         base = a
@@ -506,6 +548,24 @@ def test_cdot(comm):
     assert_allclose(norm1.real, norm2.real)
     assert_allclose(norm1.imag, -norm2.imag)
 
+@MPITest(commsize=(1))
+def test_cdot_c2c(comm):
+    pm = ParticleMesh(BoxSize=8.0, Nmesh=[4, 4, 4], comm=comm, dtype='c16')
+    comp1 = pm.generate_whitenoise(1234, mode='complex')
+    comp2 = pm.generate_whitenoise(1239, mode='complex')
+
+    norm1 = comp1.cdot(comp2)
+    norm2 = comp2.cdot(comp1)
+
+    r1 = comp1.c2r()
+
+    norm_r = comp1.c2r().cdot(comp2.c2r()) / pm.Nmesh.prod()
+
+    assert_allclose(norm2.real, norm_r)
+    assert_allclose(norm1.real, norm_r)
+    assert_allclose(norm1.real, norm2.real)
+    assert_allclose(norm1.imag, -norm2.imag)
+
 @MPITest(commsize=(1, 4))
 def test_preview(comm):
     pm = ParticleMesh(BoxSize=8.0, Nmesh=[4, 4, 4], comm=comm, dtype='f8')
@@ -540,6 +600,15 @@ def test_preview(comm):
     assert_allclose(preview5, previewsum5)
 
     preview6 = comp1.preview(Nmesh=8, axes=(0,))
+
+@MPITest(commsize=(1, 4))
+def test_c2c_r2c_edges(comm):
+    pm1 = ParticleMesh(BoxSize=8.0, Nmesh=[5, 7, 9], comm=comm, dtype='c16')
+    pm2 = ParticleMesh(BoxSize=8.0, Nmesh=[5, 7, 9], comm=comm, dtype='f8')
+
+    assert_allclose(pm1.x[0], pm2.x[0])
+    assert_allclose(pm1.x[1], pm2.x[1])
+    assert_allclose(pm1.x[2], pm2.x[2])
 
 @MPITest(commsize=(1))
 def test_grid(comm):

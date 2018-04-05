@@ -111,6 +111,8 @@ class ResampleWindow(_ResampleWindow):
             if not hsml.flags.writeable:
                 hsml = hsml.copy()
 
+        if numpy.iscomplexobj(real):
+            real = real.real
         _ResampleWindow.paint(self, real, pos, hsml, mass, order, transform.scale, transform.translate, transform.period)
 
     def readout(self, real, pos, hsml=None, out=None, diffdir=None, transform=None):
@@ -164,6 +166,8 @@ class ResampleWindow(_ResampleWindow):
             if not hsml.flags.writeable:
                 hsml = hsml.copy()
 
+        if numpy.iscomplexobj(real):
+            real = real.real
 
         _ResampleWindow.readout(self, real, pos, hsml, out, order, transform.scale, transform.translate, transform.period)
 

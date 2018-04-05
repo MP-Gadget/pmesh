@@ -58,6 +58,44 @@ def test_generate_3d_hermitian():
     assert_array_equal(value[1, 1, Nmesh // 2], (value[Nmesh - 1, Nmesh- 1, Nmesh // 2]).conjugate())
     assert_allclose(h, value, rtol=1e-5, atol=1e-9)
 
+def test_generate_3d_hermitian_full():
+    Nmesh = 8
+    value = numpy.zeros((Nmesh, Nmesh, Nmesh), dtype='complex128')
+    generate(value, 0, (Nmesh, Nmesh, Nmesh), 1, unitary=False)
+
+    value2 = numpy.zeros((Nmesh, Nmesh, Nmesh//2 + 1), dtype='complex128')
+    generate(value2, 0, (Nmesh, Nmesh, Nmesh), 1, unitary=False)
+
+    for i in range(Nmesh):
+       for j in range(Nmesh):
+           for k in range(Nmesh):
+               assert_allclose(value[i, j, k].conj(), value[-i, -j, -k])
+
+    # assert both the half fill and full fill give identical results.
+    c1 = numpy.fft.ifftn(value)
+    c2 = numpy.fft.irfftn(value2)
+
+    assert_allclose(c1.imag, 0, atol=1e-9)
+    assert_allclose(c1, c2)
+
+def test_generate_2d_hermitian_full():
+    Nmesh = 8
+    value = numpy.zeros((Nmesh, Nmesh), dtype='complex128')
+    generate(value, 0, (Nmesh, Nmesh), 1, unitary=False)
+
+    value2 = numpy.zeros((Nmesh, Nmesh//2 + 1), dtype='complex128')
+    generate(value2, 0, (Nmesh, Nmesh), 1, unitary=False)
+
+    for i in range(Nmesh):
+       for j in range(Nmesh):
+           assert_allclose(value[i, j].conj(), value[-i, -j])
+
+    # assert both the half fill and full fill give identical results.
+    c1 = numpy.fft.ifftn(value)
+    c2 = numpy.fft.irfftn(value2)
+
+    assert_allclose(c1.imag, 0, atol=1e-9)
+    assert_allclose(c1, c2)
 def test_generate_2d():
     Nmesh = 1024
     value = numpy.zeros((Nmesh, Nmesh//2 + 1), dtype='complex128')

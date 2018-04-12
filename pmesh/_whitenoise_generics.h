@@ -75,7 +75,6 @@ mkname(_generic_fill)(PMeshWhiteNoiseGenerator * self, void * delta_k, int seed)
 
             int sign;   /* sign in the k plane */
             for(sign = -1; sign <= 1; sign += 2) {
-
                 unsigned int seed_lower, seed_this;
 
                 /* the lower quadrant generator */
@@ -93,8 +92,6 @@ mkname(_generic_fill)(PMeshWhiteNoiseGenerator * self, void * delta_k, int seed)
                 for(k = 0; k <= self->Nmesh[2] / 2; k ++) {
                     int use_conj = (d1 != 0 || d2 != 0) && (k == 0 || k == self->Nmesh[2] / 2);
 
-                    /*if(use_conj)
-                        printf("use_conj = %d, %d %d %d %d %d sl %d st %d\n", use_conj, i, j, k, d1, d2, seed_lower, seed_this);*/
                     double ampl, phase;
                     if(use_conj) {
                         /* on k = 0 and Nmesh/2 plane, we use the lower quadrant generator, 
@@ -117,6 +114,14 @@ mkname(_generic_fill)(PMeshWhiteNoiseGenerator * self, void * delta_k, int seed)
 
                     FLOAT re = ampl * cos(phase);
                     FLOAT im = ampl * sin(phase);
+
+                    /*
+                    if(use_conj) {
+                        printf("%d %d %d %d useconj=%d %d %d seed %d (otherseed %d) %g %g\n", i, j, k, sign, use_conj, d1, d2, seed_lower, seed_this, re, im);
+                    } else {
+                        printf("%d %d %d %d useconj=%d %d %d seed %d (otherseed %d) %g %g\n", i, j, k, sign, use_conj, d1, d2, seed_this, seed_lower, re, im);
+                    }
+                    */
 
                     if(sign == -1) {
                         iabs[2] = self->Nmesh[2] - k;

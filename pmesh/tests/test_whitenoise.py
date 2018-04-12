@@ -37,11 +37,13 @@ def test_3d_genic():
     assert_allclose(value[1, 1, 1], (-1.6499999999999999-0.64000000000000001j), atol=0.02)
 
 def test_generate_3d_hermitian():
-    Nmesh = 8
+    Nmesh = 4
     value = numpy.zeros((Nmesh, Nmesh, Nmesh//2 + 1), dtype='complex128')
-    generate(value, 0, (Nmesh, Nmesh, Nmesh), 1, unitary=False)
+    generate(value, 0, (Nmesh, Nmesh, Nmesh), 5463, unitary=False)
 
-    h = numpy.fft.rfftn(numpy.fft.irfftn(value))
+    # workaround https://github.com/IntelPython/mkl_fft/issues/4
+    h = numpy.fft.rfftn(numpy.fft.irfftn(value.copy()))
+
     for ind in numpy.ndindex(*value.shape):
         c = (Nmesh - numpy.array(ind)) % Nmesh
         if any(c >= value.shape): continue

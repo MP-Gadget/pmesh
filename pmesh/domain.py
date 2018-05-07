@@ -392,9 +392,15 @@ class GridND(object):
                         tmp = chunk[:, j]
                     sil[j, s] = self._digitize(tmp, self.edges[j]) - 1
 
-            particle_domain = numpy.ravel_multi_index(sil, self.shape)
-            tmp = numpy.bincount(particle_domain, minlength=self.size)
+            if periodic:
+                mode = 'raise' # periodic box, must be in 0 ~ self.shape due to remainder
+            else:
+                mode = 'clip' # non periodic box, assign particles outside edges to the edge domains.
+                              # FIXME: perhaps better to raise here? it may be very unbalanced if
+                              # the edge is very far off!
 
+            particle_domain = numpy.ravel_multi_index(sil, self.shape, mode=mode)
+            tmp = numpy.bincount(particle_domain, minlength=self.size)
         else:
             tmp = numpy.zeros(self.size)
 

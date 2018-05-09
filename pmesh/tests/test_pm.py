@@ -24,6 +24,18 @@ def test_asarray(comm):
     a = numpy.array(real, copy=False)
     assert a is real.value
 
+@MPITest(commsize=(1, 4))
+def test_shape_real(comm):
+    pm = ParticleMesh(BoxSize=8.0, Nmesh=[8, 8], comm=comm, dtype='f8')
+    real = RealField(pm)
+    assert (tuple(real.cshape) == (8, 8))
+
+@MPITest(commsize=(1, 4))
+def test_shape_complex(comm):
+    pm = ParticleMesh(BoxSize=8.0, Nmesh=[8, 8], comm=comm, dtype='f8')
+    comp = ComplexField(pm)
+    assert (tuple(comp.cshape) == (8, 5))
+
 @MPITest(commsize=(1,))
 def test_negnyquist(comm):
     # the nyquist mode wave number in the hermitian complex field must be negative.

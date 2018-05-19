@@ -228,6 +228,8 @@ def test_real_apply(comm):
     pm = ParticleMesh(BoxSize=8.0, Nmesh=[8, 8], comm=comm, dtype='f8')
     real = RealField(pm)
     def filter(x, v):
+        xnormp = x.normp()
+        assert_allclose(xnormp, sum(xi ** 2 for xi in x))
         return x[0] * 10 + x[1]
 
     real.apply(filter, out=Ellipsis)
@@ -240,6 +242,8 @@ def test_complex_apply(comm):
     pm = ParticleMesh(BoxSize=8.0, Nmesh=[8, 8], comm=comm, dtype='f8')
     complex = ComplexField(pm)
     def filter(k, v):
+        knormp = k.normp()
+        assert_allclose(knormp, sum(ki ** 2 for ki in k))
         return k[0] + k[1] * 1j
 
     complex.apply(filter, out=Ellipsis)

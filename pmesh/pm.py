@@ -49,7 +49,24 @@ class slabiter(object):
             s.Nmesh = self.Nmesh
             yield s
 
+class xslab(list):
+    def normp(self, p=2, zeromode=None):
+        """ returns the p-norm of the vector, matching the broadcast shape.
+
+            Parameters
+            ----------
+            p : float
+                pnorm
+            zeromode : float, or None
+                set the zeromode to this value if not None.
+        """
+        kk = (sum([abs(ki) ** p for ki in self]))
+        if zeromode is not None:
+            kk[kk == 0] = zeromode
+        return kk
+
 class xslabiter(slabiter):
+    """ iterating will yield the sparse coordinates of a list of slabs """
     def __init__(self, axis, nslabs, optx):
         self.axis = axis
         self.nslabs = nslabs
@@ -58,7 +75,7 @@ class xslabiter(slabiter):
     def __iter__(self):
         for irow in range(self.nslabs):
             kk = [x[0] if d != self.axis else x[irow] for d, x in enumerate(self.optx)]
-            yield kk
+            yield xslab(kk)
 
 
 class Field(object):
@@ -658,7 +675,12 @@ class RealField(Field):
             ----------
             func : callable
                 func(r, y) where r is a list of r values that broadcasts into a full array.
-                value of r depends on kind. y is the value of the field on the corresponding locations.
+                value of r depends on kind.
+
+                y is the value of the field on the corresponding locations.
+
+                r.normp(p=2, zeromode=1) would return |r|^2 but set the zero mode (r == 0) to 1.
+
             kind : string
                 The kind of value in r.
                 'relative' means distance from [-0.5 Boxsize, 0.5 BoxSize).
@@ -717,7 +739,7 @@ class ComplexField(Field):
         def filter2(k, y):
             y = norm(y)
             if metric is not None:
-                k = sum([ki ** 2 for ki in k]) ** 0.5
+                k = k.normp(p=2) ** 0.5
                 y *= metric(k)
             return y
 
@@ -748,7 +770,7 @@ class ComplexField(Field):
         r.apply(self._expand_hermitian, kind='index', out=Ellipsis)
 
         if metric is not None:
-            r.apply(lambda k, y: y * metric(sum(ki**2 for ki in k) ** 0.5), out=Ellipsis)
+            r.apply(lambda k, y: y * metric(k.normp() ** 0.5), out=Ellipsis)
 
         return self.pm.comm.allreduce(r.value.sum())
 
@@ -759,7 +781,7 @@ class ComplexField(Field):
         r = self * v
 
         if metric is not None:
-            r.apply(lambda k, y: y * metric(sum(ki**2 for ki in k) ** 0.5), out=Ellipsis)
+            r.apply(lambda k, y: y * metric(k.normp() ** 0.5), out=Ellipsis)
 
         return r
 

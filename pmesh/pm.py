@@ -49,7 +49,24 @@ class slabiter(object):
             s.Nmesh = self.Nmesh
             yield s
 
+class xslab(list):
+    def normp(self, p=2, zeromode=None):
+        """ returns the p-norm of the vector, matching the broadcast shape.
+
+            Parameters
+            ----------
+            p : float
+                pnorm
+            zeromode : float, or None
+                set the zeromode to this value if not None.
+        """
+        kk = (sum([abs(ki) ** p for ki in self]))
+        if zeromode is not None:
+            kk[kk == 0] = zeromode
+        return kk
+
 class xslabiter(slabiter):
+    """ iterating will yield the sparse coordinates of a list of slabs """
     def __init__(self, axis, nslabs, optx):
         self.axis = axis
         self.nslabs = nslabs
@@ -58,7 +75,7 @@ class xslabiter(slabiter):
     def __iter__(self):
         for irow in range(self.nslabs):
             kk = [x[0] if d != self.axis else x[irow] for d, x in enumerate(self.optx)]
-            yield kk
+            yield xslab(kk)
 
 
 class Field(object):

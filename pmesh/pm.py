@@ -675,7 +675,12 @@ class RealField(Field):
             ----------
             func : callable
                 func(r, y) where r is a list of r values that broadcasts into a full array.
-                value of r depends on kind. y is the value of the field on the corresponding locations.
+                value of r depends on kind.
+
+                y is the value of the field on the corresponding locations.
+
+                r.normp(p=2, zeromode=1) would return |r|^2 but set the zero mode (r == 0) to 1.
+
             kind : string
                 The kind of value in r.
                 'relative' means distance from [-0.5 Boxsize, 0.5 BoxSize).
@@ -734,7 +739,7 @@ class ComplexField(Field):
         def filter2(k, y):
             y = norm(y)
             if metric is not None:
-                k = sum([ki ** 2 for ki in k]) ** 0.5
+                k = k.normp(p=2) ** 0.5
                 y *= metric(k)
             return y
 
@@ -765,7 +770,7 @@ class ComplexField(Field):
         r.apply(self._expand_hermitian, kind='index', out=Ellipsis)
 
         if metric is not None:
-            r.apply(lambda k, y: y * metric(sum(ki**2 for ki in k) ** 0.5), out=Ellipsis)
+            r.apply(lambda k, y: y * metric(k.normp() ** 0.5), out=Ellipsis)
 
         return self.pm.comm.allreduce(r.value.sum())
 
@@ -776,7 +781,7 @@ class ComplexField(Field):
         r = self * v
 
         if metric is not None:
-            r.apply(lambda k, y: y * metric(sum(ki**2 for ki in k) ** 0.5), out=Ellipsis)
+            r.apply(lambda k, y: y * metric(k.normp() ** 0.5), out=Ellipsis)
 
         return r
 

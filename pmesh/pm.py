@@ -534,13 +534,25 @@ class RealField(Field):
 
         return out
 
-    def csum(self):
+    def csum(self, dtype=None):
         """ Collective mean. Sum of the entire mesh. (Must be called collectively)"""
-        return self.pm.comm.allreduce(self.value.sum(dtype=self.dtype))
+        if dtype is None:
+            dtype = self.dtype
 
-    def cmean(self):
+        arg = numpy.argsort(self.value.strides)
+        sum1 = self.value.transpose(arg[::-1])
+
+        # first sum along the axis with the shortest strides
+        # this would usually mean stabler results
+        # when number of ranks are changed.
+        for d in range(self.ndim):
+            sum1 = sum1.sum(axis=-1, dtype=dtype)
+
+        return self.pm.comm.allreduce(sum1)
+
+    def cmean(self, dtype=None):
         """ Collective mean. Mean of the entire mesh. (Must be called collectively)"""
-        return self.csum() / self.csize
+        return self.csum(dtype=dtype) / self.csize
 
     def readout(self, pos, hsml=None, out=None, resampler=None, transform=None, gradient=None, layout=None):
         """

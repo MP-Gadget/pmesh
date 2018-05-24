@@ -635,6 +635,18 @@ def test_grid(comm):
     assert_array_equal(real, 1.0)
 
 @MPITest(commsize=(1, 4))
+def test_grid(comm):
+    pm = ParticleMesh(BoxSize=8.0, Nmesh=[4, 4, 4], comm=comm, dtype='f8')
+    grid, id = pm.generate_uniform_particle_grid(shift=0.5, return_id=True)
+    assert len(id) == len(grid)
+
+    allid = numpy.concatenate(comm.allgather(id), axis=0)
+    # must be all unique
+    assert len(numpy.unique(allid)) == len(allid)
+    assert numpy.max(allid) == len(allid) - 1
+    assert numpy.min(allid) == 0
+
+@MPITest(commsize=(1, 4))
 def test_grid_shifted(comm):
     pm = ParticleMesh(BoxSize=8.0, Nmesh=[4, 4, 4], comm=comm, dtype='f8')
     grid = pm.generate_uniform_particle_grid(shift=0.5)

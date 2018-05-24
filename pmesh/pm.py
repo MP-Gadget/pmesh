@@ -1248,10 +1248,26 @@ class ParticleMesh(object):
         source = coord + self.partition.local_i_start
         return source
 
-    def generate_uniform_particle_grid(self, shift=0.5, dtype=None):
+    def generate_uniform_particle_grid(self, shift=0.5, dtype=None, return_id=False):
         """
-            create uniform grid of particles, one per grid point on the basepm mesh
-            this shall go to pmesh.
+            create uniform grid of particles, one per grid point, in BoxSize coordinate.
+
+            Parameters
+            ----------
+            shift : float, array_like
+                shifting the grid by this much relative to the size of each grid cell.
+                if array_like, per direction.
+
+            dtype : dtype, or None
+                dtype of the return value; default the same precision as the pm.
+
+            return_id : boolean
+                if True, return grid, id; id is the unique integer ID of this grid point.
+                it is between 0 and total number of grid points (exclusive).
+
+            Returns:
+                grid : array_like (N, ndim)
+                id   : array_like (N)
         """
         if dtype is None: dtype == self.dtype
         real = RealField(self)
@@ -1265,7 +1281,16 @@ class ParticleMesh(object):
         source[...] *= self.BoxSize / self.Nmesh
         source.flags.writeable = False
 
-        return source
+        if not return_id:
+            return source
+
+        isource = self.mesh_coordinates('i4')
+        id = numpy.int64(isource[:, 0])
+        for i in range(1, self.ndim):
+            id[...] *= self.Nmesh[i]
+            id[...] += isource[:, i]
+
+        return source, id
 
     def decompose(self, pos, smoothing=None, transform=None):
         """

@@ -288,7 +288,7 @@ class Field(object):
         return self.ravel(out)
 
     def unsort(self, flatiter):
-        warnings.warn("Use unravel instead of unsort", DeprecationWarning)
+        warnings.warn("Use pm.unravel instead of unsort", DeprecationWarning)
         return self.unravel(flatiter)
 
     def ravel(self, out=None):
@@ -1209,6 +1209,25 @@ class ParticleMesh(object):
 
         if value is not None:
             r[...] = value
+        return r
+
+    def unravel(self, mode, flatiter):
+        """ Unravel c-ordered field values.
+
+            Parameters
+            ----------
+            flatiter : numpy.flatiter
+
+            Returns
+            -------
+            r : RealField or ComplexField
+
+            Notes
+            -----
+            `array` does not have to be C_CONTIGUOUS, as the flat iterator of array is used.
+        """
+        r = self.create(mode)
+        r.unravel(flatiter)
         return r
 
     def generate_whitenoise(self, seed, unitary=False, mean=0, mode='complex', base=None):

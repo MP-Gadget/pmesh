@@ -40,7 +40,7 @@ mkname(_generic_fill)(PMeshWhiteNoiseGenerator * self, void * delta_k, int seed)
 
     int signs[3];
 
-    if (self->size[2] == self->Nmesh[2] / 2 + 1 && self->start[0] == 0) {
+    if (self->size[2] == self->Nmesh[2] / 2 + 1 && self->start[2] == 0) {
         /* only half of the fourier space is requested, ignore the conjugates */
         signs[0] = 1;
         signs[1] = 0;

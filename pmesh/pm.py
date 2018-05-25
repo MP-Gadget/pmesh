@@ -527,7 +527,13 @@ class RealField(Field):
         if self.base is out.base:
             self.pm.ipforward.execute(self.base, out.base)
         else:
-            self.pm.forward.execute(self.base, out.base)
+            if self.pm._use_padded:
+                self.pm.forward.execute(self.base, out.base)
+            else:
+                # non-padded destroys input, so we fall back
+                # to use the inplace transform 
+                out.base.view_input()[... ] = self
+                self.pm.ipforward.execute(out.base, out.base)
 
         # PFFT normalization, same as FastPM
         out.value[...] *= numpy.prod(self.pm.Nmesh ** -1.0)
@@ -807,10 +813,16 @@ class ComplexField(Field):
             out = RealField(self.pm, self.base)
 
         assert isinstance(out, RealField)
-        if out.base is not self.base:
-            self.pm.backward.execute(self.base, out.base)
-        else:
+        if out.base is self.base:
             self.pm.ipbackward.execute(self.base, out.base)
+        else:
+            if self.pm._use_padded:
+                self.pm.backward.execute(self.base, out.base)
+            else:
+                # non-padded destroys input, so we fall back
+                # to use the inplace transform
+                out.base.view_output()[... ] = self
+                self.pm.ipbackward.execute(out.base, out.base)
 
         return out
 
@@ -1008,6 +1020,14 @@ class ParticleMesh(object):
             elif len(Nmesh) == 1:
                 np = []
 
+        if len(np) == len(Nmesh) or True:
+            # only implemented for non-padded and destroy input
+            self._use_padded = False
+            paddedflag = pfft.Flags.PFFT_DESTROY_INPUT
+        else:
+            self._use_padded = True
+            paddedflag = pfft.Flags.PFFT_PRESERVE_INPUT | pfft.Flags.PFFT_PADDED_R2C | pfft.Flags.PFFT_PADDED_C2R
+
         dtype = numpy.dtype(dtype)
         self.dtype = dtype
 
@@ -1067,7 +1087,7 @@ class ParticleMesh(object):
         self.partition = pfft.Partition(forward,
             self.Nmesh,
             self.procmesh,
-            pfft.Flags.PFFT_TRANSPOSED_OUT | pfft.Flags.PFFT_PADDED_R2C)
+            pfft.Flags.PFFT_TRANSPOSED_OUT | paddedflag)
 
         bufferin = pfft.LocalBuffer(self.partition)
         bufferout = pfft.LocalBuffer(self.partition)
@@ -1086,17 +1106,17 @@ class ParticleMesh(object):
         else:
             self.forward = pfft.Plan(self.partition, pfft.Direction.PFFT_FORWARD,
                     bufferin, bufferout, forward,
-                    plan_method | pfft.Flags.PFFT_TRANSPOSED_OUT | pfft.Flags.PFFT_TUNE | pfft.Flags.PFFT_PADDED_R2C)
+                    plan_method | pfft.Flags.PFFT_TRANSPOSED_OUT | paddedflag)
             self.backward = pfft.Plan(self.partition, pfft.Direction.PFFT_BACKWARD,
                     bufferout, bufferin, backward,
-                    plan_method | pfft.Flags.PFFT_TRANSPOSED_IN | pfft.Flags.PFFT_TUNE | pfft.Flags.PFFT_PADDED_C2R)
+                    plan_method | pfft.Flags.PFFT_TRANSPOSED_IN | paddedflag)
 
             self.ipforward = pfft.Plan(self.partition, pfft.Direction.PFFT_FORWARD,
                     bufferin, bufferin, forward,
-                    plan_method | pfft.Flags.PFFT_TRANSPOSED_OUT | pfft.Flags.PFFT_TUNE | pfft.Flags.PFFT_PADDED_R2C)
+                    plan_method | pfft.Flags.PFFT_TRANSPOSED_OUT | paddedflag)
             self.ipbackward = pfft.Plan(self.partition, pfft.Direction.PFFT_BACKWARD,
                     bufferout, bufferout, backward,
-                    plan_method | pfft.Flags.PFFT_TRANSPOSED_IN | pfft.Flags.PFFT_TUNE | pfft.Flags.PFFT_PADDED_C2R)
+                    plan_method | pfft.Flags.PFFT_TRANSPOSED_IN | paddedflag)
 
         self.domain = domain.GridND(self.partition.i_edges, comm=self.comm)
 

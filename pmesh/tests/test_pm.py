@@ -42,7 +42,6 @@ def test_negnyquist(comm):
     # nbodykit depends on this behavior.
     # see https://github.com/bccp/nbodykit/pull/459
     pm = ParticleMesh(BoxSize=8.0, Nmesh=[8, 8], comm=comm, dtype='f8')
-
     c = pm.create(mode='complex')
     assert (c.x[-1][0][-1] < 0).all()
     assert (c.x[-1][0][:-1] >= 0).all()
@@ -56,13 +55,18 @@ def test_1d(comm):
     assert_array_equal(real, complex.c2r())
 
 @MPITest(commsize=(4,))
-@skipif(True, "2d on 2d is not supported")
 def test_2d_2d(comm):
     import pfft
     pm = ParticleMesh(BoxSize=8.0, Nmesh=[8, 8], np=pfft.split_size_2d(comm.size), comm=comm, dtype='f8')
+    pm2 = ParticleMesh(BoxSize=8.0, Nmesh=[8, 8, 8], np=pfft.split_size_2d(comm.size), comm=comm, dtype='f8')
+    assert pm._use_padded == False
     real = pm.generate_whitenoise(seed=123, mode='real')
     complex = pm.generate_whitenoise(seed=123, mode='complex')
     assert_array_equal(real, complex.c2r())
+
+    real2 = pm2.generate_whitenoise(seed=123, mode='real')
+
+    assert real2.shape[:2] == real.shape
 
 @MPITest(commsize=(1,4))
 def test_fft(comm):

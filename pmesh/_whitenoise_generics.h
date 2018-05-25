@@ -29,6 +29,12 @@ mkname(_set_mode)(PMeshWhiteNoiseGenerator * self, ptrdiff_t * iabs, char * delt
 static void
 mkname(_generic_fill)(PMeshWhiteNoiseGenerator * self, void * delta_k, int seed)
 {
+
+    clock_t start, end;
+    double cpu_time_used;
+
+    start = clock();
+
     /* Fill delta_k with gadget scheme */
     int i, j, k;
 
@@ -61,6 +67,10 @@ mkname(_generic_fill)(PMeshWhiteNoiseGenerator * self, void * delta_k, int seed)
             SETSEED(self, self->Nmesh[1] - 1 - j, self->Nmesh[0] - 1 - i, rng);
     }
     gsl_rng_free(rng);
+
+    end = clock();
+    cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
+    printf("time used in seeds = %g\n", cpu_time_used);
 
     for(i = self->start[0];
         i < self->start[0] + self->size[0];

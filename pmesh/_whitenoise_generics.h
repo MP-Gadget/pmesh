@@ -97,6 +97,8 @@ mkname(_generic_fill)(PMeshWhiteNoiseGenerator * self, void * delta_k, int seed)
     printf("time used in seeds = %g\n", cpu_time_used);
 
     start = end;
+    ptrdiff_t skipped = 0;
+    ptrdiff_t used = 0;
 
     for(i = self->start[0];
         i < self->start[0] + self->size[0];
@@ -161,7 +163,10 @@ mkname(_generic_fill)(PMeshWhiteNoiseGenerator * self, void * delta_k, int seed)
 
                     /* mode is not there, skip it */
                     if(!mkname(_has_mode)(self, iabs)) {
+                        skipped ++;
                         continue;
+                    } else {
+                        used ++;
                     }
 
                     /* we want two numbers that are of std ~ 1/sqrt(2) */
@@ -218,6 +223,7 @@ mkname(_generic_fill)(PMeshWhiteNoiseGenerator * self, void * delta_k, int seed)
     end = clock();
     cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
     printf("time used in fill = %g\n", cpu_time_used);
+    printf("skipped = %td used = %td\n", skipped, used);
 }
 
 /* Footnotes */ 

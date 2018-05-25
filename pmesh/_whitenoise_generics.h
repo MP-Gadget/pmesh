@@ -41,8 +41,8 @@ mkname(_generic_fill)(PMeshWhiteNoiseGenerator * self, void * delta_k, int seed)
     int signs[3];
 
     /* do negative then positive. ordering is import to makesure the positive overwrites nyquist. */
-    signs[0] = -1;
-    signs[1] = 1;
+    signs[0] = 1;
+    signs[1] = 0;
     signs[2] = 0;
 
     gsl_rng * rng = gsl_rng_alloc(gsl_rng_ranlxd1);

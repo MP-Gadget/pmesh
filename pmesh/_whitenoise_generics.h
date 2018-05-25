@@ -40,10 +40,18 @@ mkname(_generic_fill)(PMeshWhiteNoiseGenerator * self, void * delta_k, int seed)
 
     int signs[3];
 
-    /* do negative then positive. ordering is import to makesure the positive overwrites nyquist. */
-    signs[0] = 1;
-    signs[1] = 0;
-    signs[2] = 0;
+    if (self->size[2] == self->Nmesh[2] / 2 + 1 && self->start[0] == 0) {
+        /* only half of the fourier space is requested, ignore the conjugates */
+        signs[0] = 1;
+        signs[1] = 0;
+        signs[2] = 0;
+    } else {
+        /* full fourier space field is requested */
+        /* do negative then positive. ordering is import to makesure the positive overwrites nyquist. */
+        signs[0] = -1;
+        signs[1] = 1;
+        signs[2] = 0;
+    }
 
     gsl_rng * rng = gsl_rng_alloc(gsl_rng_ranlxd1);
     gsl_rng_set(rng, seed);
@@ -141,11 +149,13 @@ mkname(_generic_fill)(PMeshWhiteNoiseGenerator * self, void * delta_k, int seed)
                     }
 
                     /* we want two numbers that are of std ~ 1/sqrt(2) */
-                    ampl = sqrt(- log(ampl));
-
-                    /* Unitary gaussian, the norm of real and imag is fixed to 1/sqrt(2) */
-                    if(self->unitary)
+                    if(self->unitary) {
+                        /* Unitary gaussian, the norm of real and imag is fixed to 1/sqrt(2) */
                         ampl = 1.0;
+                    } else {
+                        /* box-mueller */
+                        ampl = sqrt(- log(ampl));
+                    }
 
                     FLOAT re = ampl * cos(phase);
                     FLOAT im = ampl * sin(phase);

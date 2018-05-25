@@ -1,3 +1,13 @@
+static int
+mkname(_has_mode)(PMeshWhiteNoiseGenerator * self, ptrdiff_t * iabs)
+{
+    ptrdiff_t irel[3];
+    int d;
+    irel[2] = iabs[2] - self->start[2];
+    if(irel[2] >= 0 && irel[2] < self->size[2]) return 1;
+    return 0;
+}
+
 static void
 mkname(_set_mode)(PMeshWhiteNoiseGenerator * self, ptrdiff_t * iabs, char * delta_k, FLOAT re, FLOAT im)
 {
@@ -20,8 +30,14 @@ static void
 mkname(_generic_fill)(PMeshWhiteNoiseGenerator * self, void * delta_k, int seed)
 {
     /* Fill delta_k with gadget scheme */
-    int d;
     int i, j, k;
+
+    int signs[3];
+
+    /* do negative then positive. ordering is import to makesure the positive overwrites nyquist. */
+    signs[0] = -1;
+    signs[1] = 1;
+    signs[2] = 0;
 
     gsl_rng * rng = gsl_rng_alloc(gsl_rng_ranlxd1);
     gsl_rng_set(rng, seed);
@@ -73,8 +89,10 @@ mkname(_generic_fill)(PMeshWhiteNoiseGenerator * self, void * delta_k, int seed)
                 d2 = 1;
             }
 
-            int sign;   /* sign in the k plane */
-            for(sign = -1; sign <= 1; sign += 2) {
+            int isign;
+            for(isign = 0; signs[isign] != 0; isign ++) {
+                int sign = signs[isign];
+
                 unsigned int seed_lower, seed_this;
 
                 /* the lower quadrant generator */
@@ -103,14 +121,19 @@ mkname(_generic_fill)(PMeshWhiteNoiseGenerator * self, void * delta_k, int seed)
                         SAMPLE(this_rng, &ampl, &phase);
                     }
 
+                    ptrdiff_t iabs[3] = {i, j, k};
+
+                    /* mode is not there, skip it */
+                    if(!mkname(_has_mode)(self, iabs)) {
+                        continue;
+                    }
+
                     /* we want two numbers that are of std ~ 1/sqrt(2) */
                     ampl = sqrt(- log(ampl));
 
                     /* Unitary gaussian, the norm of real and imag is fixed to 1/sqrt(2) */
                     if(self->unitary)
                         ampl = 1.0;
-
-                    ptrdiff_t iabs[3] = {i, j, k};
 
                     FLOAT re = ampl * cos(phase);
                     FLOAT im = ampl * sin(phase);

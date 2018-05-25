@@ -1087,7 +1087,8 @@ class ParticleMesh(object):
         self.partition = pfft.Partition(forward,
             self.Nmesh,
             self.procmesh,
-            pfft.Flags.PFFT_TRANSPOSED_OUT | paddedflag)
+           # pfft.Flags.PFFT_TRANSPOSED_OUT
+            paddedflag)
 
         bufferin = pfft.LocalBuffer(self.partition)
         bufferout = pfft.LocalBuffer(self.partition)
@@ -1106,17 +1107,25 @@ class ParticleMesh(object):
         else:
             self.forward = pfft.Plan(self.partition, pfft.Direction.PFFT_FORWARD,
                     bufferin, bufferout, forward,
-                    plan_method | pfft.Flags.PFFT_TRANSPOSED_OUT | paddedflag)
+                    plan_method
+                   # | pfft.Flags.PFFT_TRANSPOSED_OUT 
+                    | paddedflag)
             self.backward = pfft.Plan(self.partition, pfft.Direction.PFFT_BACKWARD,
                     bufferout, bufferin, backward,
-                    plan_method | pfft.Flags.PFFT_TRANSPOSED_IN | paddedflag)
+                    plan_method 
+                   # | pfft.Flags.PFFT_TRANSPOSED_IN 
+                    | paddedflag)
 
             self.ipforward = pfft.Plan(self.partition, pfft.Direction.PFFT_FORWARD,
                     bufferin, bufferin, forward,
-                    plan_method | pfft.Flags.PFFT_TRANSPOSED_OUT | paddedflag)
+                    plan_method 
+                   # | pfft.Flags.PFFT_TRANSPOSED_OUT 
+                    | paddedflag)
             self.ipbackward = pfft.Plan(self.partition, pfft.Direction.PFFT_BACKWARD,
                     bufferout, bufferout, backward,
-                    plan_method | pfft.Flags.PFFT_TRANSPOSED_IN | paddedflag)
+                    plan_method
+                   # | pfft.Flags.PFFT_TRANSPOSED_IN
+                    | paddedflag)
 
         self.domain = domain.GridND(self.partition.i_edges, comm=self.comm)
 

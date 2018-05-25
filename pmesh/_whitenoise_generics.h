@@ -40,18 +40,33 @@ mkname(_generic_fill)(PMeshWhiteNoiseGenerator * self, void * delta_k, int seed)
 
     int signs[3];
 
-    printf("size = %td Nmesh = %td\n", self->size[2], self->Nmesh[2]);
-    if (self->size[2] == self->Nmesh[2] / 2 + 1 && self->start[2] == 0) {
-        /* only half of the fourier space is requested, ignore the conjugates */
-        signs[0] = 1;
-        signs[1] = 0;
-        signs[2] = 0;
-    } else {
-        /* full fourier space field is requested */
-        /* do negative then positive. ordering is import to makesure the positive overwrites nyquist. */
-        signs[0] = -1;
-        signs[1] = 1;
-        signs[2] = 0;
+    {
+        int compressed = 1;
+        ptrdiff_t iabs[3] = {self->start[0], self->start[1], 0};
+
+        /* if no negative k modes are requested, do not work with negative sign;
+         * this saves half of the computing time. */
+
+        for(k = self->Nmesh[2] / 2 + 1; k < self->Nmesh[2]; k ++) {
+            iabs[2] = k;
+            if (mkname(_has_mode)(self, iabs)) {
+                compressed = 0;
+                break;
+            }
+        }
+        printf("compressed = %d\n", compressed);
+        if (compressed) {
+            /* only half of the fourier space is requested, ignore the conjugates */
+            signs[0] = 1;
+            signs[1] = 0;
+            signs[2] = 0;
+        } else {
+            /* full fourier space field is requested */
+            /* do negative then positive. ordering is import to makesure the positive overwrites nyquist. */
+            signs[0] = -1;
+            signs[1] = 1;
+            signs[2] = 0;
+        }
     }
 
     gsl_rng * rng = gsl_rng_alloc(gsl_rng_ranlxd1);

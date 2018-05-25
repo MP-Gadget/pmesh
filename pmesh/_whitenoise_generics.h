@@ -72,6 +72,8 @@ mkname(_generic_fill)(PMeshWhiteNoiseGenerator * self, void * delta_k, int seed)
     cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
     printf("time used in seeds = %g\n", cpu_time_used);
 
+    start = end;
+
     for(i = self->start[0];
         i < self->start[0] + self->size[0];
         i ++) {
@@ -187,6 +189,9 @@ mkname(_generic_fill)(PMeshWhiteNoiseGenerator * self, void * delta_k, int seed)
         gsl_rng_free(lower_rng);
         gsl_rng_free(this_rng);
     }
+    end = clock();
+    cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
+    printf("time used in fill = %g\n", cpu_time_used);
 }
 
 /* Footnotes */ 

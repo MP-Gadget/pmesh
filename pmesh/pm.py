@@ -1020,7 +1020,7 @@ class ParticleMesh(object):
             elif len(Nmesh) == 1:
                 np = []
 
-        if len(np) == len(Nmesh) or True:
+        if len(np) == len(Nmesh):
             # only implemented for non-padded and destroy input
             self._use_padded = False
             paddedflag = pfft.Flags.PFFT_DESTROY_INPUT

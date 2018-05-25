@@ -2,6 +2,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <math.h>
+#include <time.h>
 
 #include <gsl/config.h>
 #include <gsl/gsl_rng.h>

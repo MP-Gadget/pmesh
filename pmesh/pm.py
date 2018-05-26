@@ -7,7 +7,7 @@ from mpi4py import MPI
 
 import numbers # for testing Numbers
 import warnings
-
+import functools
 def is_inplace(out):
     return out is Ellipsis
 
@@ -412,7 +412,7 @@ class Field(object):
 
         # ensure the down sample is real
         for i, slab in zip(complex.slabs.i, complex.slabs):
-            mask = numpy.bitwise_and.reduce(
+            mask = functools.reduce(numpy.bitwise_and,
                  [(n - ii) % n == ii
                     for ii, n in zip(i, complex.Nmesh)])
             slab.imag[mask] = 0
@@ -420,13 +420,13 @@ class Field(object):
             # remove the nyquist of the output
             # FIXME: the nyquist is messy due to hermitian constraints
             # let's do not touch them till we know they are important.
-            mask = numpy.bitwise_or.reduce(
+            mask = functools.reduce(numpy.bitwise_or,
                  [ ii == n // 2
                    for ii, n in zip(i, complex.Nmesh)])
             slab[mask] = 0
 
             # also remove the nyquist of the input
-            mask = numpy.bitwise_or.reduce(
+            mask = functools.reduce(numpy.bitwise_or,
                  [ ii == n // 2
                    for ii, n in zip(i, self.Nmesh)])
             slab[mask] = 0
@@ -1280,7 +1280,7 @@ class ParticleMesh(object):
 
         # add mean
         def filter(k, v):
-            mask = numpy.bitwise_and.reduce([ki == 0 for ki in k])
+            mask = functools.reduce(numpy.bitwise_and, [ki == 0 for ki in k])
             v[mask] = mean
             return v
 

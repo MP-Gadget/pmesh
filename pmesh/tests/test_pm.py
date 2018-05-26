@@ -85,6 +85,28 @@ def test_fft(comm):
     assert_almost_equal(numpy.asarray(real), numpy.asarray(real2), decimal=7)
 
 @MPITest(commsize=(1,4))
+def test_whitenoise_untransposed(comm):
+    pm_ut = ParticleMesh(BoxSize=8.0, Nmesh=[4, 4], comm=comm, dtype='f4', transposed=False)
+    pm_t = ParticleMesh(BoxSize=8.0, Nmesh=[4, 4], comm=comm, dtype='f4', transposed=True)
+
+    f1 = pm_ut.generate_whitenoise(seed=3333, mode='complex')
+    f2 = pm_t.generate_whitenoise(seed=3333, mode='complex')
+
+    f1r = numpy.concatenate(comm.allgather(numpy.array(f1.ravel())))
+    f2r = numpy.concatenate(comm.allgather(numpy.array(f2.ravel())))
+
+    assert_array_equal(f1r, f2r)
+
+    # this should have asserted r2c transforms as well.
+    r1 = pm_ut.generate_whitenoise(seed=3333, mode='real')
+    r2 = pm_t.generate_whitenoise(seed=3333, mode='real')
+
+    r1r = numpy.concatenate(comm.allgather(numpy.array(r1.ravel())))
+    r2r = numpy.concatenate(comm.allgather(numpy.array(r2.ravel())))
+
+    assert_array_equal(r1r, r2r)
+
+@MPITest(commsize=(1,4))
 def test_inplace_fft(comm):
     pm = ParticleMesh(BoxSize=8.0, Nmesh=[8, 8], comm=comm, dtype='f8')
     real = RealField(pm)

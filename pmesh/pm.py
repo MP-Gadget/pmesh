@@ -1005,8 +1005,26 @@ class ParticleMesh(object):
 
     """
 
-    def __init__(self, Nmesh, BoxSize=1.0, comm=None, np=None, dtype='f8', plan_method='estimate', resampler='cic'):
-        """ create a PM object.  """
+    def __init__(self, Nmesh, BoxSize=1.0, comm=None, np=None, dtype='f8',
+                    plan_method='estimate', resampler='cic', transposed=True):
+        """ create a PM object.  
+
+            Parameters
+            ----------
+            transposed : bool
+                if True, use the transposed data decomposition in fourier space;
+                transposed data decomposition results faster transforms, 
+                but makes the whitenoise generation in 3d very slow.
+            plan_method : string
+                method for planning, `estimate`, `exhaustive`, `measure`.
+            resampler : string or ResampleWindow
+                used to determine the default size of the domain decomposition
+            np : the process mesh
+                if None, automatically infer -- (n-1)d decomposition on (n)d mesh,
+            Nmesh : tuple or alike
+                size of the mesh. len(Nmesh) is the dimension of the system.
+
+        """
         if comm is None:
             comm = MPI.COMM_WORLD
 
@@ -1065,7 +1083,7 @@ class ParticleMesh(object):
 
         _cache_args = (tuple(self.Nmesh), tuple(self.BoxSize),
                        MPI._addressof(comm), comm.rank, comm.size,
-                       tuple(np), self.dtype, plan_method)
+                       tuple(np), self.dtype, plan_method, paddedflag, transposed)
 
         template = _pm_cache.get(_cache_args, None)
 
@@ -1084,11 +1102,19 @@ class ParticleMesh(object):
         else:
             self.procmesh = pfft.ProcMesh(np, comm=comm)
 
+        if transposed:
+            partition_flags = pfft.Flags.PFFT_TRANSPOSED_OUT | paddedflag
+            forward_flags = pfft.Flags.PFFT_TRANSPOSED_OUT | paddedflag
+            backward_flags = pfft.Flags.PFFT_TRANSPOSED_IN | paddedflag
+        else:
+            partition_flags = paddedflag
+            forward_flags = paddedflag
+            backward_flags = paddedflag
+
         self.partition = pfft.Partition(forward,
             self.Nmesh,
             self.procmesh,
-           # pfft.Flags.PFFT_TRANSPOSED_OUT
-            paddedflag)
+            partition_flags)
 
         bufferin = pfft.LocalBuffer(self.partition)
         bufferout = pfft.LocalBuffer(self.partition)
@@ -1107,25 +1133,17 @@ class ParticleMesh(object):
         else:
             self.forward = pfft.Plan(self.partition, pfft.Direction.PFFT_FORWARD,
                     bufferin, bufferout, forward,
-                    plan_method
-                   # | pfft.Flags.PFFT_TRANSPOSED_OUT 
-                    | paddedflag)
+                    plan_method | forward_flags)
             self.backward = pfft.Plan(self.partition, pfft.Direction.PFFT_BACKWARD,
                     bufferout, bufferin, backward,
-                    plan_method 
-                   # | pfft.Flags.PFFT_TRANSPOSED_IN 
-                    | paddedflag)
+                    plan_method  | backward_flags)
 
             self.ipforward = pfft.Plan(self.partition, pfft.Direction.PFFT_FORWARD,
                     bufferin, bufferin, forward,
-                    plan_method 
-                   # | pfft.Flags.PFFT_TRANSPOSED_OUT 
-                    | paddedflag)
+                    plan_method | forward_flags)
             self.ipbackward = pfft.Plan(self.partition, pfft.Direction.PFFT_BACKWARD,
                     bufferout, bufferout, backward,
-                    plan_method
-                   # | pfft.Flags.PFFT_TRANSPOSED_IN
-                    | paddedflag)
+                    plan_method | backward_flags)
 
         self.domain = domain.GridND(self.partition.i_edges, comm=self.comm)
 

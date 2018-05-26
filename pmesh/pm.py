@@ -474,7 +474,7 @@ class Field(object):
             if all(Nmesh == self.pm.Nmesh): Nmesh = None
 
         if Nmesh is not None:
-            pm = self.pm.resize(Nmesh)
+            pm = self.pm.reshape(Nmesh)
             if method is None:
                 if any(Nmesh < self.pm.Nmesh): method = 'downsample'
                 else : method = 'upsample'
@@ -1038,6 +1038,8 @@ class ParticleMesh(object):
             elif len(Nmesh) == 1:
                 np = []
 
+        self.np = np
+
         if len(np) == len(Nmesh):
             # only implemented for non-padded and destroy input
             self._use_padded = False
@@ -1111,6 +1113,7 @@ class ParticleMesh(object):
             forward_flags = paddedflag
             backward_flags = paddedflag
 
+        self.transposed = transposed
         self.partition = pfft.Partition(forward,
             self.Nmesh,
             self.procmesh,
@@ -1204,27 +1207,39 @@ class ParticleMesh(object):
         _pm_cache[_cache_args] = self
 
     def resize(self, Nmesh):
+        warnings.warn("ParticleMesh.resize method is deprecated. Use reshape method", DeprecationWarning)
+        return self.reshape(Nmesh=Nmesh)
+
+    def reshape(self, Nmesh=None, transposed=None):
         """
-            Create a resized ParticleMesh object, changing the resolution Nmesh.
+            Create a reshaped ParticleMesh object, changing the resolution Nmesh, or even
+            dimension.
 
             Parameters
             ----------
             Nmesh : int or array_like or None
                 The new resolution
+            transposed : boolean
+                The new transposed format.
 
             Returns
             -------
-            A ParticleMesh of the given resolution. If Nmesh is None
-            or the same as ``self.Nmesh``, a reference of ``self`` is returned.
+            A ParticleMesh of the given resolution and transpose property
         """
         if Nmesh is None: Nmesh = self.Nmesh
         Nmesh_ = self.Nmesh.copy()
         Nmesh_[...] = Nmesh
-        if all(self.Nmesh == Nmesh_): return self
+
+        if transposed is None:
+            transposed = self.transposed
 
         return ParticleMesh(BoxSize=self.BoxSize,
                             Nmesh=Nmesh_,
-                            dtype=self.dtype, comm=self.comm)
+                            dtype=self.dtype,
+                            comm=self.comm,
+                            resampler=self.resampler,
+                            np=self.np,
+                            transposed=self.transposed)
 
     def create(self, mode, base=None, value=None, zeros=False):
         """

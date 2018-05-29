@@ -630,6 +630,35 @@ class RealField(Field):
 
         return out
 
+    def ctranspose(self, axes):
+        """ Collectively Transpose a RealField. This does not change the representation but actually
+            replaces the coordinates according to the new set of axes.
+
+            Notes
+            -----
+            This is currently implemented very inefficiently, with readout and paint operations.
+
+        """
+        # must be full rank axes.
+        assert len(numpy.unique(axes)) == self.ndim
+        assert numpy.max(axes) == self.ndim - 1
+
+        # create a new pm with transposed BoxSize and Nmesh
+        pm = self.pm.reshape(BoxSize=self.BoxSize[axes], Nmesh=self.Nmesh[axes])
+
+        # for fancy indexing
+        axes = numpy.array(axes, dtype='intp')
+
+        q = self.pm.generate_uniform_particle_grid(shift=0)
+        v = self.readout(q, resampler='nnb')
+
+        # transpose the coordinates
+        q = q[..., axes]
+
+        layout = pm.decompose(q, smoothing='nnb')
+
+        return pm.paint(q, mass=v, resampler='nnb', layout=layout)
+
     def csum(self, dtype=None):
         """ Collective mean. Sum of the entire mesh. (Must be called collectively)"""
         if dtype is None:
@@ -1324,7 +1353,7 @@ class ParticleMesh(object):
         warnings.warn("ParticleMesh.resize method is deprecated. Use reshape method", DeprecationWarning)
         return self.reshape(Nmesh=Nmesh)
 
-    def reshape(self, Nmesh=None):
+    def reshape(self, Nmesh=None, BoxSize=None):
         """
             Create a reshaped ParticleMesh object, changing the resolution Nmesh, or even
             dimension.
@@ -1339,15 +1368,21 @@ class ParticleMesh(object):
             A ParticleMesh of the given resolution and transpose property
         """
         if Nmesh is None: Nmesh = self.Nmesh
+        if BoxSize is None: BoxSize = self.BoxSize
+
         Nmesh_ = self.Nmesh.copy()
         Nmesh_[...] = Nmesh
 
-        return ParticleMesh(BoxSize=self.BoxSize,
+        BoxSize_ = self.BoxSize.copy()
+        BoxSize_[...] = BoxSize
+
+        return ParticleMesh(BoxSize=BoxSize_,
                             Nmesh=Nmesh_,
                             dtype=self.dtype,
                             comm=self.comm,
                             resampler=self.resampler,
                             np=self.np)
+
     def create(self, type=None, base=None, value=None, mode=None):
         """
             Create a field object.

@@ -606,6 +606,29 @@ def test_cdot_c2c(comm):
     assert_allclose(norm1.imag, -norm2.imag)
 
 @MPITest(commsize=(1, 4))
+def test_transpose(comm):
+    pm = ParticleMesh(BoxSize=[8.0, 16.0, 32.0], Nmesh=[4, 6, 8], comm=comm, dtype='f8')
+
+    comp1 = pm.generate_whitenoise(1234, type='real')
+
+    comp1t = comp1.ctranspose([0, 1, 2])
+
+    assert_array_equal(comp1t.Nmesh, comp1.Nmesh)
+    assert_array_equal(comp1t.BoxSize, comp1.BoxSize)
+
+    assert_array_equal(comp1t.cnorm(), comp1.cnorm())
+
+    comp1t = comp1.ctranspose([1, 2, 0])
+
+    assert_array_equal(comp1t.Nmesh, comp1.Nmesh[[1, 2, 0]])
+    assert_array_equal(comp1t.BoxSize, comp1.BoxSize[[1, 2, 0]])
+
+    comp1tt = comp1t.ctranspose([1, 2, 0])
+    comp1ttt = comp1tt.ctranspose([1, 2, 0])
+
+    assert_allclose(comp1ttt, comp1)
+
+@MPITest(commsize=(1, 4))
 def test_preview(comm):
     pm = ParticleMesh(BoxSize=8.0, Nmesh=[4, 4, 4], comm=comm, dtype='f8')
 

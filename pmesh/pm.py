@@ -198,26 +198,28 @@ class Field(object):
 
     def __init__(self, pm, base=None):
         """ Used internally to add shortcuts of attributes from pm """
+        partition = pm.partition
+
         if base is None:
-            base = pfft.LocalBuffer(pm.partition)
+            base = pfft.LocalBuffer(partition)
 
         self.base = base
         self.pm = pm
-        self.partition = pm.partition
+        self.partition = partition
         self.BoxSize = pm.BoxSize
         self.Nmesh = pm.Nmesh
         self.ndim = len(pm.Nmesh)
 
         if isinstance(self, RealField):
-            self.value = self.base.view_input()
-            self.start = self.partition.local_i_start
-            self.cshape = numpy.array([e[-1] for e in self.partition.i_edges], dtype='intp')
-            self.x, self.i = self._init_i_coords(self.partition, self.Nmesh, self.BoxSize)
+            self.value = base.view_input()
+            self.start = partition.local_i_start
+            self.cshape = numpy.array([e[-1] for e in partition.i_edges], dtype='intp')
+            self.x, self.i = self._init_i_coords(partition, self.Nmesh, self.BoxSize)
         elif isinstance(self, ComplexField):
-            self.value = self.base.view_output()
-            self.start = self.partition.local_o_start
-            self.cshape = numpy.array([e[-1] for e in self.partition.o_edges], dtype='intp')
-            self.x, self.i = self._init_o_coords(self.partition, self.Nmesh, self.BoxSize)
+            self.value = base.view_output()
+            self.start = partition.local_o_start
+            self.cshape = numpy.array([e[-1] for e in partition.o_edges], dtype='intp')
+            self.x, self.i = self._init_o_coords(partition, self.Nmesh, self.BoxSize)
             self.real = self.value.real
             self.imag = self.value.imag
             self.plain = self.value.view(dtype=(self.real.dtype, 2))
@@ -1211,6 +1213,8 @@ class ParticleMesh(object):
             procmesh,
             partition_flags)
 
+        plans['partition'] = partition
+
         self.domain = domain.GridND(partition.i_edges, comm=self.comm)
 
         self.transposed = transposed
@@ -1229,12 +1233,14 @@ class ParticleMesh(object):
                     period = self.Nmesh)
 
         self.resampler = FindResampler(resampler)
-        self.partition = partition
         self.dtype = dtype
         self.plans = plans
 
         _pm_cache[_cache_args] = self
 
+    @property
+    def partition(self):
+        return self.plans['partition']
 
     def resize(self, Nmesh):
         warnings.warn("ParticleMesh.resize method is deprecated. Use reshape method", DeprecationWarning)
@@ -1355,8 +1361,10 @@ class ParticleMesh(object):
             return complex.c2r(out=Ellipsis)
 
     def mesh_coordinates(self, dtype=None):
-        coord = numpy.indices(self.partition.local_i_shape, dtype).reshape(self.ndim, -1).T
-        source = coord + self.partition.local_i_start
+        partition = self.plans['partition']
+
+        coord = numpy.indices(partition.local_i_shape, dtype).reshape(self.ndim, -1).T
+        source = coord + partition.local_i_start
         return source
 
     def generate_uniform_particle_grid(self, shift=0.5, dtype=None, return_id=False):
@@ -1616,7 +1624,7 @@ class ParticleMesh(object):
 
         # transform from my mesh to source's mesh
         transform = Affine(self.ndim,
-                    translate=-source.pm.partition.local_i_start,
+                    translate=-source.partition.local_i_start,
                     scale=1.0 * source.Nmesh / self.Nmesh,
                     period=source.Nmesh)
 
@@ -1627,10 +1635,10 @@ class ParticleMesh(object):
 
         #q1 = layout.exchange(q)
         #v1 = source.readout(q1, resampler=resampler, transform=transform)
-        #print(source.pm.partition.local_i_start, transform.translate)
+        #print(source.partition.local_i_start, transform.translate)
         #for a, b in zip(q1, v1):
         #    if all(a == [0, 0]):
-        #        print(source.pm.partition.local_i_start, a, a * transform.scale + transform.translate, b)
+        #        print(source.partition.local_i_start, a, a * transform.scale + transform.translate, b)
         if not keep_mean:
             f *= (source.pm.Nmesh.prod() / source.pm.BoxSize.prod()) / (self.Nmesh.prod() / self.BoxSize.prod())
 

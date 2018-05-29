@@ -10,6 +10,8 @@ import warnings
 import functools
 from collections import OrderedDict
 
+_gettype = type
+
 def is_inplace(out):
     return out is Ellipsis
 
@@ -86,7 +88,10 @@ class Field(object):
         It only supports those two subclasses.
     """
     def __repr__(self):
-        return '%s:' % self.__class__.__name__ + repr(self.value)
+        if hasattr(self, 'value'):
+            return '%s:' % self.__class__.__name__ + repr(self.value)
+        else:
+            return '%s:' % self.__class__.__name__
 
     def __radd__(self, other): return self.__add__(other)
     def __rmul__(self, other): return self.__mul__(other)
@@ -198,10 +203,22 @@ class Field(object):
 
     def __init__(self, pm, base=None):
         """ Used internally to add shortcuts of attributes from pm """
-        partition = pm.partition
 
-        if base is None:
-            base = pfft.LocalBuffer(partition)
+        if isinstance(self, RealField):
+            # usually we use the transpsoed partition;
+            # which is compatible for the real field either transposed
+            # or not
+            partition = pm.plans['partitionT']
+        elif isinstance(self, UntransposedComplexField):
+            # for untransposed complex field.
+            partition = pm.plans['partitionU']
+        elif isinstance(self, TransposedComplexField):
+            partition = pm.plans['partitionT']
+        else:
+            raise TypeError("not support type, internall Error")
+
+        # create a new base object based on the given base object
+        base = pfft.LocalBuffer(partition, base=base)
 
         self.base = base
         self.pm = pm
@@ -215,7 +232,7 @@ class Field(object):
             self.start = partition.local_i_start
             self.cshape = numpy.array([e[-1] for e in partition.i_edges], dtype='intp')
             self.x, self.i = self._init_i_coords(partition, self.Nmesh, self.BoxSize)
-        elif isinstance(self, ComplexField):
+        elif isinstance(self, (TransposedComplexField, UntransposedComplexField)):
             self.value = base.view_output()
             self.start = partition.local_o_start
             self.cshape = numpy.array([e[-1] for e in partition.o_edges], dtype='intp')
@@ -224,7 +241,7 @@ class Field(object):
             self.imag = self.value.imag
             self.plain = self.value.view(dtype=(self.real.dtype, 2))
         else:
-            raise TypeError("Olny RealField and ComplexField. No more subclassing");
+            raise TypeError("Only RealField and ComplexField. No more subclassing");
 
         # copy over a few ndarray attributes
         self.flat = self.value.flat
@@ -281,7 +298,7 @@ class Field(object):
 
         index = numpy.array(index, copy=True)
         value, localindex = self._ctol(index)
-        if isinstance(self, ComplexField):
+        if isinstance(self, BaseComplexField):
             dualindex = numpy.negative(index)
             if len(dualindex) == self.ndim + 1:
                 dualindex[-1] *= -1
@@ -403,6 +420,33 @@ class Field(object):
             # optimize for a single rank -- directly copy the result
             self.flat[...] = flatiter
 
+    def cast(self, type, out=None):
+        """ cast the field object to the given type, maintaining the meaning of the field.
+        """
+
+        if out is None:
+            out = self.pm.create(type=type)
+        else:
+            out = self.pm.create(type=type, base=out.base)
+
+        assert isinstance(out, type)
+
+        if isinstance(self, RealField) and isinstance(out, BaseComplexField):
+            self.r2c(out)
+        if isinstance(self, RealField) and isinstance(out, RealField):
+            out.value[...] = self.value
+        if isinstance(self, BaseComplexField) and isinstance(out, RealField):
+            self.c2r(out)
+        if isinstance(self, BaseComplexField) and isinstance(out, BaseComplexField):
+            if _gettype(self) is not _gettype(out):
+                tmp = self.pm.create(type=RealField, base=out.base)
+                # do a c2r r2c to account for the transpose
+                self.c2r(out=tmp).r2c(out=out)
+            else:
+                out.value[...] = self.value
+
+        return out
+
     def resample(self, out):
         """ Resample the Field by filling 0 or truncating modes.
             Convert from and between Real/Complex automatically.
@@ -410,32 +454,18 @@ class Field(object):
             Parameters
             ----------
             out : Field
-                must be provided because it is a different PM. Can be RealField or ComplexField
+                must be provided because it is a different PM. Can be RealField or (Tranposed/Untransposed)ComplexField
 
         """
         assert isinstance(out, Field)
 
         if all(out.Nmesh == self.Nmesh):
             # no resampling needed. Just do Fourier transforms.
-            if isinstance(self, RealField) and isinstance(out, ComplexField):
-                self.r2c(out)
-            if isinstance(self, RealField) and isinstance(out, RealField):
-                out.value[...] = self.value
-            if isinstance(self, ComplexField) and isinstance(out, RealField):
-                self.c2r(out)
-            if isinstance(self, ComplexField) and isinstance(out, ComplexField):
-                out.value[...] = self.value
-            return out
+            self.cast(type=_gettype(out), out=out)
 
-        if isinstance(self, RealField):
-            self = self.r2c()
+        self = self.cast(type=TransposedComplexField)
 
-        if isinstance(out, RealField):
-            complex = ComplexField(out.pm)
-        else:
-            complex = out
-
-        complex.value[...] = 0.0
+        complex = out.pm.create(type=TransposedComplexField, base=out.base, value=0)
 
         tmp = numpy.empty_like(self.value)
 
@@ -517,7 +547,7 @@ class Field(object):
         if not hasattr(axes, '__iter__'): axes = (axes,)
         else: axes = list(axes)
 
-        if isinstance(self, ComplexField):
+        if isinstance(self, BaseComplexField):
             self = self.c2r()
 
         if Nmesh is not None:
@@ -565,26 +595,35 @@ class RealField(Field):
 
         """
         if out is None:
-            out = ComplexField(self.pm)
+            out = TransposedComplexField(self.pm)
 
         if is_inplace(out):
             out = self
 
         if out is self:
-            out = ComplexField(self.pm, base=self.base)
+            out = TransposedComplexField(self.pm, base=self.base)
 
-        assert isinstance(out, ComplexField)
+        assert isinstance(out, (BaseComplexField,))
 
-        if self.base is out.base:
-            self.pm.plans['ipforward'].execute(self.base, out.base)
-        else:
-            if self.pm._use_padded:
-                self.pm.plans['forward'].execute(self.base, out.base)
+        if not self.pm._use_padded:
+            # non-padded destroys input, so we fall back
+            # to use the inplace transform
+            # view out as self's type and copy the value
+            self = self.pm.create(type=type(self), value=self.value, base=out.base)
+
+        if self.base in out.base and out.base in self.base:
+            # in place
+            if isinstance(out, UntransposedComplexField):
+                plan = self.pm.plans['ipforwardU']
             else:
-                # non-padded destroys input, so we fall back
-                # to use the inplace transform 
-                out.base.view_input()[... ] = self
-                self.pm.plans['ipforward'].execute(out.base, out.base)
+                plan = self.pm.plans['ipforwardT']
+        else:
+            if isinstance(out, UntransposedComplexField):
+                plan = self.pm.plans['forwardU']
+            else:
+                plan = self.pm.plans['forwardT']
+
+        plan.execute(self.base, out.base)
 
         # PFFT normalization, same as FastPM
         out.value[...] *= numpy.prod(self.Nmesh ** -1.0)
@@ -756,7 +795,8 @@ class RealField(Field):
                 'index' means [0, Nmesh )
         """
         if out is None:
-            out = self.pm.create(mode='real')
+            out = self.pm.create(type=RealField)
+
         if is_inplace(out):
             out = self
 
@@ -775,7 +815,7 @@ class RealField(Field):
     def cnorm(self):
         return self.cdot(self)
 
-class ComplexField(Field):
+class BaseComplexField(Field):
     def __init__(self, pm, base=None):
         Field.__init__(self, pm, base)
 
@@ -832,7 +872,7 @@ class ComplexField(Field):
                 metric(k) gives the metric of each mode.
 
         """
-        r = self.pm.create(mode='complex', value=0)
+        r = self.pm.create(type=TransposedComplexField, value=0)
 
         r.value[...] = (self.value * numpy.conj(other.value))
 
@@ -864,16 +904,27 @@ class ComplexField(Field):
             out = RealField(self.pm, self.base)
 
         assert isinstance(out, RealField)
-        if out.base is self.base:
-            self.pm.plans['ipbackward'].execute(self.base, out.base)
-        else:
-            if self.pm._use_padded:
-                self.pm.plans['backward'].execute(self.base, out.base)
+
+        if not self.pm._use_padded:
+            # non-padded destroys input, so we fall back
+            # to using an inplace transform
+
+            # view out as self, and copy the value
+            self = self.pm.create(type=type(self), base=out.base, value=self.value)
+
+        if out.base in self.base and self.base in out.base:
+            # inplace
+            if isinstance(self, UntransposedComplexField):
+                plan = self.pm.plans['ipbackwardU']
             else:
-                # non-padded destroys input, so we fall back
-                # to use the inplace transform
-                out.base.view_output()[... ] = self
-                self.pm.plans['ipbackward'].execute(out.base, out.base)
+                plan = self.pm.plans['ipbackwardT']
+        else:
+            if isinstance(self, UntransposedComplexField):
+                plan = self.pm.plans['backwardU']
+            else:
+                plan = self.pm.plans['backwardT']
+
+        plan.execute(self.base, out.base)
 
         return out
 
@@ -890,7 +941,7 @@ class ComplexField(Field):
             actually changed in order to maintain the hermitian?
         """
         if out is None:
-            out = ComplexField(v.pm)
+            out = v.pm.create(type=_gettype(v))
         if is_inplace(out):
             out = v
 
@@ -918,7 +969,7 @@ class ComplexField(Field):
                 'index' means [0, Nmesh )
         """
         if out is None:
-            out = self.pm.create(mode='complex')
+            out = self.pm.create(mode=TransposedComplexField)
         if is_inplace(out):
             out = self
 
@@ -933,6 +984,25 @@ class ComplexField(Field):
             else:
                 raise ValueError("kind is wavenumber, circular, or index")
         return out
+
+class UntransposedComplexField(BaseComplexField):
+    """
+        A complex field with untransposed representation. Faster for whitenoise,
+        slower for r2c and c2r.
+    """
+    def __init__(self, pm, base=None):
+        Field.__init__(self, pm, base)
+
+class TransposedComplexField(BaseComplexField):
+    """
+        A complex field with transposed representation. Faster for r2c/c2r but slower for
+        whitenoise
+    """
+    def __init__(self, pm, base=None):
+        Field.__init__(self, pm, base)
+
+# backward-compatbility, alias TranposedComplexField to ComplexField
+ComplexField = TransposedComplexField
 
 def build_index(indices, fullshape):
     """
@@ -1002,6 +1072,25 @@ def exchange(layout, value):
         localvalue = value
     return localvalue
 
+def _typestr_to_type(typestr):
+
+    if not isinstance(typestr, type):
+        if typestr == 'real':
+            typestr = RealField
+        elif typestr == 'complex':
+            typestr = ComplexField
+        elif typestr == 'transposedcomplex':
+            typestr = TransposedComplexField
+        elif typestr == 'untransposedcomplex':
+            typestr = UntransposedComplexField
+        else:
+            raise ValueError('mode must be real or complex, or ')
+
+    if not issubclass(typestr, Field):
+        raise TypeError("mode must be a subclass of %s" % str(Field))
+
+    return typestr
+
 from weakref import WeakValueDictionary
 
 _pm_cache = WeakValueDictionary()
@@ -1057,15 +1146,11 @@ class ParticleMesh(object):
     """
 
     def __init__(self, Nmesh, BoxSize=1.0, comm=None, np=None, dtype='f8',
-                    plan_method='estimate', resampler='cic', transposed=True):
+                    plan_method='estimate', resampler='cic'):
         """ create a PM object.  
 
             Parameters
             ----------
-            transposed : bool
-                if True, use the transposed data decomposition in fourier space;
-                transposed data decomposition results faster transforms, 
-                but makes the whitenoise generation in 3d very slow.
             plan_method : string
                 method for planning, `estimate`, `exhaustive`, `measure`.
             resampler : string or ResampleWindow
@@ -1138,7 +1223,7 @@ class ParticleMesh(object):
 
         _cache_args = (tuple(Nmesh), tuple(BoxSize),
                        MPI._addressof(comm), comm.rank, comm.size,
-                       tuple(np), dtype, plan_method, paddedflag, transposed)
+                       tuple(np), dtype, plan_method, paddedflag)
 
         template = _pm_cache.get(_cache_args, None)
 
@@ -1168,7 +1253,7 @@ class ParticleMesh(object):
         else:
             plans = OrderedDict() # order dict implies ordered destruction.
 
-            def make_duo(inplace, tranposed):
+            def make_duo(inplace, transposed):
 
                 if transposed:
                     partition_flags = pfft.Flags.PFFT_TRANSPOSED_OUT | paddedflag
@@ -1197,27 +1282,20 @@ class ParticleMesh(object):
                 bplan = pfft.Plan(partition, pfft.Direction.PFFT_BACKWARD,
                     bufferout, bufferin, backward,
                     plan_method  | backward_flags)
-                return fplan, bplan
+                return partition, fplan, bplan
 
-            plans['forward'], plans['backward'] = make_duo(False, transposed)
-            plans['ipforward'], plans['ipbackward'] = make_duo(True, transposed)
+            plans['partitionT'], plans['forwardT'], plans['backwardT'] = make_duo(False, True)
+            junk, plans['ipforwardT'], plans['ipbackwardT'] = make_duo(True, True)
 
-        # FIXME: merge into make duo?
-        if transposed:
-            partition_flags = pfft.Flags.PFFT_TRANSPOSED_OUT | paddedflag
-        else:
-            partition_flags = paddedflag
+            plans['partitionU'], plans['forwardU'], plans['backwardU'] = make_duo(False, False)
+            junk, plans['ipforwardU'], plans['ipbackwardU'] = make_duo(True, False)
+            del junk
 
-        partition = pfft.Partition(forward,
-            Nmesh,
-            procmesh,
-            partition_flags)
-
-        plans['partition'] = partition
+        # use the transpsoed partition for configuration space edges
+        partition = plans['partitionT']
 
         self.domain = domain.GridND(partition.i_edges, comm=self.comm)
 
-        self.transposed = transposed
         self.procmesh = procmesh
 
         # Transform from simulation unit to local grid unit.
@@ -1240,13 +1318,13 @@ class ParticleMesh(object):
 
     @property
     def partition(self):
-        return self.plans['partition']
+        return self.plans['partitionT']
 
     def resize(self, Nmesh):
         warnings.warn("ParticleMesh.resize method is deprecated. Use reshape method", DeprecationWarning)
         return self.reshape(Nmesh=Nmesh)
 
-    def reshape(self, Nmesh=None, transposed=None):
+    def reshape(self, Nmesh=None):
         """
             Create a reshaped ParticleMesh object, changing the resolution Nmesh, or even
             dimension.
@@ -1255,8 +1333,6 @@ class ParticleMesh(object):
             ----------
             Nmesh : int or array_like or None
                 The new resolution
-            transposed : boolean
-                The new transposed format.
 
             Returns
             -------
@@ -1266,25 +1342,21 @@ class ParticleMesh(object):
         Nmesh_ = self.Nmesh.copy()
         Nmesh_[...] = Nmesh
 
-        if transposed is None:
-            transposed = self.transposed
-
         return ParticleMesh(BoxSize=self.BoxSize,
                             Nmesh=Nmesh_,
                             dtype=self.dtype,
                             comm=self.comm,
                             resampler=self.resampler,
-                            np=self.np,
-                            transposed=self.transposed)
-
-    def create(self, mode, base=None, value=None, zeros=False):
+                            np=self.np)
+    def create(self, type=None, base=None, value=None, mode=None):
         """
             Create a field object.
 
             Parameters
             ----------
-            mode : string
-                'real', 'complex'
+            type: string, or type
+                'real', 'complex', 'untransposedcomplex',
+                RealField, ComplexField, TransposedComplexField, UntransposedComplexField
 
             base : object, None
                 Reusing the base attribute (physical memory) of an existing field
@@ -1294,26 +1366,28 @@ class ParticleMesh(object):
                 initialize the field with the values.
         """
 
-        if zeros:
-            warnings.warn("argument zeros is deprecated. use value=0 instead", DeprecationWarning)
-            value = 0
+        if mode is not None:
+            warnings.warn("argument mode is deprecated. use type=%s instead" % mode, DeprecationWarning)
 
-        if mode == 'real':
-            r = RealField(self, base=base)
-        elif mode == 'complex':
-            r = ComplexField(self, base=base)
-        else:
-            raise ValueError('mode must be real or complex')
+            if type is None:
+                type = mode
+            else:
+                raise ValueError("both mode and type are specified, possiblity arguments are arranged in wrong order")
+
+        type = _typestr_to_type(type)
+
+        r = type(self, base=base)
 
         if value is not None:
             r[...] = value
         return r
 
-    def unravel(self, mode, flatiter):
+    def unravel(self, type, flatiter):
         """ Unravel c-ordered field values.
 
             Parameters
             ----------
+            type : type to unravel into, subclass of Field. (ComplexField, RealField, TransposedComplexField, UntransposedComplexField)
             flatiter : numpy.flatiter
 
             Returns
@@ -1324,11 +1398,11 @@ class ParticleMesh(object):
             -----
             `array` does not have to be C_CONTIGUOUS, as the flat iterator of array is used.
         """
-        r = self.create(mode)
+        r = self.create(type=type)
         r.unravel(flatiter)
         return r
 
-    def generate_whitenoise(self, seed, unitary=False, mean=0, mode='complex', base=None):
+    def generate_whitenoise(self, seed, unitary=False, mean=0, type=TransposedComplexField, mode=None, base=None):
         """ Generate white noise to the field with the given seed.
 
             The scheme is supposed to be compatible with Gadget when the field is three-dimensional.
@@ -1344,7 +1418,19 @@ class ParticleMesh(object):
                 only the phase is random.
         """
         from .whitenoise import generate
-        complex = ComplexField(self, base=base)
+
+        if mode is not None:
+            warnings.warn("mode argument is deprecated, use type")
+            type = mode
+
+        # first generate complex field
+        type = _typestr_to_type(type)
+        if type is RealField:
+            complex_type = UntransposedComplexField
+        else:
+            complex_type = type
+
+        complex = self.create(type=complex_type, base=base)
         generate(complex.value, complex.start, complex.Nmesh, seed, bool(unitary))
 
         # add mean
@@ -1355,13 +1441,11 @@ class ParticleMesh(object):
 
         complex.apply(filter, out=Ellipsis)
 
-        if mode == 'complex':
-            return complex
-        else:
-            return complex.c2r(out=Ellipsis)
+        # cast to the correct requested type
+        return complex.cast(type=type, out=complex)
 
     def mesh_coordinates(self, dtype=None):
-        partition = self.plans['partition']
+        partition = self.plans['partitionT']
 
         coord = numpy.indices(partition.local_i_shape, dtype).reshape(self.ndim, -1).T
         source = coord + partition.local_i_start
@@ -1389,7 +1473,6 @@ class ParticleMesh(object):
                 id   : array_like (N)
         """
         if dtype is None: dtype == self.dtype
-        real = RealField(self)
 
         _shift = numpy.zeros(self.ndim, dtype)
         _shift[:] = shift
@@ -1507,7 +1590,7 @@ class ParticleMesh(object):
         resampler = FindResampler(resampler)
 
         if out is None:
-            out = self.create(mode='real')
+            out = self.create(type=RealField)
 
         if not hold:
             out.value[...] = 0
@@ -1534,7 +1617,7 @@ class ParticleMesh(object):
         assert gradient is None # second order is not supported yet
 
         if out is None:
-            out = self.create(mode='real')
+            out = self.create(type=RealField)
 
         out[...] = 0
         if v_pos is not None:

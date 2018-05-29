@@ -92,7 +92,7 @@ def test_readout():
     code = CodeSegment(engine)
     s = pm.BoxSize / pm.Nmesh * 0.001 + 0.99 * engine.q / pm.Nmesh # sample all positions.
 
-    field = pm.generate_whitenoise(seed=1234, mode='real')
+    field = pm.generate_whitenoise(seed=1234, type='real')
 
     code.get_x(s='s', x='x')
     code.decompose(x='x', layout='layout')
@@ -108,7 +108,7 @@ def test_transfer_imag():
     def transfer(k):
         return 1j * k[0]
 
-    field = pm.generate_whitenoise(seed=1234, mode='real')
+    field = pm.generate_whitenoise(seed=1234, type='real')
 
     engine = ParticleMeshEngine(pm)
     code = CodeSegment(engine)
@@ -123,7 +123,7 @@ def test_transfer_real():
     def transfer(k):
         return k[0]
 
-    field = pm.generate_whitenoise(seed=1234, mode='real')
+    field = pm.generate_whitenoise(seed=1234, type='real')
 
     engine = ParticleMeshEngine(pm)
     code = CodeSegment(engine)
@@ -135,7 +135,7 @@ def test_transfer_real():
 
 @skipif(not has_abopt)
 def test_c2rr2c():
-    field = pm.generate_whitenoise(seed=1234, mode='real')
+    field = pm.generate_whitenoise(seed=1234, type='real')
 
     engine = ParticleMeshEngine(pm)
     code = CodeSegment(engine)
@@ -146,7 +146,7 @@ def test_c2rr2c():
 
 @skipif(not has_abopt)
 def test_lowpass():
-    field = pm.generate_whitenoise(seed=1234, mode='real')
+    field = pm.generate_whitenoise(seed=1234, type='real')
 
     engine = ParticleMeshEngine(pm)
     code = CodeSegment(engine)

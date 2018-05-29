@@ -5,8 +5,8 @@ from runtests.mpi import MPITest
 def test_lic(comm):
     from pmesh.pm import ParticleMesh
     pm = ParticleMesh(Nmesh=[8, 8], comm=comm, BoxSize=8.0)
-    vx = pm.create(mode='real')
-    vy = pm.create(mode='real')
+    vx = pm.create(type='real')
+    vy = pm.create(type='real')
     vx = vx.apply(lambda r, v: r[0])
     vy = vy.apply(lambda r, v: 1.0)
 

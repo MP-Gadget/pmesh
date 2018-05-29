@@ -8,6 +8,8 @@ from mpi4py import MPI
 import numbers # for testing Numbers
 import warnings
 import functools
+from collections import OrderedDict
+
 def is_inplace(out):
     return out is Ellipsis
 
@@ -145,6 +147,55 @@ class Field(object):
         other.value[...] = self.value
         return other
 
+    def _init_i_coords(self, partition, Nmesh, BoxSize):
+        x = []
+        r = []
+        i_ind = []
+
+        for d in range(partition.ndim):
+            t = numpy.ones(partition.ndim, dtype='intp')
+            t[d] = partition.local_i_shape[d]
+
+            i_indi = numpy.arange(t[d], dtype='intp') + partition.local_i_start[d]
+
+            ri = numpy.arange(t[d], dtype='f4') + partition.local_i_start[d]
+
+            ri[ri >= Nmesh[d] // 2] -= Nmesh[d]
+
+            xi = ri * BoxSize[d] / Nmesh[d]
+
+            i_ind.append(i_indi.reshape(t))
+            r.append(ri.reshape(t))
+            x.append(xi.reshape(t))
+
+        # FIXME: r
+        return x, i_ind
+
+    def _init_o_coords(self, partition, Nmesh, BoxSize):
+        k = []
+        w = []
+        o_ind = []
+
+        for d in range(partition.ndim):
+            s = numpy.ones(partition.ndim, dtype='intp')
+            s[d] = partition.local_o_shape[d]
+
+            o_indi = numpy.arange(s[d], dtype='intp') + partition.local_o_start[d]
+
+            wi = numpy.arange(s[d], dtype='f4') + partition.local_o_start[d]
+
+            wi[wi >= Nmesh[d] // 2] -= Nmesh[d]
+
+            wi *= (2 * numpy.pi / Nmesh[d])
+            ki = wi * Nmesh[d] / BoxSize[d]
+
+            o_ind.append(o_indi.reshape(s))
+            w.append(wi.reshape(s))
+            k.append(ki.reshape(s))
+
+        # FIXME: w
+        return k, o_ind
+
     def __init__(self, pm, base=None):
         """ Used internally to add shortcuts of attributes from pm """
         if base is None:
@@ -161,14 +212,12 @@ class Field(object):
             self.value = self.base.view_input()
             self.start = self.partition.local_i_start
             self.cshape = numpy.array([e[-1] for e in self.partition.i_edges], dtype='intp')
-            self.x = pm.x
-            self.i = pm.i_ind
+            self.x, self.i = self._init_i_coords(self.partition, self.Nmesh, self.BoxSize)
         elif isinstance(self, ComplexField):
             self.value = self.base.view_output()
             self.start = self.partition.local_o_start
             self.cshape = numpy.array([e[-1] for e in self.partition.o_edges], dtype='intp')
-            self.x = pm.k
-            self.i = pm.o_ind
+            self.x, self.i = self._init_o_coords(self.partition, self.Nmesh, self.BoxSize)
             self.real = self.value.real
             self.imag = self.value.imag
             self.plain = self.value.view(dtype=(self.real.dtype, 2))
@@ -471,12 +520,12 @@ class Field(object):
 
         if Nmesh is not None:
             # skip resampling if Nmesh is identical to current
-            if all(Nmesh == self.pm.Nmesh): Nmesh = None
+            if all(Nmesh == self.Nmesh): Nmesh = None
 
         if Nmesh is not None:
             pm = self.pm.reshape(Nmesh)
             if method is None:
-                if any(Nmesh < self.pm.Nmesh): method = 'downsample'
+                if any(Nmesh < self.Nmesh): method = 'downsample'
                 else : method = 'upsample'
             if method == 'downsample':
                 out = pm.downsample(self, resampler=resampler, keep_mean=True)
@@ -525,18 +574,18 @@ class RealField(Field):
         assert isinstance(out, ComplexField)
 
         if self.base is out.base:
-            self.pm.ipforward.execute(self.base, out.base)
+            self.pm.plans['ipforward'].execute(self.base, out.base)
         else:
             if self.pm._use_padded:
-                self.pm.forward.execute(self.base, out.base)
+                self.pm.plans['forward'].execute(self.base, out.base)
             else:
                 # non-padded destroys input, so we fall back
                 # to use the inplace transform 
                 out.base.view_input()[... ] = self
-                self.pm.ipforward.execute(out.base, out.base)
+                self.pm.plans['ipforward'].execute(out.base, out.base)
 
         # PFFT normalization, same as FastPM
-        out.value[...] *= numpy.prod(self.pm.Nmesh ** -1.0)
+        out.value[...] *= numpy.prod(self.Nmesh ** -1.0)
 
         return out
 
@@ -814,15 +863,15 @@ class ComplexField(Field):
 
         assert isinstance(out, RealField)
         if out.base is self.base:
-            self.pm.ipbackward.execute(self.base, out.base)
+            self.pm.plans['ipbackward'].execute(self.base, out.base)
         else:
             if self.pm._use_padded:
-                self.pm.backward.execute(self.base, out.base)
+                self.pm.plans['backward'].execute(self.base, out.base)
             else:
                 # non-padded destroys input, so we fall back
                 # to use the inplace transform
                 out.base.view_output()[... ] = self
-                self.pm.ipbackward.execute(out.base, out.base)
+                self.pm.plans['ipbackward'].execute(out.base, out.base)
 
         return out
 
@@ -1049,7 +1098,6 @@ class ParticleMesh(object):
             paddedflag = pfft.Flags.PFFT_PRESERVE_INPUT | pfft.Flags.PFFT_PADDED_R2C | pfft.Flags.PFFT_PADDED_C2R
 
         dtype = numpy.dtype(dtype)
-        self.dtype = dtype
 
         if dtype == numpy.dtype('f8'):
             forward = pfft.Type.PFFT_R2C
@@ -1071,6 +1119,9 @@ class ParticleMesh(object):
         self.BoxSize = numpy.empty(len(Nmesh), dtype='f8')
         self.BoxSize[:] = BoxSize
 
+        Nmesh = self.Nmesh
+        BoxSize = self.BoxSize
+
         # if a similar ParticleMesh exists, use its
         # procmesh and plans,
         # this is to avoid creating too many MPI communicators,
@@ -1083,9 +1134,9 @@ class ParticleMesh(object):
         # is alive.
         # if we don't find a pm then we'll create a new one anyways.
 
-        _cache_args = (tuple(self.Nmesh), tuple(self.BoxSize),
+        _cache_args = (tuple(Nmesh), tuple(BoxSize),
                        MPI._addressof(comm), comm.rank, comm.size,
-                       tuple(np), self.dtype, plan_method, paddedflag, transposed)
+                       tuple(np), dtype, plan_method, paddedflag, transposed)
 
         template = _pm_cache.get(_cache_args, None)
 
@@ -1100,27 +1151,9 @@ class ParticleMesh(object):
 #            print(template, type(template), _cache_args)
 
         if template is not None:
-            self.procmesh = template.procmesh
+            procmesh = template.procmesh
         else:
-            self.procmesh = pfft.ProcMesh(np, comm=comm)
-
-        if transposed:
-            partition_flags = pfft.Flags.PFFT_TRANSPOSED_OUT | paddedflag
-            forward_flags = pfft.Flags.PFFT_TRANSPOSED_OUT | paddedflag
-            backward_flags = pfft.Flags.PFFT_TRANSPOSED_IN | paddedflag
-        else:
-            partition_flags = paddedflag
-            forward_flags = paddedflag
-            backward_flags = paddedflag
-
-        self.transposed = transposed
-        self.partition = pfft.Partition(forward,
-            self.Nmesh,
-            self.procmesh,
-            partition_flags)
-
-        bufferin = pfft.LocalBuffer(self.partition)
-        bufferout = pfft.LocalBuffer(self.partition)
+            procmesh = pfft.ProcMesh(np, comm=comm)
 
         plan_method = {
             "estimate": pfft.Flags.PFFT_ESTIMATE,
@@ -1129,82 +1162,79 @@ class ParticleMesh(object):
             } [plan_method]
 
         if template is not None:
-            self.forward = template.forward
-            self.backward = template.backward
-            self.ipforward = template.ipforward
-            self.ipbackward = template.ipbackward
+            plans = template.plans
         else:
-            self.forward = pfft.Plan(self.partition, pfft.Direction.PFFT_FORWARD,
+            plans = OrderedDict() # order dict implies ordered destruction.
+
+            def make_duo(inplace, tranposed):
+
+                if transposed:
+                    partition_flags = pfft.Flags.PFFT_TRANSPOSED_OUT | paddedflag
+                    forward_flags = pfft.Flags.PFFT_TRANSPOSED_OUT | paddedflag
+                    backward_flags = pfft.Flags.PFFT_TRANSPOSED_IN | paddedflag
+                else:
+                    partition_flags = paddedflag
+                    forward_flags = paddedflag
+                    backward_flags = paddedflag
+
+                partition = pfft.Partition(forward,
+                    Nmesh,
+                    procmesh,
+                    partition_flags)
+
+                bufferin = pfft.LocalBuffer(partition)
+
+                if not inplace:
+                    bufferout = pfft.LocalBuffer(partition)
+                else:
+                    bufferout = bufferin
+
+                fplan = pfft.Plan(partition, pfft.Direction.PFFT_FORWARD,
                     bufferin, bufferout, forward,
                     plan_method | forward_flags)
-            self.backward = pfft.Plan(self.partition, pfft.Direction.PFFT_BACKWARD,
+                bplan = pfft.Plan(partition, pfft.Direction.PFFT_BACKWARD,
                     bufferout, bufferin, backward,
                     plan_method  | backward_flags)
+                return fplan, bplan
 
-            self.ipforward = pfft.Plan(self.partition, pfft.Direction.PFFT_FORWARD,
-                    bufferin, bufferin, forward,
-                    plan_method | forward_flags)
-            self.ipbackward = pfft.Plan(self.partition, pfft.Direction.PFFT_BACKWARD,
-                    bufferout, bufferout, backward,
-                    plan_method | backward_flags)
+            plans['forward'], plans['backward'] = make_duo(False, transposed)
+            plans['ipforward'], plans['ipbackward'] = make_duo(True, transposed)
 
-        self.domain = domain.GridND(self.partition.i_edges, comm=self.comm)
+        # FIXME: merge into make duo?
+        if transposed:
+            partition_flags = pfft.Flags.PFFT_TRANSPOSED_OUT | paddedflag
+        else:
+            partition_flags = paddedflag
 
-        k = []
-        x = []
-        w = []
-        r = []
-        o_ind = []
-        i_ind = []
+        partition = pfft.Partition(forward,
+            Nmesh,
+            procmesh,
+            partition_flags)
 
-        for d in range(self.partition.ndim):
-            t = numpy.ones(self.partition.ndim, dtype='intp')
-            s = numpy.ones(self.partition.ndim, dtype='intp')
-            t[d] = self.partition.local_i_shape[d]
-            s[d] = self.partition.local_o_shape[d]
+        self.domain = domain.GridND(partition.i_edges, comm=self.comm)
 
-            i_indi = numpy.arange(t[d], dtype='intp') + self.partition.local_i_start[d]
-            o_indi = numpy.arange(s[d], dtype='intp') + self.partition.local_o_start[d]
-
-            wi = numpy.arange(s[d], dtype='f4') + self.partition.local_o_start[d]
-            ri = numpy.arange(t[d], dtype='f4') + self.partition.local_i_start[d]
-
-            wi[wi >= self.Nmesh[d] // 2] -= self.Nmesh[d]
-            ri[ri >= self.Nmesh[d] // 2] -= self.Nmesh[d]
-
-            wi *= (2 * numpy.pi / self.Nmesh[d])
-            ki = wi * self.Nmesh[d] / self.BoxSize[d]
-            xi = ri * self.BoxSize[d] / self.Nmesh[d]
-
-            o_ind.append(o_indi.reshape(s))
-            i_ind.append(i_indi.reshape(t))
-            w.append(wi.reshape(s))
-            r.append(ri.reshape(t))
-            k.append(ki.reshape(s))
-            x.append(xi.reshape(t))
-
-        self.i_ind = i_ind
-        self.o_ind = o_ind
-        self.w = w
-        self.r = r
-        self.k = k
-        self.x = x
+        self.transposed = transposed
+        self.procmesh = procmesh
 
         # Transform from simulation unit to local grid unit.
-        self.affine = Affine(self.partition.ndim,
-                    translate=-self.partition.local_i_start,
+        self.affine = Affine(partition.ndim,
+                    translate=-partition.local_i_start,
                     scale=1.0 * self.Nmesh / self.BoxSize,
                     period = self.Nmesh)
 
         # Transform from global grid unit to local grid unit.
-        self.affine_grid = Affine(self.partition.ndim,
-                    translate=-self.partition.local_i_start,
+        self.affine_grid = Affine(partition.ndim,
+                    translate=-partition.local_i_start,
                     scale=1.0,
                     period = self.Nmesh)
 
         self.resampler = FindResampler(resampler)
+        self.partition = partition
+        self.dtype = dtype
+        self.plans = plans
 
         _pm_cache[_cache_args] = self
+
 
     def resize(self, Nmesh):
         warnings.warn("ParticleMesh.resize method is deprecated. Use reshape method", DeprecationWarning)
@@ -1248,7 +1278,7 @@ class ParticleMesh(object):
             Parameters
             ----------
             mode : string
-                'real' or 'complex'.
+                'real', 'complex'
 
             base : object, None
                 Reusing the base attribute (physical memory) of an existing field

@@ -207,18 +207,22 @@ def test_decompose(comm):
 @MPITest(commsize=(1))
 def test_indices(comm):
     pm = ParticleMesh(BoxSize=8.0, Nmesh=[4, 4], comm=comm, dtype='f8')
-    assert_almost_equal(pm.k[0], [[0], [0.785], [-1.571], [-0.785]], decimal=3)
-    assert_almost_equal(pm.k[1], [[0, 0.785, -1.571]], decimal=3)
-    assert_almost_equal(pm.x[0], [[0], [2], [-4], [-2]], decimal=3)
-    assert_almost_equal(pm.x[1], [[0, 2, -4, -2]], decimal=3)
+    comp = pm.create(mode='complex')
+    real = pm.create(mode='real')
+    assert_almost_equal(comp.x[0], [[0], [0.785], [-1.571], [-0.785]], decimal=3)
+    assert_almost_equal(comp.x[1], [[0, 0.785, -1.571]], decimal=3)
+    assert_almost_equal(real.x[0], [[0], [2], [-4], [-2]], decimal=3)
+    assert_almost_equal(real.x[1], [[0, 2, -4, -2]], decimal=3)
 
 @MPITest(commsize=(1))
 def test_indices_c2c(comm):
     pm = ParticleMesh(BoxSize=8.0, Nmesh=[4, 4], comm=comm, dtype='c16')
-    assert_almost_equal(pm.k[0], [[0], [0.785], [-1.571], [-0.785]], decimal=3)
-    assert_almost_equal(pm.k[1], [[0, 0.785, -1.571, -0.785]], decimal=3)
-    assert_almost_equal(pm.x[0], [[0], [2], [-4], [-2]], decimal=3)
-    assert_almost_equal(pm.x[1], [[0, 2, -4, -2]], decimal=3)
+    comp = pm.create(mode='complex')
+    real = pm.create(mode='real')
+    assert_almost_equal(comp.x[0], [[0], [0.785], [-1.571], [-0.785]], decimal=3)
+    assert_almost_equal(comp.x[1], [[0, 0.785, -1.571, -0.785]], decimal=3)
+    assert_almost_equal(real.x[0], [[0], [2], [-4], [-2]], decimal=3)
+    assert_almost_equal(real.x[1], [[0, 2, -4, -2]], decimal=3)
 
 def assert_same_base(a1, a2):
     def find_base(a):
@@ -642,9 +646,11 @@ def test_c2c_r2c_edges(comm):
     pm1 = ParticleMesh(BoxSize=8.0, Nmesh=[5, 7, 9], comm=comm, dtype='c16')
     pm2 = ParticleMesh(BoxSize=8.0, Nmesh=[5, 7, 9], comm=comm, dtype='f8')
 
-    assert_allclose(pm1.x[0], pm2.x[0])
-    assert_allclose(pm1.x[1], pm2.x[1])
-    assert_allclose(pm1.x[2], pm2.x[2])
+    real1 = pm1.create(mode='real')
+    real2 = pm2.create(mode='real')
+    assert_allclose(real1.x[0], real2.x[0])
+    assert_allclose(real1.x[1], real2.x[1])
+    assert_allclose(real1.x[2], real2.x[2])
 
 @MPITest(commsize=(1))
 def test_grid(comm):

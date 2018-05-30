@@ -424,6 +424,8 @@ class Field(object):
         """ cast the field object to the given type, maintaining the meaning of the field.
         """
 
+        type = _typestr_to_type(type)
+
         if out is None:
             out = self.pm.create(type=type)
         else:

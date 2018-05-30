@@ -829,6 +829,8 @@ class RealField(Field):
         if is_inplace(out):
             out = self
 
+        assert isinstance(out, _gettype(self))
+
         for x, i, islab, oslab in zip(self.slabs.x, self.slabs.i, self.slabs, out.slabs):
             if kind == 'relative':
                 oslab[...] = func(x, islab)
@@ -998,9 +1000,12 @@ class BaseComplexField(Field):
                 'index' means [0, Nmesh )
         """
         if out is None:
-            out = self.pm.create(mode=TransposedComplexField)
+            # must match the type!
+            out = self.pm.create(type=_gettype(self))
         if is_inplace(out):
             out = self
+
+        assert isinstance(out, _gettype(self))
 
         for k, i, islab, oslab in zip(self.slabs.x, self.slabs.i, self.slabs, out.slabs):
             if kind == 'wavenumber':

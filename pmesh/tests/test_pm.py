@@ -4,7 +4,7 @@ from numpy.testing import assert_allclose
 from numpy.testing import assert_almost_equal
 from numpy.testing.decorators import skipif
 
-from pmesh.pm import ParticleMesh, RealField, ComplexField
+from pmesh.pm import ParticleMesh, RealField, ComplexField, TransposedComplexField, UntransposedComplexField
 from pmesh import window
 import numpy
 
@@ -273,6 +273,20 @@ def test_complex_apply(comm):
 
     for i, x, slab in zip(complex.slabs.i, complex.slabs.x, complex.slabs):
         assert_array_equal(slab, x[0] + x[1] * 1j)
+
+@MPITest(commsize=1)
+def test_untransposed_complex_apply(comm):
+    pm = ParticleMesh(BoxSize=8.0, Nmesh=[8, 8, 8], comm=comm, dtype='f8')
+    complex = UntransposedComplexField(pm)
+    def filter(k, v):
+        knormp = k.normp()
+        assert_allclose(knormp, sum(ki ** 2 for ki in k))
+        return k[0] + k[1] * 1j + k[2]
+
+    complex = complex.apply(filter)
+
+    for i, x, slab in zip(complex.slabs.i, complex.slabs.x, complex.slabs):
+        assert_array_equal(slab, x[0] + x[1] * 1j + x[2])
 
 @MPITest(commsize=(1, 2, 3, 4))
 def test_sort(comm):

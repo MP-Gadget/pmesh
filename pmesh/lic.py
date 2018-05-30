@@ -48,7 +48,7 @@ def lic(vectors, kernel, length, ds, resampler=None, texture=None, normalize=Tru
         vectors = [vi / vabs for vi in vectors]
 
     if texture is None:
-        texture = pm.generate_whitenoise(seed=990919, mode='real')
+        texture = pm.generate_whitenoise(seed=990919, type='real')
 
     Q = pm.generate_uniform_particle_grid(shift=0.0)
 

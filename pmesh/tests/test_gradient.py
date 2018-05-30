@@ -69,7 +69,7 @@ def get_mass(mass, ind, comm):
 def test_c2r_vjp(comm):
     pm = ParticleMesh(BoxSize=8.0, Nmesh=[4, 4], comm=comm, dtype='f8')
 
-    real = pm.generate_whitenoise(1234, mode='real', mean=1.0)
+    real = pm.generate_whitenoise(1234, type='real', mean=1.0)
     comp = real.r2c()
 
     def objective(comp):
@@ -102,7 +102,7 @@ def test_c2r_vjp(comm):
 def test_readout_gradients(comm):
     pm = ParticleMesh(BoxSize=8.0, Nmesh=[4, 4, 4], comm=comm, dtype='f8', resampler='cic')
 
-    real = pm.generate_whitenoise(1234, mode='real')
+    real = pm.generate_whitenoise(1234, type='real')
 
     def objective(real, pos, layout):
         value = real.readout(pos, layout=layout)
@@ -181,7 +181,7 @@ def test_readout_gradients(comm):
 def test_paint_gradients(comm):
     pm = ParticleMesh(BoxSize=8.0, Nmesh=[4, 4, 4], comm=comm, dtype='f8', resampler='cic')
 
-    real = pm.generate_whitenoise(1234, mode='real')
+    real = pm.generate_whitenoise(1234, type='real')
 
     def objective(pos, mass, layout):
         real = pm.paint(pos, mass=mass, layout=layout)
@@ -262,8 +262,8 @@ def test_paint_gradients(comm):
 def test_cdot_grad(comm):
     pm = ParticleMesh(BoxSize=8.0, Nmesh=[4, 4], comm=comm, dtype='f8')
 
-    comp1 = pm.generate_whitenoise(1234, mode='complex', mean=1)
-    comp2 = pm.generate_whitenoise(1235, mode='complex', mean=1)
+    comp1 = pm.generate_whitenoise(1234, type='complex', mean=1)
+    comp2 = pm.generate_whitenoise(1235, type='complex', mean=1)
 
     def objective(comp1, comp2):
         return comp1.cdot(comp2).real
@@ -318,7 +318,7 @@ def test_cdot_grad(comm):
 def test_cnorm_grad(comm):
     pm = ParticleMesh(BoxSize=8.0, Nmesh=[4, 4, 4], comm=comm, dtype='f8')
 
-    comp1 = pm.generate_whitenoise(1234, mode='complex')
+    comp1 = pm.generate_whitenoise(1234, type='complex')
 
     def objective(comp1):
         return comp1.cnorm()

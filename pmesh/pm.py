@@ -7,6 +7,10 @@ from mpi4py import MPI
 
 import numbers # for testing Numbers
 import warnings
+import functools
+from collections import OrderedDict
+
+_gettype = type
 
 def is_inplace(out):
     return out is Ellipsis
@@ -84,7 +88,10 @@ class Field(object):
         It only supports those two subclasses.
     """
     def __repr__(self):
-        return '%s:' % self.__class__.__name__ + repr(self.value)
+        if hasattr(self, 'value'):
+            return '%s:' % self.__class__.__name__ + repr(self.value)
+        else:
+            return '%s:' % self.__class__.__name__
 
     def __radd__(self, other): return self.__add__(other)
     def __rmul__(self, other): return self.__mul__(other)
@@ -145,35 +152,96 @@ class Field(object):
         other.value[...] = self.value
         return other
 
+    def _init_i_coords(self, partition, Nmesh, BoxSize):
+        x = []
+        r = []
+        i_ind = []
+
+        for d in range(partition.ndim):
+            t = numpy.ones(partition.ndim, dtype='intp')
+            t[d] = partition.local_i_shape[d]
+
+            i_indi = numpy.arange(t[d], dtype='intp') + partition.local_i_start[d]
+
+            ri = numpy.arange(t[d], dtype='f4') + partition.local_i_start[d]
+
+            ri[ri >= Nmesh[d] // 2] -= Nmesh[d]
+
+            xi = ri * BoxSize[d] / Nmesh[d]
+
+            i_ind.append(i_indi.reshape(t))
+            r.append(ri.reshape(t))
+            x.append(xi.reshape(t))
+
+        # FIXME: r
+        return x, i_ind
+
+    def _init_o_coords(self, partition, Nmesh, BoxSize):
+        k = []
+        w = []
+        o_ind = []
+
+        for d in range(partition.ndim):
+            s = numpy.ones(partition.ndim, dtype='intp')
+            s[d] = partition.local_o_shape[d]
+
+            o_indi = numpy.arange(s[d], dtype='intp') + partition.local_o_start[d]
+
+            wi = numpy.arange(s[d], dtype='f4') + partition.local_o_start[d]
+
+            wi[wi >= Nmesh[d] // 2] -= Nmesh[d]
+
+            wi *= (2 * numpy.pi / Nmesh[d])
+            ki = wi * Nmesh[d] / BoxSize[d]
+
+            o_ind.append(o_indi.reshape(s))
+            w.append(wi.reshape(s))
+            k.append(ki.reshape(s))
+
+        # FIXME: w
+        return k, o_ind
+
     def __init__(self, pm, base=None):
         """ Used internally to add shortcuts of attributes from pm """
-        if base is None:
-            base = pfft.LocalBuffer(pm.partition)
+
+        if isinstance(self, RealField):
+            # usually we use the transpsoed partition;
+            # which is compatible for the real field either transposed
+            # or not
+            partition = pm.plans['partitionT']
+        elif isinstance(self, UntransposedComplexField):
+            # for untransposed complex field.
+            partition = pm.plans['partitionU']
+        elif isinstance(self, TransposedComplexField):
+            partition = pm.plans['partitionT']
+        else:
+            raise TypeError("not support type, internall Error")
+
+        # create a new base object based on the given base object
+        base = pfft.LocalBuffer(partition, base=base)
 
         self.base = base
         self.pm = pm
-        self.partition = pm.partition
+        self.partition = partition
         self.BoxSize = pm.BoxSize
         self.Nmesh = pm.Nmesh
         self.ndim = len(pm.Nmesh)
 
         if isinstance(self, RealField):
-            self.value = self.base.view_input()
-            self.start = self.partition.local_i_start
-            self.cshape = numpy.array([e[-1] for e in self.partition.i_edges], dtype='intp')
-            self.x = pm.x
-            self.i = pm.i_ind
-        elif isinstance(self, ComplexField):
-            self.value = self.base.view_output()
-            self.start = self.partition.local_o_start
-            self.cshape = numpy.array([e[-1] for e in self.partition.o_edges], dtype='intp')
-            self.x = pm.k
-            self.i = pm.o_ind
+            self.value = base.view_input()
+            self.start = partition.local_i_start
+            self.cshape = numpy.array([e[-1] for e in partition.i_edges], dtype='intp')
+            self.x, self.i = self._init_i_coords(partition, self.Nmesh, self.BoxSize)
+        elif isinstance(self, (TransposedComplexField, UntransposedComplexField)):
+            self.value = base.view_output()
+            self.start = partition.local_o_start
+            self.cshape = numpy.array([e[-1] for e in partition.o_edges], dtype='intp')
+            self.x, self.i = self._init_o_coords(partition, self.Nmesh, self.BoxSize)
             self.real = self.value.real
             self.imag = self.value.imag
             self.plain = self.value.view(dtype=(self.real.dtype, 2))
         else:
-            raise TypeError("Olny RealField and ComplexField. No more subclassing");
+            raise TypeError("Only RealField and ComplexField. No more subclassing");
 
         # copy over a few ndarray attributes
         self.flat = self.value.flat
@@ -230,7 +298,7 @@ class Field(object):
 
         index = numpy.array(index, copy=True)
         value, localindex = self._ctol(index)
-        if isinstance(self, ComplexField):
+        if isinstance(self, BaseComplexField):
             dualindex = numpy.negative(index)
             if len(dualindex) == self.ndim + 1:
                 dualindex[-1] *= -1
@@ -352,6 +420,33 @@ class Field(object):
             # optimize for a single rank -- directly copy the result
             self.flat[...] = flatiter
 
+    def cast(self, type, out=None):
+        """ cast the field object to the given type, maintaining the meaning of the field.
+        """
+
+        if out is None:
+            out = self.pm.create(type=type)
+        else:
+            out = self.pm.create(type=type, base=out.base)
+
+        assert isinstance(out, type)
+
+        if isinstance(self, RealField) and isinstance(out, BaseComplexField):
+            self.r2c(out)
+        if isinstance(self, RealField) and isinstance(out, RealField):
+            out.value[...] = self.value
+        if isinstance(self, BaseComplexField) and isinstance(out, RealField):
+            self.c2r(out)
+        if isinstance(self, BaseComplexField) and isinstance(out, BaseComplexField):
+            if _gettype(self) is not _gettype(out):
+                tmp = self.pm.create(type=RealField, base=out.base)
+                # do a c2r r2c to account for the transpose
+                self.c2r(out=tmp).r2c(out=out)
+            else:
+                out.value[...] = self.value
+
+        return out
+
     def resample(self, out):
         """ Resample the Field by filling 0 or truncating modes.
             Convert from and between Real/Complex automatically.
@@ -359,32 +454,18 @@ class Field(object):
             Parameters
             ----------
             out : Field
-                must be provided because it is a different PM. Can be RealField or ComplexField
+                must be provided because it is a different PM. Can be RealField or (Tranposed/Untransposed)ComplexField
 
         """
         assert isinstance(out, Field)
 
         if all(out.Nmesh == self.Nmesh):
             # no resampling needed. Just do Fourier transforms.
-            if isinstance(self, RealField) and isinstance(out, ComplexField):
-                self.r2c(out)
-            if isinstance(self, RealField) and isinstance(out, RealField):
-                out.value[...] = self.value
-            if isinstance(self, ComplexField) and isinstance(out, RealField):
-                self.c2r(out)
-            if isinstance(self, ComplexField) and isinstance(out, ComplexField):
-                out.value[...] = self.value
-            return out
+            self.cast(type=_gettype(out), out=out)
 
-        if isinstance(self, RealField):
-            self = self.r2c()
+        self = self.cast(type=TransposedComplexField)
 
-        if isinstance(out, RealField):
-            complex = ComplexField(out.pm)
-        else:
-            complex = out
-
-        complex.value[...] = 0.0
+        complex = out.pm.create(type=TransposedComplexField, base=out.base, value=0)
 
         tmp = numpy.empty_like(self.value)
 
@@ -412,7 +493,7 @@ class Field(object):
 
         # ensure the down sample is real
         for i, slab in zip(complex.slabs.i, complex.slabs):
-            mask = numpy.bitwise_and.reduce(
+            mask = functools.reduce(numpy.bitwise_and,
                  [(n - ii) % n == ii
                     for ii, n in zip(i, complex.Nmesh)])
             slab.imag[mask] = 0
@@ -420,13 +501,13 @@ class Field(object):
             # remove the nyquist of the output
             # FIXME: the nyquist is messy due to hermitian constraints
             # let's do not touch them till we know they are important.
-            mask = numpy.bitwise_or.reduce(
+            mask = functools.reduce(numpy.bitwise_or,
                  [ ii == n // 2
                    for ii, n in zip(i, complex.Nmesh)])
             slab[mask] = 0
 
             # also remove the nyquist of the input
-            mask = numpy.bitwise_or.reduce(
+            mask = functools.reduce(numpy.bitwise_or,
                  [ ii == n // 2
                    for ii, n in zip(i, self.Nmesh)])
             slab[mask] = 0
@@ -466,17 +547,17 @@ class Field(object):
         if not hasattr(axes, '__iter__'): axes = (axes,)
         else: axes = list(axes)
 
-        if isinstance(self, ComplexField):
+        if isinstance(self, BaseComplexField):
             self = self.c2r()
 
         if Nmesh is not None:
             # skip resampling if Nmesh is identical to current
-            if all(Nmesh == self.pm.Nmesh): Nmesh = None
+            if all(Nmesh == self.Nmesh): Nmesh = None
 
         if Nmesh is not None:
-            pm = self.pm.resize(Nmesh)
+            pm = self.pm.reshape(Nmesh)
             if method is None:
-                if any(Nmesh < self.pm.Nmesh): method = 'downsample'
+                if any(Nmesh < self.Nmesh): method = 'downsample'
                 else : method = 'upsample'
             if method == 'downsample':
                 out = pm.downsample(self, resampler=resampler, keep_mean=True)
@@ -514,31 +595,69 @@ class RealField(Field):
 
         """
         if out is None:
-            out = ComplexField(self.pm)
+            out = TransposedComplexField(self.pm)
 
         if is_inplace(out):
             out = self
 
         if out is self:
-            out = ComplexField(self.pm, base=self.base)
+            out = TransposedComplexField(self.pm, base=self.base)
 
-        assert isinstance(out, ComplexField)
+        assert isinstance(out, (BaseComplexField,))
 
-        if self.base is out.base:
-            self.pm.ipforward.execute(self.base, out.base)
-        else:
-            if self.pm._use_padded:
-                self.pm.forward.execute(self.base, out.base)
+        if not self.pm._use_padded:
+            # non-padded destroys input, so we fall back
+            # to use the inplace transform
+            # view out as self's type and copy the value
+            self = self.pm.create(type=type(self), value=self.value, base=out.base)
+
+        if self.base in out.base and out.base in self.base:
+            # in place
+            if isinstance(out, UntransposedComplexField):
+                plan = self.pm.plans['ipforwardU']
             else:
-                # non-padded destroys input, so we fall back
-                # to use the inplace transform 
-                out.base.view_input()[... ] = self
-                self.pm.ipforward.execute(out.base, out.base)
+                plan = self.pm.plans['ipforwardT']
+        else:
+            if isinstance(out, UntransposedComplexField):
+                plan = self.pm.plans['forwardU']
+            else:
+                plan = self.pm.plans['forwardT']
+
+        plan.execute(self.base, out.base)
 
         # PFFT normalization, same as FastPM
-        out.value[...] *= numpy.prod(self.pm.Nmesh ** -1.0)
+        out.value[...] *= numpy.prod(self.Nmesh ** -1.0)
 
         return out
+
+    def ctranspose(self, axes):
+        """ Collectively Transpose a RealField. This does not change the representation but actually
+            replaces the coordinates according to the new set of axes.
+
+            Notes
+            -----
+            This is currently implemented very inefficiently, with readout and paint operations.
+
+        """
+        # must be full rank axes.
+        assert len(numpy.unique(axes)) == self.ndim
+        assert numpy.max(axes) == self.ndim - 1
+
+        # create a new pm with transposed BoxSize and Nmesh
+        pm = self.pm.reshape(BoxSize=self.BoxSize[axes], Nmesh=self.Nmesh[axes])
+
+        # for fancy indexing
+        axes = numpy.array(axes, dtype='intp')
+
+        q = self.pm.generate_uniform_particle_grid(shift=0)
+        v = self.readout(q, resampler='nnb')
+
+        # transpose the coordinates
+        q = q[..., axes]
+
+        layout = pm.decompose(q, smoothing='nnb')
+
+        return pm.paint(q, mass=v, resampler='nnb', layout=layout)
 
     def csum(self, dtype=None):
         """ Collective mean. Sum of the entire mesh. (Must be called collectively)"""
@@ -705,7 +824,8 @@ class RealField(Field):
                 'index' means [0, Nmesh )
         """
         if out is None:
-            out = self.pm.create(mode='real')
+            out = self.pm.create(type=RealField)
+
         if is_inplace(out):
             out = self
 
@@ -724,7 +844,7 @@ class RealField(Field):
     def cnorm(self):
         return self.cdot(self)
 
-class ComplexField(Field):
+class BaseComplexField(Field):
     def __init__(self, pm, base=None):
         Field.__init__(self, pm, base)
 
@@ -781,7 +901,7 @@ class ComplexField(Field):
                 metric(k) gives the metric of each mode.
 
         """
-        r = self.pm.create(mode='complex', value=0)
+        r = self.pm.create(type=TransposedComplexField, value=0)
 
         r.value[...] = (self.value * numpy.conj(other.value))
 
@@ -813,16 +933,27 @@ class ComplexField(Field):
             out = RealField(self.pm, self.base)
 
         assert isinstance(out, RealField)
-        if out.base is self.base:
-            self.pm.ipbackward.execute(self.base, out.base)
-        else:
-            if self.pm._use_padded:
-                self.pm.backward.execute(self.base, out.base)
+
+        if not self.pm._use_padded:
+            # non-padded destroys input, so we fall back
+            # to using an inplace transform
+
+            # view out as self, and copy the value
+            self = self.pm.create(type=type(self), base=out.base, value=self.value)
+
+        if out.base in self.base and self.base in out.base:
+            # inplace
+            if isinstance(self, UntransposedComplexField):
+                plan = self.pm.plans['ipbackwardU']
             else:
-                # non-padded destroys input, so we fall back
-                # to use the inplace transform
-                out.base.view_output()[... ] = self
-                self.pm.ipbackward.execute(out.base, out.base)
+                plan = self.pm.plans['ipbackwardT']
+        else:
+            if isinstance(self, UntransposedComplexField):
+                plan = self.pm.plans['backwardU']
+            else:
+                plan = self.pm.plans['backwardT']
+
+        plan.execute(self.base, out.base)
 
         return out
 
@@ -839,7 +970,7 @@ class ComplexField(Field):
             actually changed in order to maintain the hermitian?
         """
         if out is None:
-            out = ComplexField(v.pm)
+            out = v.pm.create(type=_gettype(v))
         if is_inplace(out):
             out = v
 
@@ -867,7 +998,7 @@ class ComplexField(Field):
                 'index' means [0, Nmesh )
         """
         if out is None:
-            out = self.pm.create(mode='complex')
+            out = self.pm.create(mode=TransposedComplexField)
         if is_inplace(out):
             out = self
 
@@ -882,6 +1013,25 @@ class ComplexField(Field):
             else:
                 raise ValueError("kind is wavenumber, circular, or index")
         return out
+
+class UntransposedComplexField(BaseComplexField):
+    """
+        A complex field with untransposed representation. Faster for whitenoise,
+        slower for r2c and c2r.
+    """
+    def __init__(self, pm, base=None):
+        Field.__init__(self, pm, base)
+
+class TransposedComplexField(BaseComplexField):
+    """
+        A complex field with transposed representation. Faster for r2c/c2r but slower for
+        whitenoise
+    """
+    def __init__(self, pm, base=None):
+        Field.__init__(self, pm, base)
+
+# backward-compatbility, alias TranposedComplexField to ComplexField
+ComplexField = TransposedComplexField
 
 def build_index(indices, fullshape):
     """
@@ -951,6 +1101,25 @@ def exchange(layout, value):
         localvalue = value
     return localvalue
 
+def _typestr_to_type(typestr):
+
+    if not isinstance(typestr, type):
+        if typestr == 'real':
+            typestr = RealField
+        elif typestr == 'complex':
+            typestr = ComplexField
+        elif typestr == 'transposedcomplex':
+            typestr = TransposedComplexField
+        elif typestr == 'untransposedcomplex':
+            typestr = UntransposedComplexField
+        else:
+            raise ValueError('mode must be real or complex, or ')
+
+    if not issubclass(typestr, Field):
+        raise TypeError("mode must be a subclass of %s" % str(Field))
+
+    return typestr
+
 from weakref import WeakValueDictionary
 
 _pm_cache = WeakValueDictionary()
@@ -1005,8 +1174,22 @@ class ParticleMesh(object):
 
     """
 
-    def __init__(self, Nmesh, BoxSize=1.0, comm=None, np=None, dtype='f8', plan_method='estimate', resampler='cic'):
-        """ create a PM object.  """
+    def __init__(self, Nmesh, BoxSize=1.0, comm=None, np=None, dtype='f8',
+                    plan_method='estimate', resampler='cic'):
+        """ create a PM object.  
+
+            Parameters
+            ----------
+            plan_method : string
+                method for planning, `estimate`, `exhaustive`, `measure`.
+            resampler : string or ResampleWindow
+                used to determine the default size of the domain decomposition
+            np : the process mesh
+                if None, automatically infer -- (n-1)d decomposition on (n)d mesh,
+            Nmesh : tuple or alike
+                size of the mesh. len(Nmesh) is the dimension of the system.
+
+        """
         if comm is None:
             comm = MPI.COMM_WORLD
 
@@ -1020,6 +1203,8 @@ class ParticleMesh(object):
             elif len(Nmesh) == 1:
                 np = []
 
+        self.np = np
+
         if len(np) == len(Nmesh):
             # only implemented for non-padded and destroy input
             self._use_padded = False
@@ -1029,7 +1214,6 @@ class ParticleMesh(object):
             paddedflag = pfft.Flags.PFFT_PRESERVE_INPUT | pfft.Flags.PFFT_PADDED_R2C | pfft.Flags.PFFT_PADDED_C2R
 
         dtype = numpy.dtype(dtype)
-        self.dtype = dtype
 
         if dtype == numpy.dtype('f8'):
             forward = pfft.Type.PFFT_R2C
@@ -1051,6 +1235,9 @@ class ParticleMesh(object):
         self.BoxSize = numpy.empty(len(Nmesh), dtype='f8')
         self.BoxSize[:] = BoxSize
 
+        Nmesh = self.Nmesh
+        BoxSize = self.BoxSize
+
         # if a similar ParticleMesh exists, use its
         # procmesh and plans,
         # this is to avoid creating too many MPI communicators,
@@ -1063,9 +1250,9 @@ class ParticleMesh(object):
         # is alive.
         # if we don't find a pm then we'll create a new one anyways.
 
-        _cache_args = (tuple(self.Nmesh), tuple(self.BoxSize),
+        _cache_args = (tuple(Nmesh), tuple(BoxSize),
                        MPI._addressof(comm), comm.rank, comm.size,
-                       tuple(np), self.dtype, plan_method)
+                       tuple(np), dtype, plan_method, paddedflag)
 
         template = _pm_cache.get(_cache_args, None)
 
@@ -1080,17 +1267,9 @@ class ParticleMesh(object):
 #            print(template, type(template), _cache_args)
 
         if template is not None:
-            self.procmesh = template.procmesh
+            procmesh = template.procmesh
         else:
-            self.procmesh = pfft.ProcMesh(np, comm=comm)
-
-        self.partition = pfft.Partition(forward,
-            self.Nmesh,
-            self.procmesh,
-            pfft.Flags.PFFT_TRANSPOSED_OUT | paddedflag)
-
-        bufferin = pfft.LocalBuffer(self.partition)
-        bufferout = pfft.LocalBuffer(self.partition)
+            procmesh = pfft.ProcMesh(np, comm=comm)
 
         plan_method = {
             "estimate": pfft.Flags.PFFT_ESTIMATE,
@@ -1099,86 +1278,85 @@ class ParticleMesh(object):
             } [plan_method]
 
         if template is not None:
-            self.forward = template.forward
-            self.backward = template.backward
-            self.ipforward = template.ipforward
-            self.ipbackward = template.ipbackward
+            plans = template.plans
         else:
-            self.forward = pfft.Plan(self.partition, pfft.Direction.PFFT_FORWARD,
+            plans = OrderedDict() # order dict implies ordered destruction.
+
+            def make_duo(inplace, transposed):
+
+                if transposed:
+                    partition_flags = pfft.Flags.PFFT_TRANSPOSED_OUT | paddedflag
+                    forward_flags = pfft.Flags.PFFT_TRANSPOSED_OUT | paddedflag
+                    backward_flags = pfft.Flags.PFFT_TRANSPOSED_IN | paddedflag
+                else:
+                    partition_flags = paddedflag
+                    forward_flags = paddedflag
+                    backward_flags = paddedflag
+
+                partition = pfft.Partition(forward,
+                    Nmesh,
+                    procmesh,
+                    partition_flags)
+
+                bufferin = pfft.LocalBuffer(partition)
+
+                if not inplace:
+                    bufferout = pfft.LocalBuffer(partition)
+                else:
+                    bufferout = bufferin
+
+                fplan = pfft.Plan(partition, pfft.Direction.PFFT_FORWARD,
                     bufferin, bufferout, forward,
-                    plan_method | pfft.Flags.PFFT_TRANSPOSED_OUT | paddedflag)
-            self.backward = pfft.Plan(self.partition, pfft.Direction.PFFT_BACKWARD,
+                    plan_method | forward_flags)
+                bplan = pfft.Plan(partition, pfft.Direction.PFFT_BACKWARD,
                     bufferout, bufferin, backward,
-                    plan_method | pfft.Flags.PFFT_TRANSPOSED_IN | paddedflag)
+                    plan_method  | backward_flags)
+                return partition, fplan, bplan
 
-            self.ipforward = pfft.Plan(self.partition, pfft.Direction.PFFT_FORWARD,
-                    bufferin, bufferin, forward,
-                    plan_method | pfft.Flags.PFFT_TRANSPOSED_OUT | paddedflag)
-            self.ipbackward = pfft.Plan(self.partition, pfft.Direction.PFFT_BACKWARD,
-                    bufferout, bufferout, backward,
-                    plan_method | pfft.Flags.PFFT_TRANSPOSED_IN | paddedflag)
+            plans['partitionT'], plans['forwardT'], plans['backwardT'] = make_duo(False, True)
+            junk, plans['ipforwardT'], plans['ipbackwardT'] = make_duo(True, True)
 
-        self.domain = domain.GridND(self.partition.i_edges, comm=self.comm)
+            plans['partitionU'], plans['forwardU'], plans['backwardU'] = make_duo(False, False)
+            junk, plans['ipforwardU'], plans['ipbackwardU'] = make_duo(True, False)
+            del junk
 
-        k = []
-        x = []
-        w = []
-        r = []
-        o_ind = []
-        i_ind = []
+        # use the transpsoed partition for configuration space edges
+        partition = plans['partitionT']
 
-        for d in range(self.partition.ndim):
-            t = numpy.ones(self.partition.ndim, dtype='intp')
-            s = numpy.ones(self.partition.ndim, dtype='intp')
-            t[d] = self.partition.local_i_shape[d]
-            s[d] = self.partition.local_o_shape[d]
+        self.domain = domain.GridND(partition.i_edges, comm=self.comm)
 
-            i_indi = numpy.arange(t[d], dtype='intp') + self.partition.local_i_start[d]
-            o_indi = numpy.arange(s[d], dtype='intp') + self.partition.local_o_start[d]
-
-            wi = numpy.arange(s[d], dtype='f4') + self.partition.local_o_start[d]
-            ri = numpy.arange(t[d], dtype='f4') + self.partition.local_i_start[d]
-
-            wi[wi >= self.Nmesh[d] // 2] -= self.Nmesh[d]
-            ri[ri >= self.Nmesh[d] // 2] -= self.Nmesh[d]
-
-            wi *= (2 * numpy.pi / self.Nmesh[d])
-            ki = wi * self.Nmesh[d] / self.BoxSize[d]
-            xi = ri * self.BoxSize[d] / self.Nmesh[d]
-
-            o_ind.append(o_indi.reshape(s))
-            i_ind.append(i_indi.reshape(t))
-            w.append(wi.reshape(s))
-            r.append(ri.reshape(t))
-            k.append(ki.reshape(s))
-            x.append(xi.reshape(t))
-
-        self.i_ind = i_ind
-        self.o_ind = o_ind
-        self.w = w
-        self.r = r
-        self.k = k
-        self.x = x
+        self.procmesh = procmesh
 
         # Transform from simulation unit to local grid unit.
-        self.affine = Affine(self.partition.ndim,
-                    translate=-self.partition.local_i_start,
+        self.affine = Affine(partition.ndim,
+                    translate=-partition.local_i_start,
                     scale=1.0 * self.Nmesh / self.BoxSize,
                     period = self.Nmesh)
 
         # Transform from global grid unit to local grid unit.
-        self.affine_grid = Affine(self.partition.ndim,
-                    translate=-self.partition.local_i_start,
+        self.affine_grid = Affine(partition.ndim,
+                    translate=-partition.local_i_start,
                     scale=1.0,
                     period = self.Nmesh)
 
         self.resampler = FindResampler(resampler)
+        self.dtype = dtype
+        self.plans = plans
 
         _pm_cache[_cache_args] = self
 
+    @property
+    def partition(self):
+        return self.plans['partitionT']
+
     def resize(self, Nmesh):
+        warnings.warn("ParticleMesh.resize method is deprecated. Use reshape method", DeprecationWarning)
+        return self.reshape(Nmesh=Nmesh)
+
+    def reshape(self, Nmesh=None, BoxSize=None):
         """
-            Create a resized ParticleMesh object, changing the resolution Nmesh.
+            Create a reshaped ParticleMesh object, changing the resolution Nmesh, or even
+            dimension.
 
             Parameters
             ----------
@@ -1187,26 +1365,33 @@ class ParticleMesh(object):
 
             Returns
             -------
-            A ParticleMesh of the given resolution. If Nmesh is None
-            or the same as ``self.Nmesh``, a reference of ``self`` is returned.
+            A ParticleMesh of the given resolution and transpose property
         """
         if Nmesh is None: Nmesh = self.Nmesh
+        if BoxSize is None: BoxSize = self.BoxSize
+
         Nmesh_ = self.Nmesh.copy()
         Nmesh_[...] = Nmesh
-        if all(self.Nmesh == Nmesh_): return self
 
-        return ParticleMesh(BoxSize=self.BoxSize,
+        BoxSize_ = self.BoxSize.copy()
+        BoxSize_[...] = BoxSize
+
+        return ParticleMesh(BoxSize=BoxSize_,
                             Nmesh=Nmesh_,
-                            dtype=self.dtype, comm=self.comm)
+                            dtype=self.dtype,
+                            comm=self.comm,
+                            resampler=self.resampler,
+                            np=self.np)
 
-    def create(self, mode, base=None, value=None, zeros=False):
+    def create(self, type=None, base=None, value=None, mode=None):
         """
             Create a field object.
 
             Parameters
             ----------
-            mode : string
-                'real' or 'complex'.
+            type: string, or type
+                'real', 'complex', 'untransposedcomplex',
+                RealField, ComplexField, TransposedComplexField, UntransposedComplexField
 
             base : object, None
                 Reusing the base attribute (physical memory) of an existing field
@@ -1216,26 +1401,28 @@ class ParticleMesh(object):
                 initialize the field with the values.
         """
 
-        if zeros:
-            warnings.warn("argument zeros is deprecated. use value=0 instead", DeprecationWarning)
-            value = 0
+        if mode is not None:
+            warnings.warn("argument mode is deprecated. use type=%s instead" % mode, DeprecationWarning)
 
-        if mode == 'real':
-            r = RealField(self, base=base)
-        elif mode == 'complex':
-            r = ComplexField(self, base=base)
-        else:
-            raise ValueError('mode must be real or complex')
+            if type is None:
+                type = mode
+            else:
+                raise ValueError("both mode and type are specified, possiblity arguments are arranged in wrong order")
+
+        type = _typestr_to_type(type)
+
+        r = type(self, base=base)
 
         if value is not None:
             r[...] = value
         return r
 
-    def unravel(self, mode, flatiter):
+    def unravel(self, type, flatiter):
         """ Unravel c-ordered field values.
 
             Parameters
             ----------
+            type : type to unravel into, subclass of Field. (ComplexField, RealField, TransposedComplexField, UntransposedComplexField)
             flatiter : numpy.flatiter
 
             Returns
@@ -1246,11 +1433,11 @@ class ParticleMesh(object):
             -----
             `array` does not have to be C_CONTIGUOUS, as the flat iterator of array is used.
         """
-        r = self.create(mode)
+        r = self.create(type=type)
         r.unravel(flatiter)
         return r
 
-    def generate_whitenoise(self, seed, unitary=False, mean=0, mode='complex', base=None):
+    def generate_whitenoise(self, seed, unitary=False, mean=0, type=TransposedComplexField, mode=None, base=None):
         """ Generate white noise to the field with the given seed.
 
             The scheme is supposed to be compatible with Gadget when the field is three-dimensional.
@@ -1266,25 +1453,37 @@ class ParticleMesh(object):
                 only the phase is random.
         """
         from .whitenoise import generate
-        complex = ComplexField(self, base=base)
+
+        if mode is not None:
+            warnings.warn("mode argument is deprecated, use type")
+            type = mode
+
+        # first generate complex field
+        type = _typestr_to_type(type)
+        if type is RealField:
+            complex_type = UntransposedComplexField
+        else:
+            complex_type = type
+
+        complex = self.create(type=complex_type, base=base)
         generate(complex.value, complex.start, complex.Nmesh, seed, bool(unitary))
 
         # add mean
         def filter(k, v):
-            mask = numpy.bitwise_and.reduce([ki == 0 for ki in k])
+            mask = functools.reduce(numpy.bitwise_and, [ki == 0 for ki in k])
             v[mask] = mean
             return v
 
         complex.apply(filter, out=Ellipsis)
 
-        if mode == 'complex':
-            return complex
-        else:
-            return complex.c2r(out=Ellipsis)
+        # cast to the correct requested type
+        return complex.cast(type=type, out=complex)
 
     def mesh_coordinates(self, dtype=None):
-        coord = numpy.indices(self.partition.local_i_shape, dtype).reshape(self.ndim, -1).T
-        source = coord + self.partition.local_i_start
+        partition = self.plans['partitionT']
+
+        coord = numpy.indices(partition.local_i_shape, dtype).reshape(self.ndim, -1).T
+        source = coord + partition.local_i_start
         return source
 
     def generate_uniform_particle_grid(self, shift=0.5, dtype=None, return_id=False):
@@ -1309,7 +1508,6 @@ class ParticleMesh(object):
                 id   : array_like (N)
         """
         if dtype is None: dtype == self.dtype
-        real = RealField(self)
 
         _shift = numpy.zeros(self.ndim, dtype)
         _shift[:] = shift
@@ -1427,7 +1625,7 @@ class ParticleMesh(object):
         resampler = FindResampler(resampler)
 
         if out is None:
-            out = self.create(mode='real')
+            out = self.create(type=RealField)
 
         if not hold:
             out.value[...] = 0
@@ -1454,7 +1652,7 @@ class ParticleMesh(object):
         assert gradient is None # second order is not supported yet
 
         if out is None:
-            out = self.create(mode='real')
+            out = self.create(type=RealField)
 
         out[...] = 0
         if v_pos is not None:
@@ -1544,7 +1742,7 @@ class ParticleMesh(object):
 
         # transform from my mesh to source's mesh
         transform = Affine(self.ndim,
-                    translate=-source.pm.partition.local_i_start,
+                    translate=-source.partition.local_i_start,
                     scale=1.0 * source.Nmesh / self.Nmesh,
                     period=source.Nmesh)
 
@@ -1555,10 +1753,10 @@ class ParticleMesh(object):
 
         #q1 = layout.exchange(q)
         #v1 = source.readout(q1, resampler=resampler, transform=transform)
-        #print(source.pm.partition.local_i_start, transform.translate)
+        #print(source.partition.local_i_start, transform.translate)
         #for a, b in zip(q1, v1):
         #    if all(a == [0, 0]):
-        #        print(source.pm.partition.local_i_start, a, a * transform.scale + transform.translate, b)
+        #        print(source.partition.local_i_start, a, a * transform.scale + transform.translate, b)
         if not keep_mean:
             f *= (source.pm.Nmesh.prod() / source.pm.BoxSize.prod()) / (self.Nmesh.prod() / self.BoxSize.prod())
 

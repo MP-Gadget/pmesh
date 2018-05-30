@@ -42,7 +42,7 @@ def test_negnyquist(comm):
     # nbodykit depends on this behavior.
     # see https://github.com/bccp/nbodykit/pull/459
     pm = ParticleMesh(BoxSize=8.0, Nmesh=[8, 8], comm=comm, dtype='f8')
-    c = pm.create(mode='complex')
+    c = pm.create(type='complex')
     assert (c.x[-1][0][-1] < 0).all()
     assert (c.x[-1][0][:-1] >= 0).all()
 
@@ -50,8 +50,8 @@ def test_negnyquist(comm):
 @skipif(True, "1d is not supported")
 def test_1d(comm):
     pm = ParticleMesh(BoxSize=8.0, Nmesh=[8], comm=comm, dtype='f8')
-    real = pm.generate_whitenoise(seed=123, mode='real')
-    complex = pm.generate_whitenoise(seed=123, mode='complex')
+    real = pm.generate_whitenoise(seed=123, type='real')
+    complex = pm.generate_whitenoise(seed=123, type='complex')
     assert_array_equal(real, complex.c2r())
 
 @MPITest(commsize=(4,))
@@ -60,11 +60,11 @@ def test_2d_2d(comm):
     pm = ParticleMesh(BoxSize=8.0, Nmesh=[8, 8], np=pfft.split_size_2d(comm.size), comm=comm, dtype='f8')
     pm2 = ParticleMesh(BoxSize=8.0, Nmesh=[8, 8, 8], np=pfft.split_size_2d(comm.size), comm=comm, dtype='f8')
     assert pm._use_padded == False
-    real = pm.generate_whitenoise(seed=123, mode='real')
-    complex = pm.generate_whitenoise(seed=123, mode='complex')
+    real = pm.generate_whitenoise(seed=123, type='real')
+    complex = pm.generate_whitenoise(seed=123, type='complex')
     assert_array_equal(real, complex.c2r())
 
-    real2 = pm2.generate_whitenoise(seed=123, mode='real')
+    real2 = pm2.generate_whitenoise(seed=123, type='real')
 
     assert real2.shape[:2] == real.shape
 
@@ -73,7 +73,7 @@ def test_fft(comm):
     pm = ParticleMesh(BoxSize=8.0, Nmesh=[4, 4], comm=comm, dtype='f4')
     numpy.random.seed(1234)
 
-    real = pm.create(mode='real', value=0)
+    real = pm.create(type='real', value=0)
     raw = real.base.view_raw()
     real[...] = 2
     real[::2, ::2] = -2
@@ -83,6 +83,27 @@ def test_fft(comm):
 
     real2 = complex.c2r()
     assert_almost_equal(numpy.asarray(real), numpy.asarray(real2), decimal=7)
+
+@MPITest(commsize=(1,4))
+def test_whitenoise_untransposed(comm):
+    pm = ParticleMesh(BoxSize=8.0, Nmesh=[4, 4], comm=comm, dtype='f4')
+
+    f1 = pm.generate_whitenoise(seed=3333, type='untransposedcomplex')
+    f2 = pm.generate_whitenoise(seed=3333, type='transposedcomplex')
+
+    f1r = numpy.concatenate(comm.allgather(numpy.array(f1.ravel())))
+    f2r = numpy.concatenate(comm.allgather(numpy.array(f2.ravel())))
+
+    assert_array_equal(f1r, f2r)
+
+    # this should have asserted r2c transforms as well.
+    r1 = f1.c2r()
+    r2 = f2.c2r()
+
+    r1r = numpy.concatenate(comm.allgather(numpy.array(r1.ravel())))
+    r2r = numpy.concatenate(comm.allgather(numpy.array(r2.ravel())))
+
+    assert_array_equal(r1r, r2r)
 
 @MPITest(commsize=(1,4))
 def test_inplace_fft(comm):
@@ -104,12 +125,12 @@ def test_inplace_fft(comm):
     complex = real.r2c()
     complex2 = real.r2c(out=Ellipsis)
 
-    assert real.base is complex2.base
+    assert real.base in complex2.base
     assert_almost_equal(numpy.asarray(complex), numpy.asarray(complex2), decimal=7)
 
     real = complex2.c2r()
     real2 = complex2.c2r(out=Ellipsis)
-    assert real2.base is complex2.base
+    assert real2.base in complex2.base
     assert_almost_equal(numpy.asarray(real), numpy.asarray(real2), decimal=7)
 
 @MPITest(commsize=(1,4))
@@ -185,18 +206,22 @@ def test_decompose(comm):
 @MPITest(commsize=(1))
 def test_indices(comm):
     pm = ParticleMesh(BoxSize=8.0, Nmesh=[4, 4], comm=comm, dtype='f8')
-    assert_almost_equal(pm.k[0], [[0], [0.785], [-1.571], [-0.785]], decimal=3)
-    assert_almost_equal(pm.k[1], [[0, 0.785, -1.571]], decimal=3)
-    assert_almost_equal(pm.x[0], [[0], [2], [-4], [-2]], decimal=3)
-    assert_almost_equal(pm.x[1], [[0, 2, -4, -2]], decimal=3)
+    comp = pm.create(type='complex')
+    real = pm.create(type='real')
+    assert_almost_equal(comp.x[0], [[0], [0.785], [-1.571], [-0.785]], decimal=3)
+    assert_almost_equal(comp.x[1], [[0, 0.785, -1.571]], decimal=3)
+    assert_almost_equal(real.x[0], [[0], [2], [-4], [-2]], decimal=3)
+    assert_almost_equal(real.x[1], [[0, 2, -4, -2]], decimal=3)
 
 @MPITest(commsize=(1))
 def test_indices_c2c(comm):
     pm = ParticleMesh(BoxSize=8.0, Nmesh=[4, 4], comm=comm, dtype='c16')
-    assert_almost_equal(pm.k[0], [[0], [0.785], [-1.571], [-0.785]], decimal=3)
-    assert_almost_equal(pm.k[1], [[0, 0.785, -1.571, -0.785]], decimal=3)
-    assert_almost_equal(pm.x[0], [[0], [2], [-4], [-2]], decimal=3)
-    assert_almost_equal(pm.x[1], [[0, 2, -4, -2]], decimal=3)
+    comp = pm.create(type='complex')
+    real = pm.create(type='real')
+    assert_almost_equal(comp.x[0], [[0], [0.785], [-1.571], [-0.785]], decimal=3)
+    assert_almost_equal(comp.x[1], [[0, 0.785, -1.571, -0.785]], decimal=3)
+    assert_almost_equal(real.x[0], [[0], [2], [-4], [-2]], decimal=3)
+    assert_almost_equal(real.x[1], [[0, 2, -4, -2]], decimal=3)
 
 def assert_same_base(a1, a2):
     def find_base(a):
@@ -318,7 +343,7 @@ def test_real_resample(comm):
     pmh = ParticleMesh(BoxSize=8.0, Nmesh=[8, 8], comm=comm, dtype='f8')
     pml = ParticleMesh(BoxSize=8.0, Nmesh=[4, 4], comm=comm, dtype='f8')
 
-    reall = pml.create(mode='real')
+    reall = pml.create(type='real')
     reall.apply(lambda i, v: (i[0] % 2) * (i[1] %2 ), kind='index', out=Ellipsis)
     for resampler in ['nearest', 'cic', 'tsc', 'cubic']:
         realh = pmh.upsample(reall, resampler=resampler, keep_mean=False)
@@ -529,7 +554,7 @@ def test_readout(comm):
 @MPITest(commsize=(1))
 def test_cdot_cnorm(comm):
     pm = ParticleMesh(BoxSize=8.0, Nmesh=[4, 4, 4], comm=comm, dtype='f8')
-    comp1 = pm.generate_whitenoise(1234, mode='complex')
+    comp1 = pm.generate_whitenoise(1234, type='complex')
 
     norm1 = comp1.cdot(comp1)
     norm2 = comp1.cnorm()
@@ -540,7 +565,7 @@ def test_cdot_cnorm(comm):
 @MPITest(commsize=(1))
 def test_cnorm_log(comm):
     pm = ParticleMesh(BoxSize=8.0, Nmesh=[4, 4, 4], comm=comm, dtype='f8')
-    comp1 = pm.generate_whitenoise(1234, mode='complex', mean=1.0)
+    comp1 = pm.generate_whitenoise(1234, type='complex', mean=1.0)
 
     norm2 = comp1.cnorm(norm = lambda x: numpy.log(x.real ** 2 + x.imag ** 2))
     norm3 = (numpy.log(abs(numpy.fft.fftn(numpy.fft.irfftn(comp1.value))) ** 2)).sum()
@@ -549,8 +574,8 @@ def test_cnorm_log(comm):
 @MPITest(commsize=(1))
 def test_cdot(comm):
     pm = ParticleMesh(BoxSize=8.0, Nmesh=[4, 4, 4], comm=comm, dtype='f8')
-    comp1 = pm.generate_whitenoise(1234, mode='complex')
-    comp2 = pm.generate_whitenoise(1239, mode='complex')
+    comp1 = pm.generate_whitenoise(1234, type='complex')
+    comp2 = pm.generate_whitenoise(1239, type='complex')
 
     norm1 = comp1.cdot(comp2)
     norm2 = comp2.cdot(comp1)
@@ -565,8 +590,8 @@ def test_cdot(comm):
 @MPITest(commsize=(1))
 def test_cdot_c2c(comm):
     pm = ParticleMesh(BoxSize=8.0, Nmesh=[4, 4, 4], comm=comm, dtype='c16')
-    comp1 = pm.generate_whitenoise(1234, mode='complex')
-    comp2 = pm.generate_whitenoise(1239, mode='complex')
+    comp1 = pm.generate_whitenoise(1234, type='complex')
+    comp2 = pm.generate_whitenoise(1239, type='complex')
 
     norm1 = comp1.cdot(comp2)
     norm2 = comp2.cdot(comp1)
@@ -581,10 +606,33 @@ def test_cdot_c2c(comm):
     assert_allclose(norm1.imag, -norm2.imag)
 
 @MPITest(commsize=(1, 4))
+def test_transpose(comm):
+    pm = ParticleMesh(BoxSize=[8.0, 16.0, 32.0], Nmesh=[4, 6, 8], comm=comm, dtype='f8')
+
+    comp1 = pm.generate_whitenoise(1234, type='real')
+
+    comp1t = comp1.ctranspose([0, 1, 2])
+
+    assert_array_equal(comp1t.Nmesh, comp1.Nmesh)
+    assert_array_equal(comp1t.BoxSize, comp1.BoxSize)
+
+    assert_array_equal(comp1t.cnorm(), comp1.cnorm())
+
+    comp1t = comp1.ctranspose([1, 2, 0])
+
+    assert_array_equal(comp1t.Nmesh, comp1.Nmesh[[1, 2, 0]])
+    assert_array_equal(comp1t.BoxSize, comp1.BoxSize[[1, 2, 0]])
+
+    comp1tt = comp1t.ctranspose([1, 2, 0])
+    comp1ttt = comp1tt.ctranspose([1, 2, 0])
+
+    assert_allclose(comp1ttt, comp1)
+
+@MPITest(commsize=(1, 4))
 def test_preview(comm):
     pm = ParticleMesh(BoxSize=8.0, Nmesh=[4, 4, 4], comm=comm, dtype='f8')
 
-    comp1 = pm.generate_whitenoise(1234, mode='real')
+    comp1 = pm.generate_whitenoise(1234, type='real')
 
     preview = comp1.preview(axes=(0, 1, 2))
 
@@ -620,9 +668,11 @@ def test_c2c_r2c_edges(comm):
     pm1 = ParticleMesh(BoxSize=8.0, Nmesh=[5, 7, 9], comm=comm, dtype='c16')
     pm2 = ParticleMesh(BoxSize=8.0, Nmesh=[5, 7, 9], comm=comm, dtype='f8')
 
-    assert_allclose(pm1.x[0], pm2.x[0])
-    assert_allclose(pm1.x[1], pm2.x[1])
-    assert_allclose(pm1.x[2], pm2.x[2])
+    real1 = pm1.create(type='real')
+    real2 = pm2.create(type='real')
+    assert_allclose(real1.x[0], real2.x[0])
+    assert_allclose(real1.x[1], real2.x[1])
+    assert_allclose(real1.x[2], real2.x[2])
 
 @MPITest(commsize=(1))
 def test_grid(comm):

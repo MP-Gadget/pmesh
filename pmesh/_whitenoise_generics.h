@@ -1,3 +1,13 @@
+static int
+mkname(_has_mode)(PMeshWhiteNoiseGenerator * self, ptrdiff_t * iabs)
+{
+    ptrdiff_t irel[3];
+    int d;
+    irel[2] = iabs[2] - self->start[2];
+    if(irel[2] >= 0 && irel[2] < self->size[2]) return 1;
+    return 0;
+}
+
 static void
 mkname(_set_mode)(PMeshWhiteNoiseGenerator * self, ptrdiff_t * iabs, char * delta_k, FLOAT re, FLOAT im)
 {
@@ -19,9 +29,45 @@ mkname(_set_mode)(PMeshWhiteNoiseGenerator * self, ptrdiff_t * iabs, char * delt
 static void
 mkname(_generic_fill)(PMeshWhiteNoiseGenerator * self, void * delta_k, int seed)
 {
+
+    clock_t start, end;
+    double cpu_time_used;
+
+    start = clock();
+
     /* Fill delta_k with gadget scheme */
-    int d;
     int i, j, k;
+
+    int signs[3];
+
+    {
+        int compressed = 1;
+        ptrdiff_t iabs[3] = {self->start[0], self->start[1], 0};
+
+        /* if no negative k modes are requested, do not work with negative sign;
+         * this saves half of the computing time. */
+
+        for(k = self->Nmesh[2] / 2 + 1; k < self->Nmesh[2]; k ++) {
+            iabs[2] = k;
+            if (mkname(_has_mode)(self, iabs)) {
+                compressed = 0;
+                break;
+            }
+        }
+        printf("compressed = %d\n", compressed);
+        if (compressed) {
+            /* only half of the fourier space is requested, ignore the conjugates */
+            signs[0] = 1;
+            signs[1] = 0;
+            signs[2] = 0;
+        } else {
+            /* full fourier space field is requested */
+            /* do negative then positive. ordering is import to makesure the positive overwrites nyquist. */
+            signs[0] = -1;
+            signs[1] = 1;
+            signs[2] = 0;
+        }
+    }
 
     gsl_rng * rng = gsl_rng_alloc(gsl_rng_ranlxd1);
     gsl_rng_set(rng, seed);
@@ -45,6 +91,14 @@ mkname(_generic_fill)(PMeshWhiteNoiseGenerator * self, void * delta_k, int seed)
             SETSEED(self, self->Nmesh[1] - 1 - j, self->Nmesh[0] - 1 - i, rng);
     }
     gsl_rng_free(rng);
+
+    end = clock();
+    cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
+    printf("time used in seeds = %g\n", cpu_time_used);
+
+    start = end;
+    ptrdiff_t skipped = 0;
+    ptrdiff_t used = 0;
 
     for(i = self->start[0];
         i < self->start[0] + self->size[0];
@@ -73,8 +127,10 @@ mkname(_generic_fill)(PMeshWhiteNoiseGenerator * self, void * delta_k, int seed)
                 d2 = 1;
             }
 
-            int sign;   /* sign in the k plane */
-            for(sign = -1; sign <= 1; sign += 2) {
+            int isign;
+            for(isign = 0; signs[isign] != 0; isign ++) {
+                int sign = signs[isign];
+
                 unsigned int seed_lower, seed_this;
 
                 /* the lower quadrant generator */
@@ -103,14 +159,24 @@ mkname(_generic_fill)(PMeshWhiteNoiseGenerator * self, void * delta_k, int seed)
                         SAMPLE(this_rng, &ampl, &phase);
                     }
 
-                    /* we want two numbers that are of std ~ 1/sqrt(2) */
-                    ampl = sqrt(- log(ampl));
-
-                    /* Unitary gaussian, the norm of real and imag is fixed to 1/sqrt(2) */
-                    if(self->unitary)
-                        ampl = 1.0;
-
                     ptrdiff_t iabs[3] = {i, j, k};
+
+                    /* mode is not there, skip it */
+                    if(!mkname(_has_mode)(self, iabs)) {
+                        skipped ++;
+                        continue;
+                    } else {
+                        used ++;
+                    }
+
+                    /* we want two numbers that are of std ~ 1/sqrt(2) */
+                    if(self->unitary) {
+                        /* Unitary gaussian, the norm of real and imag is fixed to 1/sqrt(2) */
+                        ampl = 1.0;
+                    } else {
+                        /* box-mueller */
+                        ampl = sqrt(- log(ampl));
+                    }
 
                     FLOAT re = ampl * cos(phase);
                     FLOAT im = ampl * sin(phase);
@@ -154,6 +220,10 @@ mkname(_generic_fill)(PMeshWhiteNoiseGenerator * self, void * delta_k, int seed)
         gsl_rng_free(lower_rng);
         gsl_rng_free(this_rng);
     }
+    end = clock();
+    cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
+    printf("time used in fill = %g\n", cpu_time_used);
+    printf("skipped = %td used = %td\n", skipped, used);
 }
 
 /* Footnotes */ 

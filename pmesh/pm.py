@@ -7,7 +7,7 @@ from mpi4py import MPI
 
 import numbers # for testing Numbers
 import warnings
-
+import functools
 def is_inplace(out):
     return out is Ellipsis
 
@@ -412,7 +412,7 @@ class Field(object):
 
         # ensure the down sample is real
         for i, slab in zip(complex.slabs.i, complex.slabs):
-            mask = numpy.bitwise_and.reduce(
+            mask = functools.reduce(numpy.bitwise_and,
                  [(n - ii) % n == ii
                     for ii, n in zip(i, complex.Nmesh)])
             slab.imag[mask] = 0
@@ -420,13 +420,13 @@ class Field(object):
             # remove the nyquist of the output
             # FIXME: the nyquist is messy due to hermitian constraints
             # let's do not touch them till we know they are important.
-            mask = numpy.bitwise_or.reduce(
+            mask = functools.reduce(numpy.bitwise_or,
                  [ ii == n // 2
                    for ii, n in zip(i, complex.Nmesh)])
             slab[mask] = 0
 
             # also remove the nyquist of the input
-            mask = numpy.bitwise_or.reduce(
+            mask = functools.reduce(numpy.bitwise_or,
                  [ ii == n // 2
                    for ii, n in zip(i, self.Nmesh)])
             slab[mask] = 0
@@ -474,7 +474,7 @@ class Field(object):
             if all(Nmesh == self.pm.Nmesh): Nmesh = None
 
         if Nmesh is not None:
-            pm = self.pm.resize(Nmesh)
+            pm = self.pm.reshape(Nmesh)
             if method is None:
                 if any(Nmesh < self.pm.Nmesh): method = 'downsample'
                 else : method = 'upsample'
@@ -1005,8 +1005,26 @@ class ParticleMesh(object):
 
     """
 
-    def __init__(self, Nmesh, BoxSize=1.0, comm=None, np=None, dtype='f8', plan_method='estimate', resampler='cic'):
-        """ create a PM object.  """
+    def __init__(self, Nmesh, BoxSize=1.0, comm=None, np=None, dtype='f8',
+                    plan_method='estimate', resampler='cic', transposed=True):
+        """ create a PM object.  
+
+            Parameters
+            ----------
+            transposed : bool
+                if True, use the transposed data decomposition in fourier space;
+                transposed data decomposition results faster transforms, 
+                but makes the whitenoise generation in 3d very slow.
+            plan_method : string
+                method for planning, `estimate`, `exhaustive`, `measure`.
+            resampler : string or ResampleWindow
+                used to determine the default size of the domain decomposition
+            np : the process mesh
+                if None, automatically infer -- (n-1)d decomposition on (n)d mesh,
+            Nmesh : tuple or alike
+                size of the mesh. len(Nmesh) is the dimension of the system.
+
+        """
         if comm is None:
             comm = MPI.COMM_WORLD
 
@@ -1019,6 +1037,8 @@ class ParticleMesh(object):
                 np = [self.comm.size]
             elif len(Nmesh) == 1:
                 np = []
+
+        self.np = np
 
         if len(np) == len(Nmesh):
             # only implemented for non-padded and destroy input
@@ -1065,7 +1085,7 @@ class ParticleMesh(object):
 
         _cache_args = (tuple(self.Nmesh), tuple(self.BoxSize),
                        MPI._addressof(comm), comm.rank, comm.size,
-                       tuple(np), self.dtype, plan_method)
+                       tuple(np), self.dtype, plan_method, paddedflag, transposed)
 
         template = _pm_cache.get(_cache_args, None)
 
@@ -1084,10 +1104,20 @@ class ParticleMesh(object):
         else:
             self.procmesh = pfft.ProcMesh(np, comm=comm)
 
+        if transposed:
+            partition_flags = pfft.Flags.PFFT_TRANSPOSED_OUT | paddedflag
+            forward_flags = pfft.Flags.PFFT_TRANSPOSED_OUT | paddedflag
+            backward_flags = pfft.Flags.PFFT_TRANSPOSED_IN | paddedflag
+        else:
+            partition_flags = paddedflag
+            forward_flags = paddedflag
+            backward_flags = paddedflag
+
+        self.transposed = transposed
         self.partition = pfft.Partition(forward,
             self.Nmesh,
             self.procmesh,
-            pfft.Flags.PFFT_TRANSPOSED_OUT | paddedflag)
+            partition_flags)
 
         bufferin = pfft.LocalBuffer(self.partition)
         bufferout = pfft.LocalBuffer(self.partition)
@@ -1106,17 +1136,17 @@ class ParticleMesh(object):
         else:
             self.forward = pfft.Plan(self.partition, pfft.Direction.PFFT_FORWARD,
                     bufferin, bufferout, forward,
-                    plan_method | pfft.Flags.PFFT_TRANSPOSED_OUT | paddedflag)
+                    plan_method | forward_flags)
             self.backward = pfft.Plan(self.partition, pfft.Direction.PFFT_BACKWARD,
                     bufferout, bufferin, backward,
-                    plan_method | pfft.Flags.PFFT_TRANSPOSED_IN | paddedflag)
+                    plan_method  | backward_flags)
 
             self.ipforward = pfft.Plan(self.partition, pfft.Direction.PFFT_FORWARD,
                     bufferin, bufferin, forward,
-                    plan_method | pfft.Flags.PFFT_TRANSPOSED_OUT | paddedflag)
+                    plan_method | forward_flags)
             self.ipbackward = pfft.Plan(self.partition, pfft.Direction.PFFT_BACKWARD,
                     bufferout, bufferout, backward,
-                    plan_method | pfft.Flags.PFFT_TRANSPOSED_IN | paddedflag)
+                    plan_method | backward_flags)
 
         self.domain = domain.GridND(self.partition.i_edges, comm=self.comm)
 
@@ -1177,27 +1207,39 @@ class ParticleMesh(object):
         _pm_cache[_cache_args] = self
 
     def resize(self, Nmesh):
+        warnings.warn("ParticleMesh.resize method is deprecated. Use reshape method", DeprecationWarning)
+        return self.reshape(Nmesh=Nmesh)
+
+    def reshape(self, Nmesh=None, transposed=None):
         """
-            Create a resized ParticleMesh object, changing the resolution Nmesh.
+            Create a reshaped ParticleMesh object, changing the resolution Nmesh, or even
+            dimension.
 
             Parameters
             ----------
             Nmesh : int or array_like or None
                 The new resolution
+            transposed : boolean
+                The new transposed format.
 
             Returns
             -------
-            A ParticleMesh of the given resolution. If Nmesh is None
-            or the same as ``self.Nmesh``, a reference of ``self`` is returned.
+            A ParticleMesh of the given resolution and transpose property
         """
         if Nmesh is None: Nmesh = self.Nmesh
         Nmesh_ = self.Nmesh.copy()
         Nmesh_[...] = Nmesh
-        if all(self.Nmesh == Nmesh_): return self
+
+        if transposed is None:
+            transposed = self.transposed
 
         return ParticleMesh(BoxSize=self.BoxSize,
                             Nmesh=Nmesh_,
-                            dtype=self.dtype, comm=self.comm)
+                            dtype=self.dtype,
+                            comm=self.comm,
+                            resampler=self.resampler,
+                            np=self.np,
+                            transposed=self.transposed)
 
     def create(self, mode, base=None, value=None, zeros=False):
         """
@@ -1271,7 +1313,7 @@ class ParticleMesh(object):
 
         # add mean
         def filter(k, v):
-            mask = numpy.bitwise_and.reduce([ki == 0 for ki in k])
+            mask = functools.reduce(numpy.bitwise_and, [ki == 0 for ki in k])
             v[mask] = mean
             return v
 

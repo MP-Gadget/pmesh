@@ -30,11 +30,12 @@ static void
 mkname(_generic_fill)(PMeshWhiteNoiseGenerator * self, void * delta_k, int seed)
 {
 
+#if 0
     clock_t start, end;
     double cpu_time_used;
 
     start = clock();
-
+#endif
     /* Fill delta_k with gadget scheme */
     int i, j, k;
 
@@ -54,7 +55,7 @@ mkname(_generic_fill)(PMeshWhiteNoiseGenerator * self, void * delta_k, int seed)
                 break;
             }
         }
-        printf("compressed = %d\n", compressed);
+        // printf("compressed = %d\n", compressed);
         if (compressed) {
             /* only half of the fourier space is requested, ignore the conjugates */
             signs[0] = 1;
@@ -92,11 +93,13 @@ mkname(_generic_fill)(PMeshWhiteNoiseGenerator * self, void * delta_k, int seed)
     }
     gsl_rng_free(rng);
 
+#if 0
     end = clock();
     cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
     printf("time used in seeds = %g\n", cpu_time_used);
 
     start = end;
+#endif
     ptrdiff_t skipped = 0;
     ptrdiff_t used = 0;
 
@@ -220,10 +223,12 @@ mkname(_generic_fill)(PMeshWhiteNoiseGenerator * self, void * delta_k, int seed)
         gsl_rng_free(lower_rng);
         gsl_rng_free(this_rng);
     }
+#if 0
     end = clock();
     cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
     printf("time used in fill = %g\n", cpu_time_used);
     printf("skipped = %td used = %td\n", skipped, used);
+#endif
 }
 
 /* Footnotes */ 

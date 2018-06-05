@@ -86,6 +86,31 @@ def test_exchange(comm):
     assert_array_equal(mass2, mass)
 
 @MPITest(commsize=2)
+def test_exchange_struct(comm):
+    DomainGrid = [[0, 1, 2], [0, 2]]
+
+    dcop = domain.GridND(DomainGrid, 
+            comm=comm,
+            periodic=True)
+
+    if comm.rank == 0:
+        pos = numpy.array(list(numpy.ndindex((2, 2))), dtype='f8')
+        mass = [0, 1, 2, 3]
+    else:
+        pos = numpy.empty((0, 2), dtype='f8')
+        mass = []
+
+    data = numpy.empty(len(pos), dtype=[('pos', ('f8', 2)), ('mass', 'f8')])
+    data['pos'] = pos
+    data['mass'] = mass
+    layout = dcop.decompose(pos, smoothing=0)
+
+    data = layout.exchange(data)
+    npos = comm.allgather(data['pos'])
+    assert_array_equal(npos[0], [[0, 0], [0, 1]])
+    assert_array_equal(npos[1], [[1, 0], [1, 1]])
+
+@MPITest(commsize=2)
 def test_inhomotypes(comm):
     """ Testing type promotion """
     DomainGrid = [[0, 1, 2], [0, 2]]

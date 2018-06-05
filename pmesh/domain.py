@@ -49,12 +49,20 @@ def bincountv(x, weights, minlength=None, dtype=None, out=None):
 def promote(data, comm):
     data = numpy.asarray(data)
     dtypes = comm.allgather(data.dtype.str)
-    dtype = numpy.find_common_type(list(set(dtypes)), [])
-    data = numpy.asarray(data, dtype)
-    allshape = comm.allgather(data.shape[1:])
-    if any([numpy.any(shape != data.shape[1:]) for shape in allshape]):
-        raise ValueError('the shape of the data does not match accross ranks.')
-    return data
+    if any(['V' in dtype for dtype in dtypes]):
+        # structs? common type doesn't work here.
+        if not all([dtypes[0] == dtype for dtype in dtypes]):
+            raise TypeError("type of data is incompatible -- some are structs, some are not")
+        else:
+            # refuse to promote the type of structs
+            return data
+    else:
+        dtype = numpy.find_common_type(list(set(dtypes)), [])
+        data = numpy.asarray(data, dtype)
+        allshape = comm.allgather(data.shape[1:])
+        if any([numpy.any(shape != data.shape[1:]) for shape in allshape]):
+            raise ValueError('the shape of the data does not match accross ranks.')
+        return data
 
 class Layout(object):
     """ 

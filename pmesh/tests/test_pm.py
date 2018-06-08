@@ -7,6 +7,7 @@ from numpy.testing.decorators import skipif
 from pmesh.pm import ParticleMesh, RealField, ComplexField, TransposedComplexField, UntransposedComplexField
 from pmesh import window
 import numpy
+import pytest
 
 @MPITest(commsize=(1,))
 def test_asarray(comm):
@@ -618,6 +619,16 @@ def test_cdot_c2c(comm):
     assert_allclose(norm1.real, norm_r)
     assert_allclose(norm1.real, norm2.real)
     assert_allclose(norm1.imag, -norm2.imag)
+
+@MPITest(commsize=(1))
+def test_cdot_types(comm):
+    pm = ParticleMesh(BoxSize=8.0, Nmesh=[4, 4, 4], comm=comm, dtype='f8')
+    comp1 = pm.generate_whitenoise(1234, type='complex')
+    comp2 = pm.generate_whitenoise(1239, type='untransposedcomplex')
+
+    with pytest.raises(TypeError):
+        norm1 = comp1.cdot(comp2)
+        norm2 = comp2.cdot(comp1)
 
 @MPITest(commsize=(1, 4))
 def test_transpose(comm):

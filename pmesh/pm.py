@@ -905,9 +905,13 @@ class BaseComplexField(Field):
                 metric(k) gives the metric of each mode.
 
         """
-        r = self.pm.create(type=TransposedComplexField, value=0)
+        if not isinstance(other, _gettype(self)):
+            raise TypeError("type of two operands of cdot must be the same type")
 
-        r.value[...] = (self.value * numpy.conj(other.value))
+        r = self.pm.create(type=_gettype(self), value=other)
+
+        r.value[...] = numpy.conj(r.value[...])
+        r.value[...] *= self.value
 
         r.apply(self._expand_hermitian, kind='index', out=Ellipsis)
 

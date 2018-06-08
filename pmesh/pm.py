@@ -147,10 +147,15 @@ class Field(object):
     def __eq__(self, other):
         return self[...] == other
 
+    def _check_compatible(self, other):
+        if isinstance(other, Field):
+            if not isinstance(other, _gettype(self)):
+                raise TypeError("type of two operands of cdot must be the same type")
+        else:
+            assert all(numpy.shape(other) == self.shape)
+
     def copy(self):
-        other = self.__class__(self.pm)
-        other.value[...] = self.value
-        return other
+        return self.pm.create(_gettype(self), value=self.value)
 
     def _init_i_coords(self, partition, Nmesh, BoxSize):
         x = []
@@ -843,10 +848,7 @@ class RealField(Field):
         return out
 
     def cdot(self, other):
-        if isinstance(other, Field):
-            if not isinstance(other, _gettype(self)):
-                raise TypeError("type of two operands of cdot must be the same type")
-
+        self._check_compatible(other)
         return self.pm.comm.allreduce(numpy.sum(self[...] * other[...]))
 
     def cnorm(self):

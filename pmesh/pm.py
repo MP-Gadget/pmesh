@@ -843,6 +843,10 @@ class RealField(Field):
         return out
 
     def cdot(self, other):
+        if isinstance(other, Field):
+            if not isinstance(other, _gettype(self)):
+                raise TypeError("type of two operands of cdot must be the same type")
+
         return self.pm.comm.allreduce(numpy.sum(self[...] * other[...]))
 
     def cnorm(self):
@@ -905,8 +909,9 @@ class BaseComplexField(Field):
                 metric(k) gives the metric of each mode.
 
         """
-        if not isinstance(other, _gettype(self)):
-            raise TypeError("type of two operands of cdot must be the same type")
+        if isinstance(other, Field):
+            if not isinstance(other, _gettype(self)):
+                raise TypeError("type of two operands of cdot must be the same type")
 
         r = self.pm.create(type=_gettype(self), value=other)
 

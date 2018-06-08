@@ -630,6 +630,11 @@ def test_cdot_types(comm):
         norm1 = comp1.cdot(comp2)
         norm2 = comp2.cdot(comp1)
 
+    # this should work though fragile, because only on the Nmesh and 1 rank
+    # the shape of values is the same.
+    norm1 = comp1.cdot(comp2.value)
+    norm2 = comp2.cdot(comp1.value)
+
 @MPITest(commsize=(1, 4))
 def test_transpose(comm):
     pm = ParticleMesh(BoxSize=[8.0, 16.0, 32.0], Nmesh=[4, 6, 8], comm=comm, dtype='f8')

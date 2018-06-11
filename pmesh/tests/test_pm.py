@@ -748,5 +748,9 @@ def test_grid_shifted(comm):
 def test_leak(comm):
     # 1024 is long enough to crash MPICH.
     a = []
+    from pmesh.pm import _pm_cache
     for i in range(1024):
         a.append(ParticleMesh(BoxSize=8.0, Nmesh=[128, 128, 128], comm=comm, dtype='f8'))
+        obj = ParticleMesh(BoxSize=8.0, Nmesh=[128, 128, 128], comm=comm, dtype='f8')
+        del obj
+        assert len(_pm_cache) == 1

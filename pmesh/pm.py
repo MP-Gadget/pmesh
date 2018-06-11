@@ -1142,6 +1142,18 @@ from weakref import WeakValueDictionary
 
 _pm_cache = WeakValueDictionary()
 
+class _pmtemplate(object):
+    # subclass tuple to ensure ordered destruction.
+    def __init__(self, procmesh, plans):
+        self._tuple = (procmesh, plans)
+
+    @property
+    def procmesh(self):
+        return self._tuple[0]
+    @property
+    def plans(self):
+        return self._tuple[1]
+
 class ParticleMesh(object):
     """
     ParticleMesh provides an interface to solver for forces
@@ -1361,7 +1373,12 @@ class ParticleMesh(object):
         self.dtype = dtype
         self.plans = plans
 
-        _pm_cache[_cache_args] = self
+        if template is None:
+            template = _pmtemplate(procmesh, plans)
+
+        self.template = template
+
+        _pm_cache[_cache_args] = template
 
     @property
     def partition(self):

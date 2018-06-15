@@ -357,11 +357,11 @@ class Field(object):
         return slabiter(self)
 
     def sort(self, out=None):
-        warnings.warn("Use ravel instead of sort", DeprecationWarning)
+        warnings.warn("Use ravel instead of sort", DeprecationWarning, stacklevel=2)
         return self.ravel(out)
 
     def unsort(self, flatiter):
-        warnings.warn("Use pm.unravel instead of unsort", DeprecationWarning)
+        warnings.warn("Use pm.unravel instead of unsort", DeprecationWarning, stacklevel=2)
         return self.unravel(flatiter)
 
     def ravel(self, out=None):
@@ -802,7 +802,7 @@ class RealField(Field):
         return jvp
 
     def paint(self, pos, mass=1.0, resampler=None, transform=None, hold=False, gradient=None, layout=None):
-        warnings.warn("Use ParticleMesh.paint instead", DeprecationWarning)
+        warnings.warn("Use ParticleMesh.paint instead", DeprecationWarning, stacklevel=2)
         self.pm.paint(pos, mass=mass, resampler=resampler, transform=transform, hold=hold, gradient=gradient, layout=layout, out=self)
 
     def c2r_vjp(v, out=None):
@@ -1385,7 +1385,7 @@ class ParticleMesh(object):
         return self.plans['partitionT']
 
     def resize(self, Nmesh):
-        warnings.warn("ParticleMesh.resize method is deprecated. Use reshape method", DeprecationWarning)
+        warnings.warn("ParticleMesh.resize method is deprecated. Use reshape method with full Nmesh as a tuple.", DeprecationWarning, stacklevel=2)
         return self.reshape(Nmesh=Nmesh)
 
     def reshape(self, Nmesh=None, BoxSize=None):
@@ -1437,7 +1437,7 @@ class ParticleMesh(object):
         """
 
         if mode is not None:
-            warnings.warn("argument mode is deprecated. use type=%s instead" % mode, DeprecationWarning)
+            warnings.warn("argument mode is deprecated. use type=%s instead" % mode, DeprecationWarning, stacklevel=2)
 
             if type is None:
                 type = mode
@@ -1490,7 +1490,7 @@ class ParticleMesh(object):
         from .whitenoise import generate
 
         if mode is not None:
-            warnings.warn("mode argument is deprecated, use type")
+            warnings.warn("mode argument is deprecated, use type", DeprecationWarning, stacklevel=2)
             type = mode
 
         # first generate complex field

@@ -1402,17 +1402,21 @@ class ParticleMesh(object):
             -------
             A ParticleMesh of the given resolution and transpose property
         """
-        if Nmesh is None: Nmesh = self.Nmesh
-        if BoxSize is None: BoxSize = self.BoxSize
+        if Nmesh is None:
+            Nmesh = self.Nmesh
+        elif numpy.isscalar(Nmesh):
+            Nmesh = [Nmesh for i in range(self.ndim)]
 
-        Nmesh_ = self.Nmesh.copy()
-        Nmesh_[...] = Nmesh
+        if BoxSize is None:
+            BoxSize = self.BoxSize[:len(Nmesh)]
+        elif numpy.isscalar(BoxSize):
+            BoxSize = [BoxSize for i in range(len(Nmesh))]
 
-        BoxSize_ = self.BoxSize.copy()
-        BoxSize_[...] = BoxSize
+        if len(BoxSize) != len(Nmesh):
+            raise ValueError("Dimension of BoxSize (%d) doesn't agree with Nmesh (%d); provide BoxSize explicitly." % (len(BoxSize), len(Nmesh)))
 
-        return ParticleMesh(BoxSize=BoxSize_,
-                            Nmesh=Nmesh_,
+        return ParticleMesh(BoxSize=BoxSize,
+                            Nmesh=Nmesh,
                             dtype=self.dtype,
                             comm=self.comm,
                             resampler=self.resampler,

@@ -289,6 +289,25 @@ def test_untransposed_complex_apply(comm):
     for i, x, slab in zip(complex.slabs.i, complex.slabs.x, complex.slabs):
         assert_array_equal(slab, x[0] + x[1] * 1j + x[2])
 
+@MPITest(commsize=(1,))
+def test_reshape(comm):
+    pm = ParticleMesh(BoxSize=8.0, Nmesh=[8, 8, 8], comm=comm, dtype='f8', np=[1, 1])
+    pm2d = pm.reshape(Nmesh=[8, 8])
+
+    with pytest.raises(ValueError):
+        pm1d = pm.reshape(Nmesh=[8])
+
+    pm4d = pm.reshape(Nmesh=[8, 8, 8, 8], BoxSize=8.0)
+
+    with pytest.raises(ValueError):
+        pm4d = pm.reshape(Nmesh=[8, 8, 8, 8])
+
+    pm = ParticleMesh(BoxSize=8.0, Nmesh=[8, 8, 8], comm=comm, dtype='f8', np=[1,])
+    pm2d = pm.reshape(Nmesh=[8, 8])
+
+    # This is a known failure because pfft-python doesn't support 1don1d, even if np is 1.
+    #pm1d = pm.reshape(Nmesh=[8])
+
 @MPITest(commsize=(1, 2, 3, 4))
 def test_sort(comm):
     pm = ParticleMesh(BoxSize=8.0, Nmesh=[8, 6], comm=comm, dtype='f8')

@@ -93,6 +93,7 @@ def test_operators(comm):
     assert (real == real).dtype == numpy.dtype('?')
     assert not isinstance(real == real, RealField)
     assert not isinstance(complex == complex, ComplexField)
+    assert not isinstance(numpy.sum(real), RealField)
 
 @MPITest(commsize=(1,4))
 def test_fft(comm):

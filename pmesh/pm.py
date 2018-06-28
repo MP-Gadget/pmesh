@@ -183,8 +183,12 @@ class Field(NDArrayLike):
             # just return the ndarray
             if result.dtype == '?':
                 return result
-            else:
-                return self.pm.create(_gettype(self), value=result)
+            # different shape, cannot be reasonable Field objects
+            # just return the ndarray
+            if result.shape != self.shape:
+                return result
+            # really only cast when we are using simple +-* **, etc.
+            return self.pm.create(_gettype(self), value=result)
         if type(result) is tuple:
             # multiple return values
             return tuple(cast(x) for x in result)

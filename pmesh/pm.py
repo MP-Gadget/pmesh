@@ -3,6 +3,69 @@ import pfft
 import mpsort
 from . import domain
 from .window import FindResampler, Affine
+
+import warnings
+
+try:
+    from numpy.lib.mixins import NDArrayOperatorsMixin as NDArrayLike
+except ImportError:
+    warnings.warn('numpy version is low. Update to > 1.13.0. Falling back to older version of operator overides.')
+    class NDArrayLike:
+        __array_priority__ = 20.
+        def __radd__(self, other): return self.__add__(other)
+        def __rmul__(self, other): return self.__mul__(other)
+
+        def __eq__(self, other):
+            return self[...] == other
+
+        def __add__(self, other):
+            r = self.copy()
+            r[...] += other
+            return r
+
+        def __sub__(self, other):
+            r = self.copy()
+            r[...] -= other
+            return r
+
+        def __rsub__(self, other):
+            r = self.copy()
+            r[...] *= -1
+            r[...] += other
+            return r
+
+        def __mul__(self, other):
+            r = self.copy()
+            r[...] *= other
+            return r
+
+        def __div__(self, other):
+            r = self.copy()
+            r[...] /= other
+            return r
+
+        __truediv__ = __div__
+        def __rdiv__(self, other):
+            r = self.copy()
+            r[...] = other / self[...]
+            return r
+        __rtruediv__ = __rdiv__
+
+        def __abs__(self):
+            r = self.copy()
+            r[...] = abs(self[...])
+            return r
+
+        def __pow__(self, other):
+            r = self.copy()
+            r[...] = self[...] ** other
+            return r
+
+        def __neg__(self):
+            r = self.copy()
+            r[...] = -self[...]
+            return r
+
 from mpi4py import MPI
 
 import numbers # for testing Numbers
@@ -82,7 +145,7 @@ class xslabiter(slabiter):
             yield xslab(kk)
 
 
-class Field(object):
+class Field(NDArrayLike):
     """ Base class for RealField and ComplexField.
 
         It only supports those two subclasses.
@@ -93,59 +156,37 @@ class Field(object):
         else:
             return '%s:' % self.__class__.__name__
 
-    def __radd__(self, other): return self.__add__(other)
-    def __rmul__(self, other): return self.__mul__(other)
+    _HANDLED_TYPES = (numpy.ndarray, numbers.Number)
 
-    def __add__(self, other):
-        r = self.copy()
-        r[...] += other
-        return r
+    def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
 
-    def __sub__(self, other):
-        r = self.copy()
-        r[...] -= other
-        return r
+        out = kwargs.get('out', ())
+        for x in inputs + out:
+            # Only support operations with instances of _HANDLED_TYPES.
+            # Use ArrayLike instead of type(self) for isinstance to
+            # allow subclasses that don't override __array_ufunc__ to
+            # handle ArrayLike objects.
+            if not isinstance(x, self._HANDLED_TYPES + (Field,)):
+                return NotImplemented
 
-    def __rsub__(self, other):
-        r = self.copy()
-        r[...] *= -1
-        r[...] += other
-        return r
+        # Defer to the implementation of the ufunc on unwrapped values.
+        inputs = tuple(x.value if isinstance(x, Field) else x
+                       for x in inputs)
+        if out:
+            kwargs['out'] = tuple(
+                x.value if isinstance(x, Field) else x
+                for x in out)
 
-    def __mul__(self, other):
-        r = self.copy()
-        r[...] *= other
-        return r
-
-    def __div__(self, other):
-        r = self.copy()
-        r[...] /= other
-        return r
-
-    __truediv__ = __div__
-    def __rdiv__(self, other):
-        r = self.copy()
-        r[...] = other / self[...]
-        return r
-    __rtruediv__ = __rdiv__
-
-    def __abs__(self):
-        r = self.copy()
-        r[...] = abs(self[...])
-        return r
-
-    def __pow__(self, other):
-        r = self.copy()
-        r[...] = self[...] ** other
-        return r
-
-    def __neg__(self):
-        r = self.copy()
-        r[...] = -self[...]
-        return r
-
-    def __eq__(self, other):
-        return self[...] == other
+        result = getattr(ufunc, method)(*inputs, **kwargs)
+        if type(result) is tuple:
+            # multiple return values
+            return tuple(self.pm.create(_gettype(self), value=x) for x in result)
+        elif method == 'at':
+            # no return value
+            return None
+        else:
+            # one return value
+            return self.pm.create(_gettype(self), value=result)
 
     def _check_compatible(self, other):
         if isinstance(other, Field):
@@ -1845,3 +1886,5 @@ class ParticleMesh(object):
         #v1 = layout.exchange(f)
         #print(q1, v1)
         return self.paint(q, mass=f, layout=layout, resampler=resampler, transform=transform)
+
+

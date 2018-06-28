@@ -70,6 +70,27 @@ def test_2d_2d(comm):
     assert real2.shape[:2] == real.shape
 
 @MPITest(commsize=(1,4))
+def test_operators(comm):
+    pm = ParticleMesh(BoxSize=8.0, Nmesh=[4, 4], comm=comm, dtype='f4')
+    numpy.random.seed(1234)
+
+    real = pm.create(type='real', value=0)
+    complex = pm.create(type='complex', value=0)
+    real = real + 1
+    real = 1 + real
+    real = real + real.value
+    real = real * real.value
+    real = real * real
+
+    assert isinstance(real, RealField)
+    complex = 1 + complex
+    complex = complex + 1
+    complex = complex + complex.value
+    complex = numpy.conj(complex)
+    complex = numpy.conj(complex) * complex
+    assert isinstance(complex, ComplexField)
+
+@MPITest(commsize=(1,4))
 def test_fft(comm):
     pm = ParticleMesh(BoxSize=8.0, Nmesh=[4, 4], comm=comm, dtype='f4')
     numpy.random.seed(1234)

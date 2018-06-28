@@ -178,15 +178,22 @@ class Field(NDArrayLike):
                 for x in out)
 
         result = getattr(ufunc, method)(*inputs, **kwargs)
+        def cast(result):
+            # booleans, cannot be reasonable Field objects
+            # just return the ndarray
+            if result.dtype == '?':
+                return result
+            else:
+                return self.pm.create(_gettype(self), value=result)
         if type(result) is tuple:
             # multiple return values
-            return tuple(self.pm.create(_gettype(self), value=x) for x in result)
+            return tuple(cast(x) for x in result)
         elif method == 'at':
             # no return value
             return None
         else:
             # one return value
-            return self.pm.create(_gettype(self), value=result)
+            return cast(result)
 
     def _check_compatible(self, other):
         if isinstance(other, Field):

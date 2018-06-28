@@ -90,6 +90,10 @@ def test_operators(comm):
     complex = numpy.conj(complex) * complex
     assert isinstance(complex, ComplexField)
 
+    assert (real == real).dtype == numpy.dtype('?')
+    assert not isinstance(real == real, RealField)
+    assert not isinstance(complex == complex, ComplexField)
+
 @MPITest(commsize=(1,4))
 def test_fft(comm):
     pm = ParticleMesh(BoxSize=8.0, Nmesh=[4, 4], comm=comm, dtype='f4')

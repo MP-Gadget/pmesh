@@ -84,9 +84,11 @@ def test_operators(comm):
 
     assert isinstance(real, RealField)
     complex = 1 + complex
+    assert isinstance(complex, ComplexField)
     complex = complex + 1
+    assert isinstance(complex, ComplexField)
     complex = complex + complex.value
-    complex = numpy.conj(complex)
+    assert isinstance(complex, ComplexField)
     complex = numpy.conj(complex) * complex
     assert isinstance(complex, ComplexField)
 
@@ -94,6 +96,10 @@ def test_operators(comm):
     assert not isinstance(real == real, RealField)
     assert not isinstance(complex == complex, ComplexField)
     assert not isinstance(numpy.sum(real), RealField)
+
+    complex = numpy.conj(complex)
+    # fails on numpy <= 1.12.
+    #assert isinstance(complex, ComplexField)
 
 @MPITest(commsize=(1,))
 def test_create_typenames(comm):

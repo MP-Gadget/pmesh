@@ -95,6 +95,19 @@ def test_operators(comm):
     assert not isinstance(complex == complex, ComplexField)
     assert not isinstance(numpy.sum(real), RealField)
 
+@MPITest(commsize=(1,))
+def test_create_typenames(comm):
+    pm = ParticleMesh(BoxSize=8.0, Nmesh=[4, 4], comm=comm, dtype='f4')
+    numpy.random.seed(1234)
+
+    real = pm.create(type=RealField, value=0)
+    from pmesh.pm import _typestr_to_type
+    real = pm.create(type=RealField, value=0)
+    real = pm.create(type=_typestr_to_type('real'), value=0)
+    real.cast(type=_typestr_to_type('real'))
+    real.cast(type=RealField)
+    real.cast(type=RealField)
+
 @MPITest(commsize=(1,4))
 def test_fft(comm):
     pm = ParticleMesh(BoxSize=8.0, Nmesh=[4, 4], comm=comm, dtype='f4')

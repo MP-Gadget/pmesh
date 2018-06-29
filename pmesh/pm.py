@@ -10,7 +10,7 @@ try:
     from numpy.lib.mixins import NDArrayOperatorsMixin as NDArrayLike
 except ImportError:
     warnings.warn('numpy version is low. Update to > 1.13.0. Falling back to older version of operator overides.')
-    class NDArrayLike:
+    class NDArrayLike(object):
         __array_priority__ = 20.
         def __radd__(self, other): return self.__add__(other)
         def __rmul__(self, other): return self.__mul__(other)

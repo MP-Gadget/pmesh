@@ -4,27 +4,18 @@
 
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>pmesh.window &#8212; pmesh 0.1.32 documentation</title>
+    <title>pmesh.window &#8212; pmesh 0.1.46 documentation</title>
     <link rel="stylesheet" href="../../_static/classic.css" type="text/css" />
     <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
-    <script type="text/javascript">
-      var DOCUMENTATION_OPTIONS = {
-        URL_ROOT:    '../../',
-        VERSION:     '0.1.32',
-        COLLAPSE_INDEX: false,
-        FILE_SUFFIX: '.html',
-        HAS_SOURCE:  true,
-        SOURCELINK_SUFFIX: '.txt'
-      };
-    </script>
+    <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
     <script type="text/javascript" src="../../_static/jquery.js"></script>
     <script type="text/javascript" src="../../_static/underscore.js"></script>
     <script type="text/javascript" src="../../_static/doctools.js"></script>
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" /> 
-  </head>
-  <body>
+  </head><body>
     <div class="related" role="navigation" aria-label="related navigation">
       <h3>Navigation</h3>
       <ul>
@@ -34,7 +25,7 @@
         <li class="right" >
           <a href="../../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li class="nav-item nav-item-0"><a href="../../index.html">pmesh 0.1.32 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">pmesh 0.1.46 documentation</a> &#187;</li>
           <li class="nav-item nav-item-1"><a href="../index.html" accesskey="U">Module code</a> &#187;</li> 
       </ul>
     </div>  
@@ -103,7 +94,7 @@
         <span class="sd">&quot;&quot;&quot; Change the support of the window, returning a new window. &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="n">ResampleWindow</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">kind</span><span class="p">,</span> <span class="n">support</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="ResampleWindow.paint"><a class="viewcode-back" href="../../pmesh.window.html#pmesh.window.ResampleWindow.paint">[docs]</a>    <span class="k">def</span> <span class="nf">paint</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">real</span><span class="p">,</span> <span class="n">pos</span><span class="p">,</span> <span class="n">mass</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">diffdir</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">transform</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<div class="viewcode-block" id="ResampleWindow.paint"><a class="viewcode-back" href="../../pmesh.window.html#pmesh.window.ResampleWindow.paint">[docs]</a>    <span class="k">def</span> <span class="nf">paint</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">real</span><span class="p">,</span> <span class="n">pos</span><span class="p">,</span> <span class="n">hsml</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">mass</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">diffdir</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">transform</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">            paint to a field.</span>
 
@@ -116,6 +107,9 @@
 
 <span class="sd">            mass : array_like or None</span>
 <span class="sd">                None for 1</span>
+
+<span class="sd">            hsml: array_like or None</span>
+<span class="sd">                scaling of the kernel. it is dimensionless; None for no scaling (default kernel support in grid units)</span>
 
 <span class="sd">            diffdir: int or None</span>
 <span class="sd">                direction for differentiation kernel.</span>
@@ -141,7 +135,6 @@
             <span class="n">mass</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">asfarray</span><span class="p">(</span><span class="n">mass</span><span class="p">)</span>
 
         <span class="n">mass</span> <span class="o">=</span> <span class="n">_mkarr</span><span class="p">(</span><span class="n">mass</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">pos</span><span class="p">),</span> <span class="n">mass</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
-
         <span class="c1"># workaround https://github.com/cython/cython/issues/1605</span>
 
         <span class="k">if</span> <span class="ow">not</span> <span class="n">pos</span><span class="o">.</span><span class="n">flags</span><span class="o">.</span><span class="n">writeable</span><span class="p">:</span>
@@ -149,9 +142,18 @@
         <span class="k">if</span> <span class="ow">not</span> <span class="n">mass</span><span class="o">.</span><span class="n">flags</span><span class="o">.</span><span class="n">writeable</span><span class="p">:</span>
             <span class="n">mass</span> <span class="o">=</span> <span class="n">mass</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
 
-        <span class="n">_ResampleWindow</span><span class="o">.</span><span class="n">paint</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">real</span><span class="p">,</span> <span class="n">pos</span><span class="p">,</span> <span class="n">mass</span><span class="p">,</span> <span class="n">order</span><span class="p">,</span> <span class="n">transform</span><span class="o">.</span><span class="n">scale</span><span class="p">,</span> <span class="n">transform</span><span class="o">.</span><span class="n">translate</span><span class="p">,</span> <span class="n">transform</span><span class="o">.</span><span class="n">period</span><span class="p">)</span></div>
+        <span class="k">if</span> <span class="n">hsml</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">hsml</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">asfarray</span><span class="p">(</span><span class="n">hsml</span><span class="p">)</span>
+            <span class="n">hsml</span> <span class="o">=</span> <span class="n">_mkarr</span><span class="p">(</span><span class="n">hsml</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">pos</span><span class="p">),</span> <span class="n">hsml</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
 
-<div class="viewcode-block" id="ResampleWindow.readout"><a class="viewcode-back" href="../../pmesh.window.html#pmesh.window.ResampleWindow.readout">[docs]</a>    <span class="k">def</span> <span class="nf">readout</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">real</span><span class="p">,</span> <span class="n">pos</span><span class="p">,</span> <span class="n">out</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">diffdir</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">transform</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">hsml</span><span class="o">.</span><span class="n">flags</span><span class="o">.</span><span class="n">writeable</span><span class="p">:</span>
+                <span class="n">hsml</span> <span class="o">=</span> <span class="n">hsml</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="n">numpy</span><span class="o">.</span><span class="n">iscomplexobj</span><span class="p">(</span><span class="n">real</span><span class="p">):</span>
+            <span class="n">real</span> <span class="o">=</span> <span class="n">real</span><span class="o">.</span><span class="n">real</span>
+        <span class="n">_ResampleWindow</span><span class="o">.</span><span class="n">paint</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">real</span><span class="p">,</span> <span class="n">pos</span><span class="p">,</span> <span class="n">hsml</span><span class="p">,</span> <span class="n">mass</span><span class="p">,</span> <span class="n">order</span><span class="p">,</span> <span class="n">transform</span><span class="o">.</span><span class="n">scale</span><span class="p">,</span> <span class="n">transform</span><span class="o">.</span><span class="n">translate</span><span class="p">,</span> <span class="n">transform</span><span class="o">.</span><span class="n">period</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="ResampleWindow.readout"><a class="viewcode-back" href="../../pmesh.window.html#pmesh.window.ResampleWindow.readout">[docs]</a>    <span class="k">def</span> <span class="nf">readout</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">real</span><span class="p">,</span> <span class="n">pos</span><span class="p">,</span> <span class="n">hsml</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">out</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">diffdir</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">transform</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">            readout from a field.</span>
 
@@ -160,6 +162,9 @@
 <span class="sd">            real : array_like</span>
 
 <span class="sd">            pos : array_like</span>
+
+<span class="sd">            hsml: array_like, or None</span>
+<span class="sd">                scaling of the kernel. it is dimensionless; None for no scaling (default kernel support in grid units)</span>
 
 <span class="sd">            out : array_like</span>
 
@@ -192,7 +197,17 @@
         <span class="k">if</span> <span class="ow">not</span> <span class="n">pos</span><span class="o">.</span><span class="n">flags</span><span class="o">.</span><span class="n">writeable</span><span class="p">:</span>
             <span class="n">pos</span> <span class="o">=</span> <span class="n">pos</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
 
-        <span class="n">_ResampleWindow</span><span class="o">.</span><span class="n">readout</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">real</span><span class="p">,</span> <span class="n">pos</span><span class="p">,</span> <span class="n">out</span><span class="p">,</span> <span class="n">order</span><span class="p">,</span> <span class="n">transform</span><span class="o">.</span><span class="n">scale</span><span class="p">,</span> <span class="n">transform</span><span class="o">.</span><span class="n">translate</span><span class="p">,</span> <span class="n">transform</span><span class="o">.</span><span class="n">period</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">hsml</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">hsml</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">asfarray</span><span class="p">(</span><span class="n">hsml</span><span class="p">)</span>
+            <span class="n">hsml</span> <span class="o">=</span> <span class="n">_mkarr</span><span class="p">(</span><span class="n">hsml</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">pos</span><span class="p">),</span> <span class="n">hsml</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">hsml</span><span class="o">.</span><span class="n">flags</span><span class="o">.</span><span class="n">writeable</span><span class="p">:</span>
+                <span class="n">hsml</span> <span class="o">=</span> <span class="n">hsml</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="n">numpy</span><span class="o">.</span><span class="n">iscomplexobj</span><span class="p">(</span><span class="n">real</span><span class="p">):</span>
+            <span class="n">real</span> <span class="o">=</span> <span class="n">real</span><span class="o">.</span><span class="n">real</span>
+
+        <span class="n">_ResampleWindow</span><span class="o">.</span><span class="n">readout</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">real</span><span class="p">,</span> <span class="n">pos</span><span class="p">,</span> <span class="n">hsml</span><span class="p">,</span> <span class="n">out</span><span class="p">,</span> <span class="n">order</span><span class="p">,</span> <span class="n">transform</span><span class="o">.</span><span class="n">scale</span><span class="p">,</span> <span class="n">transform</span><span class="o">.</span><span class="n">translate</span><span class="p">,</span> <span class="n">transform</span><span class="o">.</span><span class="n">period</span><span class="p">)</span>
 
         <span class="k">return</span> <span class="n">out</span></div></div>
 
@@ -209,6 +224,7 @@
     <span class="n">NNB</span> <span class="o">=</span> <span class="n">ResampleWindow</span><span class="p">(</span><span class="n">kind</span><span class="o">=</span><span class="s2">&quot;tunednnb&quot;</span><span class="p">),</span>
     <span class="n">CIC</span> <span class="o">=</span> <span class="n">ResampleWindow</span><span class="p">(</span><span class="n">kind</span><span class="o">=</span><span class="s2">&quot;tunedcic&quot;</span><span class="p">),</span>
     <span class="n">TSC</span> <span class="o">=</span> <span class="n">ResampleWindow</span><span class="p">(</span><span class="n">kind</span><span class="o">=</span><span class="s2">&quot;tunedtsc&quot;</span><span class="p">),</span>
+    <span class="n">PCS</span> <span class="o">=</span> <span class="n">ResampleWindow</span><span class="p">(</span><span class="n">kind</span><span class="o">=</span><span class="s2">&quot;tunedpcs&quot;</span><span class="p">),</span>
     <span class="n">QUADRATIC</span> <span class="o">=</span> <span class="n">ResampleWindow</span><span class="p">(</span><span class="n">kind</span><span class="o">=</span><span class="s2">&quot;quadratic&quot;</span><span class="p">),</span>
     <span class="n">CUBIC</span> <span class="o">=</span> <span class="n">ResampleWindow</span><span class="p">(</span><span class="n">kind</span><span class="o">=</span><span class="s2">&quot;cubic&quot;</span><span class="p">),</span>
     <span class="n">LANCZOS2</span> <span class="o">=</span> <span class="n">ResampleWindow</span><span class="p">(</span><span class="n">kind</span><span class="o">=</span><span class="s2">&quot;lanczos2&quot;</span><span class="p">),</span>
@@ -216,6 +232,11 @@
     <span class="n">LANCZOS4</span> <span class="o">=</span> <span class="n">ResampleWindow</span><span class="p">(</span><span class="n">kind</span><span class="o">=</span><span class="s2">&quot;lanczos4&quot;</span><span class="p">),</span>
     <span class="n">LANCZOS5</span> <span class="o">=</span> <span class="n">ResampleWindow</span><span class="p">(</span><span class="n">kind</span><span class="o">=</span><span class="s2">&quot;lanczos5&quot;</span><span class="p">),</span>
     <span class="n">LANCZOS6</span> <span class="o">=</span> <span class="n">ResampleWindow</span><span class="p">(</span><span class="n">kind</span><span class="o">=</span><span class="s2">&quot;lanczos6&quot;</span><span class="p">),</span>
+    <span class="n">ACG2</span> <span class="o">=</span> <span class="n">ResampleWindow</span><span class="p">(</span><span class="n">kind</span><span class="o">=</span><span class="s2">&quot;acg2&quot;</span><span class="p">),</span>
+    <span class="n">ACG3</span> <span class="o">=</span> <span class="n">ResampleWindow</span><span class="p">(</span><span class="n">kind</span><span class="o">=</span><span class="s2">&quot;acg3&quot;</span><span class="p">),</span>
+    <span class="n">ACG4</span> <span class="o">=</span> <span class="n">ResampleWindow</span><span class="p">(</span><span class="n">kind</span><span class="o">=</span><span class="s2">&quot;acg4&quot;</span><span class="p">),</span>
+    <span class="n">ACG5</span> <span class="o">=</span> <span class="n">ResampleWindow</span><span class="p">(</span><span class="n">kind</span><span class="o">=</span><span class="s2">&quot;acg5&quot;</span><span class="p">),</span>
+    <span class="n">ACG6</span> <span class="o">=</span> <span class="n">ResampleWindow</span><span class="p">(</span><span class="n">kind</span><span class="o">=</span><span class="s2">&quot;acg6&quot;</span><span class="p">),</span>
     <span class="n">DB6</span> <span class="o">=</span> <span class="n">ResampleWindow</span><span class="p">(</span><span class="n">kind</span><span class="o">=</span><span class="s2">&quot;db6&quot;</span><span class="p">),</span>
     <span class="n">DB12</span> <span class="o">=</span> <span class="n">ResampleWindow</span><span class="p">(</span><span class="n">kind</span><span class="o">=</span><span class="s2">&quot;db12&quot;</span><span class="p">),</span>
     <span class="n">DB20</span> <span class="o">=</span> <span class="n">ResampleWindow</span><span class="p">(</span><span class="n">kind</span><span class="o">=</span><span class="s2">&quot;db20&quot;</span><span class="p">),</span>
@@ -239,12 +260,14 @@
         <div class="sphinxsidebarwrapper">
 <div id="searchbox" style="display: none" role="search">
   <h3>Quick search</h3>
+    <div class="searchformwrapper">
     <form class="search" action="../../search.html" method="get">
-      <div><input type="text" name="q" /></div>
-      <div><input type="submit" value="Go" /></div>
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
       <input type="hidden" name="check_keywords" value="yes" />
       <input type="hidden" name="area" value="default" />
     </form>
+    </div>
 </div>
 <script type="text/javascript">$('#searchbox').show(0);</script>
         </div>
@@ -260,13 +283,13 @@
         <li class="right" >
           <a href="../../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li class="nav-item nav-item-0"><a href="../../index.html">pmesh 0.1.32 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">pmesh 0.1.46 documentation</a> &#187;</li>
           <li class="nav-item nav-item-1"><a href="../index.html" >Module code</a> &#187;</li> 
       </ul>
     </div>
     <div class="footer" role="contentinfo">
         &#169; Copyright 2017, Yu Feng.
-      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.6.3.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.7.5.
     </div>
   </body>
 </html>

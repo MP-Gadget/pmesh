@@ -4,20 +4,12 @@
 
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>Introduction &#8212; pmesh 0.1.32 documentation</title>
+    <title>Introduction &#8212; pmesh 0.1.46 documentation</title>
     <link rel="stylesheet" href="_static/classic.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
-    <script type="text/javascript">
-      var DOCUMENTATION_OPTIONS = {
-        URL_ROOT:    './',
-        VERSION:     '0.1.32',
-        COLLAPSE_INDEX: false,
-        FILE_SUFFIX: '.html',
-        HAS_SOURCE:  true,
-        SOURCELINK_SUFFIX: '.txt'
-      };
-    </script>
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
     <script type="text/javascript" src="_static/jquery.js"></script>
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
@@ -25,8 +17,7 @@
     <link rel="search" title="Search" href="search.html" />
     <link rel="next" title="Installation" href="install.html" />
     <link rel="prev" title="Welcome to pmesh’s documentation!" href="index.html" /> 
-  </head>
-  <body>
+  </head><body>
     <div class="related" role="navigation" aria-label="related navigation">
       <h3>Navigation</h3>
       <ul>
@@ -42,7 +33,7 @@
         <li class="right" >
           <a href="index.html" title="Welcome to pmesh’s documentation!"
              accesskey="P">previous</a> |</li>
-        <li class="nav-item nav-item-0"><a href="index.html">pmesh 0.1.32 documentation</a> &#187;</li> 
+        <li class="nav-item nav-item-0"><a href="index.html">pmesh 0.1.46 documentation</a> &#187;</li> 
       </ul>
     </div>  
 
@@ -53,32 +44,32 @@
             
   <div class="section" id="introduction">
 <span id="id1"></span><h1>Introduction<a class="headerlink" href="#introduction" title="Permalink to this headline">¶</a></h1>
-<p>pmesh provides a <a class="reference internal" href="pmesh.pm.html#pmesh.pm.ParticleMesh" title="pmesh.pm.ParticleMesh"><code class="xref py py-class docutils literal"><span class="pre">pmesh.pm.ParticleMesh</span></code></a> object for solving forces with the particle mesh / spectrum
+<p>pmesh provides a <a class="reference internal" href="pmesh.pm.html#pmesh.pm.ParticleMesh" title="pmesh.pm.ParticleMesh"><code class="xref py py-class docutils literal notranslate"><span class="pre">pmesh.pm.ParticleMesh</span></code></a> object for solving forces with the particle mesh / spectrum
 method.</p>
-<p>We represent the fields as <a class="reference internal" href="pmesh.pm.html#pmesh.pm.ComplexField" title="pmesh.pm.ComplexField"><code class="xref py py-class docutils literal"><span class="pre">pmesh.pm.ComplexField</span></code></a> and <a class="reference internal" href="pmesh.pm.html#pmesh.pm.RealField" title="pmesh.pm.RealField"><code class="xref py py-class docutils literal"><span class="pre">pmesh.pm.RealField</span></code></a>.</p>
+<p>We represent the fields as <a class="reference internal" href="pmesh.pm.html#pmesh.pm.ComplexField" title="pmesh.pm.ComplexField"><code class="xref py py-class docutils literal notranslate"><span class="pre">pmesh.pm.ComplexField</span></code></a> and <a class="reference internal" href="pmesh.pm.html#pmesh.pm.RealField" title="pmesh.pm.RealField"><code class="xref py py-class docutils literal notranslate"><span class="pre">pmesh.pm.RealField</span></code></a>.</p>
 <p>The typical routine for calculating force is</p>
 <ol class="arabic simple">
-<li>Distrubte particles to the correct domain via <a class="reference internal" href="pmesh.pm.html#pmesh.pm.ParticleMesh.decompose" title="pmesh.pm.ParticleMesh.decompose"><code class="xref py py-meth docutils literal"><span class="pre">pmesh.pm.ParticleMesh.decompose()</span></code></a>. In this step,
-ghost particles are created automatically. The result is a <a class="reference internal" href="pmesh.domain.html#pmesh.domain.Layout" title="pmesh.domain.Layout"><code class="xref py py-meth docutils literal"><span class="pre">pmesh.domain.Layout()</span></code></a> object.</li>
-<li>Create a <a class="reference internal" href="pmesh.pm.html#pmesh.pm.RealField" title="pmesh.pm.RealField"><code class="xref py py-class docutils literal"><span class="pre">pmesh.pm.RealField</span></code></a> object and paint particles via <a class="reference internal" href="pmesh.pm.html#pmesh.pm.RealField.paint" title="pmesh.pm.RealField.paint"><code class="xref py py-meth docutils literal"><span class="pre">pmesh.pm.RealField.paint()</span></code></a>;
+<li>Distrubte particles to the correct domain via <a class="reference internal" href="pmesh.pm.html#pmesh.pm.ParticleMesh.decompose" title="pmesh.pm.ParticleMesh.decompose"><code class="xref py py-meth docutils literal notranslate"><span class="pre">pmesh.pm.ParticleMesh.decompose()</span></code></a>. In this step,
+ghost particles are created automatically. The result is a <a class="reference internal" href="pmesh.domain.html#pmesh.domain.Layout" title="pmesh.domain.Layout"><code class="xref py py-meth docutils literal notranslate"><span class="pre">pmesh.domain.Layout()</span></code></a> object.</li>
+<li>Create a <a class="reference internal" href="pmesh.pm.html#pmesh.pm.RealField" title="pmesh.pm.RealField"><code class="xref py py-class docutils literal notranslate"><span class="pre">pmesh.pm.RealField</span></code></a> object and paint particles via <a class="reference internal" href="pmesh.pm.html#pmesh.pm.RealField.paint" title="pmesh.pm.RealField.paint"><code class="xref py py-meth docutils literal notranslate"><span class="pre">pmesh.pm.RealField.paint()</span></code></a>;
 supply the domain decomposition layout as an argument to take care of the ghosts.</li>
-<li>Transform to spectrum space via a real-to-complex <a class="reference internal" href="pmesh.pm.html#pmesh.pm.RealField.r2c" title="pmesh.pm.RealField.r2c"><code class="xref py py-meth docutils literal"><span class="pre">pmesh.pm.RealField.r2c()</span></code></a>, the result is a <a class="reference internal" href="pmesh.pm.html#pmesh.pm.ComplexField" title="pmesh.pm.ComplexField"><code class="xref py py-class docutils literal"><span class="pre">pmesh.pm.ComplexField</span></code></a>. The operation
+<li>Transform to spectrum space via a real-to-complex <a class="reference internal" href="pmesh.pm.html#pmesh.pm.RealField.r2c" title="pmesh.pm.RealField.r2c"><code class="xref py py-meth docutils literal notranslate"><span class="pre">pmesh.pm.RealField.r2c()</span></code></a>, the result is a <a class="reference internal" href="pmesh.pm.html#pmesh.pm.ComplexField" title="pmesh.pm.ComplexField"><code class="xref py py-class docutils literal notranslate"><span class="pre">pmesh.pm.ComplexField</span></code></a>. The operation
 can be made in-place by setting <cite>out</cite> argument to <cite>Ellipsis</cite>.</li>
 </ol>
 <ol class="arabic simple" start="5">
-<li>Apply transfer functions to obtain the force, via <a class="reference internal" href="pmesh.pm.html#pmesh.pm.ComplexField.apply" title="pmesh.pm.ComplexField.apply"><code class="xref py py-meth docutils literal"><span class="pre">pmesh.pm.ComplexField.apply()</span></code></a>. Provide transfer function as <cite>function((kx, ky, kz), original_value)</cite>.</li>
-<li>Transform to configuration space via a complex-to-real <a class="reference internal" href="pmesh.pm.html#pmesh.pm.ComplexField.c2r" title="pmesh.pm.ComplexField.c2r"><code class="xref py py-meth docutils literal"><span class="pre">pmesh.pm.ComplexField.c2r()</span></code></a>.</li>
+<li>Apply transfer functions to obtain the force, via <code class="xref py py-meth docutils literal notranslate"><span class="pre">pmesh.pm.ComplexField.apply()</span></code>. Provide transfer function as <cite>function((kx, ky, kz), original_value)</cite>.</li>
+<li>Transform to configuration space via a complex-to-real <code class="xref py py-meth docutils literal notranslate"><span class="pre">pmesh.pm.ComplexField.c2r()</span></code>.</li>
 </ol>
 <ol class="arabic simple" start="6">
-<li>Readout force values via <a class="reference internal" href="pmesh.pm.html#pmesh.pm.RealField.readout" title="pmesh.pm.RealField.readout"><code class="xref py py-meth docutils literal"><span class="pre">pmesh.pm.RealField.readout()</span></code></a>.
+<li>Readout force values via <a class="reference internal" href="pmesh.pm.html#pmesh.pm.RealField.readout" title="pmesh.pm.RealField.readout"><code class="xref py py-meth docutils literal notranslate"><span class="pre">pmesh.pm.RealField.readout()</span></code></a>.
 supply the domain decomposition layout as an argument to take care of the ghosts.</li>
 </ol>
 <p>This is a fairly convoluted process; but it truthfully represents the level of complexity of distributed computation introduces.
 We may provide a higher level interface in the future.</p>
-<p>We provide an example to illustrate the process. Suppose pm is a <a class="reference internal" href="pmesh.pm.html#pmesh.pm.ParticleMesh" title="pmesh.pm.ParticleMesh"><code class="xref py py-class docutils literal"><span class="pre">pmesh.pm.ParticleMesh</span></code></a> object
-and position of particles is stored in <code class="code docutils literal"><span class="pre">P['Position']</span></code> .</p>
+<p>We provide an example to illustrate the process. Suppose pm is a <a class="reference internal" href="pmesh.pm.html#pmesh.pm.ParticleMesh" title="pmesh.pm.ParticleMesh"><code class="xref py py-class docutils literal notranslate"><span class="pre">pmesh.pm.ParticleMesh</span></code></a> object
+and position of particles is stored in <code class="code docutils literal notranslate"><span class="pre">P['Position']</span></code> .</p>
 <p>Here is an example for calculating linear order displacement from perturbative growth of large scale structure:</p>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">pm</span> <span class="o">=</span> <span class="n">ParticleMesh</span><span class="p">(</span><span class="n">BoxSize</span><span class="p">,</span> <span class="n">Nmesh</span><span class="o">=</span><span class="p">[</span><span class="n">Nmesh</span><span class="p">,</span> <span class="n">Nmesh</span><span class="p">,</span> <span class="n">Nmesh</span><span class="p">])</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">pm</span> <span class="o">=</span> <span class="n">ParticleMesh</span><span class="p">(</span><span class="n">BoxSize</span><span class="p">,</span> <span class="n">Nmesh</span><span class="o">=</span><span class="p">[</span><span class="n">Nmesh</span><span class="p">,</span> <span class="n">Nmesh</span><span class="p">,</span> <span class="n">Nmesh</span><span class="p">])</span>
 
 <span class="n">smoothing</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">*</span> <span class="n">pm</span><span class="o">.</span><span class="n">Nmesh</span> <span class="o">/</span> <span class="n">pm</span><span class="o">.</span><span class="n">BoxSize</span>
 
@@ -128,12 +119,14 @@ and position of particles is stored in <code class="code docutils literal"><span
    </div>
 <div id="searchbox" style="display: none" role="search">
   <h3>Quick search</h3>
+    <div class="searchformwrapper">
     <form class="search" action="search.html" method="get">
-      <div><input type="text" name="q" /></div>
-      <div><input type="submit" value="Go" /></div>
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
       <input type="hidden" name="check_keywords" value="yes" />
       <input type="hidden" name="area" value="default" />
     </form>
+    </div>
 </div>
 <script type="text/javascript">$('#searchbox').show(0);</script>
         </div>
@@ -155,12 +148,12 @@ and position of particles is stored in <code class="code docutils literal"><span
         <li class="right" >
           <a href="index.html" title="Welcome to pmesh’s documentation!"
              >previous</a> |</li>
-        <li class="nav-item nav-item-0"><a href="index.html">pmesh 0.1.32 documentation</a> &#187;</li> 
+        <li class="nav-item nav-item-0"><a href="index.html">pmesh 0.1.46 documentation</a> &#187;</li> 
       </ul>
     </div>
     <div class="footer" role="contentinfo">
         &#169; Copyright 2017, Yu Feng.
-      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.6.3.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.7.5.
     </div>
   </body>
 </html>

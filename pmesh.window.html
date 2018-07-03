@@ -4,28 +4,19 @@
 
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>pmesh.window module &#8212; pmesh 0.1.32 documentation</title>
+    <title>pmesh.window module &#8212; pmesh 0.1.46 documentation</title>
     <link rel="stylesheet" href="_static/classic.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
-    <script type="text/javascript">
-      var DOCUMENTATION_OPTIONS = {
-        URL_ROOT:    './',
-        VERSION:     '0.1.32',
-        COLLAPSE_INDEX: false,
-        FILE_SUFFIX: '.html',
-        HAS_SOURCE:  true,
-        SOURCELINK_SUFFIX: '.txt'
-      };
-    </script>
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
     <script type="text/javascript" src="_static/jquery.js"></script>
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
     <link rel="prev" title="pmesh.whitenoise module" href="pmesh.whitenoise.html" /> 
-  </head>
-  <body>
+  </head><body>
     <div class="related" role="navigation" aria-label="related navigation">
       <h3>Navigation</h3>
       <ul>
@@ -38,7 +29,7 @@
         <li class="right" >
           <a href="pmesh.whitenoise.html" title="pmesh.whitenoise module"
              accesskey="P">previous</a> |</li>
-        <li class="nav-item nav-item-0"><a href="index.html">pmesh 0.1.32 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-0"><a href="index.html">pmesh 0.1.46 documentation</a> &#187;</li>
           <li class="nav-item nav-item-1"><a href="modules.html" >pmesh</a> &#187;</li>
           <li class="nav-item nav-item-2"><a href="pmesh.html" accesskey="U">pmesh package</a> &#187;</li> 
       </ul>
@@ -54,17 +45,18 @@
 <dl class="class">
 <dt id="pmesh.window.Affine">
 <em class="property">class </em><code class="descclassname">pmesh.window.</code><code class="descname">Affine</code><span class="sig-paren">(</span><em>ndim</em>, <em>scale=None</em>, <em>translate=None</em>, <em>period=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pmesh/window.html#Affine"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pmesh.window.Affine" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">object</span></code></p>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
 <p>Defines an affine Transformation, used by ResampleWindow.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>translate</strong> : array_like, in integer mesh units.</p>
-<blockquote class="last">
-<div><p>period : array_like in integer mesh units.
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>translate</strong> <span class="classifier-delimiter">:</span> <span class="classifier">array_like, in integer mesh units.</span></dt>
+<dd><p class="first last">period : array_like in integer mesh units.
 scale : factor that multiples on position to obtain mesh units.</p>
-</div></blockquote>
+</dd>
+</dl>
 </td>
 </tr>
 </tbody>
@@ -86,33 +78,35 @@ Amount is in integer mesh units, as translate.</p>
 <dl class="class">
 <dt id="pmesh.window.ResampleWindow">
 <em class="property">class </em><code class="descclassname">pmesh.window.</code><code class="descname">ResampleWindow</code><span class="sig-paren">(</span><em>kind</em>, <em>support=-1</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pmesh/window.html#ResampleWindow"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pmesh.window.ResampleWindow" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">pmesh._window.ResampleWindow</span></code></p>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">pmesh._window.ResampleWindow</span></code></p>
 <dl class="method">
 <dt id="pmesh.window.ResampleWindow.paint">
-<code class="descname">paint</code><span class="sig-paren">(</span><em>real</em>, <em>pos</em>, <em>mass=None</em>, <em>diffdir=None</em>, <em>transform=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pmesh/window.html#ResampleWindow.paint"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pmesh.window.ResampleWindow.paint" title="Permalink to this definition">¶</a></dt>
+<code class="descname">paint</code><span class="sig-paren">(</span><em>real</em>, <em>pos</em>, <em>hsml=None</em>, <em>mass=None</em>, <em>diffdir=None</em>, <em>transform=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pmesh/window.html#ResampleWindow.paint"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pmesh.window.ResampleWindow.paint" title="Permalink to this definition">¶</a></dt>
 <dd><p>paint to a field.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>real</strong> : array_like</p>
-<blockquote>
-<div><p>original values are preserved.</p>
-</div></blockquote>
-<p><strong>pos</strong> : array_like</p>
-<p><strong>mass</strong> : array_like or None</p>
-<blockquote>
-<div><p>None for 1</p>
-</div></blockquote>
-<p><strong>diffdir: int or None</strong></p>
-<blockquote>
-<div><p>direction for differentiation kernel.
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>real</strong> <span class="classifier-delimiter">:</span> <span class="classifier">array_like</span></dt>
+<dd><p class="first last">original values are preserved.</p>
+</dd>
+<dt><strong>pos</strong> <span class="classifier-delimiter">:</span> <span class="classifier">array_like</span></dt>
+<dd></dd>
+<dt><strong>mass</strong> <span class="classifier-delimiter">:</span> <span class="classifier">array_like or None</span></dt>
+<dd><p class="first last">None for 1</p>
+</dd>
+<dt><strong>hsml: array_like or None</strong></dt>
+<dd><p class="first last">scaling of the kernel. it is dimensionless; None for no scaling (default kernel support in grid units)</p>
+</dd>
+<dt><strong>diffdir: int or None</strong></dt>
+<dd><p class="first last">direction for differentiation kernel.
 0, 1, 2,… or None</p>
-</div></blockquote>
-<p><strong>transform: Affine</strong></p>
-<blockquote class="last">
-<div><p>The Affine transformation from position to grid units.</p>
-</div></blockquote>
+</dd>
+<dt><strong>transform: Affine</strong></dt>
+<dd><p class="first last">The Affine transformation from position to grid units.</p>
+</dd>
+</dl>
 </td>
 </tr>
 </tbody>
@@ -121,28 +115,33 @@ Amount is in integer mesh units, as translate.</p>
 
 <dl class="method">
 <dt id="pmesh.window.ResampleWindow.readout">
-<code class="descname">readout</code><span class="sig-paren">(</span><em>real</em>, <em>pos</em>, <em>out=None</em>, <em>diffdir=None</em>, <em>transform=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pmesh/window.html#ResampleWindow.readout"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pmesh.window.ResampleWindow.readout" title="Permalink to this definition">¶</a></dt>
+<code class="descname">readout</code><span class="sig-paren">(</span><em>real</em>, <em>pos</em>, <em>hsml=None</em>, <em>out=None</em>, <em>diffdir=None</em>, <em>transform=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pmesh/window.html#ResampleWindow.readout"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pmesh.window.ResampleWindow.readout" title="Permalink to this definition">¶</a></dt>
 <dd><p>readout from a field.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>real</strong> : array_like</p>
-<p><strong>pos</strong> : array_like</p>
-<p><strong>out</strong> : array_like</p>
-<p><strong>mass</strong> : array_like or None</p>
-<blockquote>
-<div><p>None for 1</p>
-</div></blockquote>
-<p><strong>diffdir: int or None</strong></p>
-<blockquote>
-<div><p>direction for differentiation kernel.
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>real</strong> <span class="classifier-delimiter">:</span> <span class="classifier">array_like</span></dt>
+<dd></dd>
+<dt><strong>pos</strong> <span class="classifier-delimiter">:</span> <span class="classifier">array_like</span></dt>
+<dd></dd>
+<dt><strong>hsml: array_like, or None</strong></dt>
+<dd><p class="first last">scaling of the kernel. it is dimensionless; None for no scaling (default kernel support in grid units)</p>
+</dd>
+<dt><strong>out</strong> <span class="classifier-delimiter">:</span> <span class="classifier">array_like</span></dt>
+<dd></dd>
+<dt><strong>mass</strong> <span class="classifier-delimiter">:</span> <span class="classifier">array_like or None</span></dt>
+<dd><p class="first last">None for 1</p>
+</dd>
+<dt><strong>diffdir: int or None</strong></dt>
+<dd><p class="first last">direction for differentiation kernel.
 0, 1, 2,… or None</p>
-</div></blockquote>
-<p><strong>transform: Affine</strong></p>
-<blockquote class="last">
-<div><p>The Affine transformation from position to grid units.</p>
-</div></blockquote>
+</dd>
+<dt><strong>transform: Affine</strong></dt>
+<dd><p class="first last">The Affine transformation from position to grid units.</p>
+</dd>
+</dl>
 </td>
 </tr>
 </tbody>
@@ -177,12 +176,14 @@ Amount is in integer mesh units, as translate.</p>
    </div>
 <div id="searchbox" style="display: none" role="search">
   <h3>Quick search</h3>
+    <div class="searchformwrapper">
     <form class="search" action="search.html" method="get">
-      <div><input type="text" name="q" /></div>
-      <div><input type="submit" value="Go" /></div>
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
       <input type="hidden" name="check_keywords" value="yes" />
       <input type="hidden" name="area" value="default" />
     </form>
+    </div>
 </div>
 <script type="text/javascript">$('#searchbox').show(0);</script>
         </div>
@@ -201,14 +202,14 @@ Amount is in integer mesh units, as translate.</p>
         <li class="right" >
           <a href="pmesh.whitenoise.html" title="pmesh.whitenoise module"
              >previous</a> |</li>
-        <li class="nav-item nav-item-0"><a href="index.html">pmesh 0.1.32 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-0"><a href="index.html">pmesh 0.1.46 documentation</a> &#187;</li>
           <li class="nav-item nav-item-1"><a href="modules.html" >pmesh</a> &#187;</li>
           <li class="nav-item nav-item-2"><a href="pmesh.html" >pmesh package</a> &#187;</li> 
       </ul>
     </div>
     <div class="footer" role="contentinfo">
         &#169; Copyright 2017, Yu Feng.
-      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.6.3.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.7.5.
     </div>
   </body>
 </html>

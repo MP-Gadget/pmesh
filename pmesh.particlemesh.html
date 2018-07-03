@@ -4,20 +4,12 @@
 
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>pmesh.particlemesh module &#8212; pmesh 0.1.32 documentation</title>
+    <title>pmesh.particlemesh module &#8212; pmesh 0.1.46 documentation</title>
     <link rel="stylesheet" href="_static/classic.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
-    <script type="text/javascript">
-      var DOCUMENTATION_OPTIONS = {
-        URL_ROOT:    './',
-        VERSION:     '0.1.32',
-        COLLAPSE_INDEX: false,
-        FILE_SUFFIX: '.html',
-        HAS_SOURCE:  true,
-        SOURCELINK_SUFFIX: '.txt'
-      };
-    </script>
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
     <script type="text/javascript" src="_static/jquery.js"></script>
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
@@ -25,8 +17,7 @@
     <link rel="search" title="Search" href="search.html" />
     <link rel="next" title="pmesh.pm module" href="pmesh.pm.html" />
     <link rel="prev" title="pmesh.lanczos module" href="pmesh.lanczos.html" /> 
-  </head>
-  <body>
+  </head><body>
     <div class="related" role="navigation" aria-label="related navigation">
       <h3>Navigation</h3>
       <ul>
@@ -42,7 +33,7 @@
         <li class="right" >
           <a href="pmesh.lanczos.html" title="pmesh.lanczos module"
              accesskey="P">previous</a> |</li>
-        <li class="nav-item nav-item-0"><a href="index.html">pmesh 0.1.32 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-0"><a href="index.html">pmesh 0.1.46 documentation</a> &#187;</li>
           <li class="nav-item nav-item-1"><a href="modules.html" >pmesh</a> &#187;</li>
           <li class="nav-item nav-item-2"><a href="pmesh.html" accesskey="U">pmesh package</a> &#187;</li> 
       </ul>
@@ -62,58 +53,65 @@
 <dl class="class">
 <dt id="pmesh.particlemesh.ParticleMesh">
 <em class="property">class </em><code class="descclassname">pmesh.particlemesh.</code><code class="descname">ParticleMesh</code><span class="sig-paren">(</span><em>BoxSize</em>, <em>Nmesh</em>, <em>paintbrush='cic'</em>, <em>comm=None</em>, <em>np=None</em>, <em>verbose=False</em>, <em>dtype='f8'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pmesh/particlemesh.html#ParticleMesh"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pmesh.particlemesh.ParticleMesh" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">object</span></code></p>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
 <p>ParticleMesh provides an interface to solver for forces
 with particle mesh method</p>
 <p>ParticleMesh object is a state machine. Refer to <a class="reference internal" href="intro.html#introduction"><span class="std std-ref">Introduction</span></a> on 
 the standard steps to use this object.</p>
 <p>Memory usage is twice the size of the FFT mesh. However, 
 Be aware the transfer functions may take more memory.</p>
-<p class="rubric">Attributes</p>
-<table border="1" class="docutils">
-<colgroup>
-<col width="3%" />
-<col width="97%" />
-</colgroup>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
 <tbody valign="top">
-<tr class="row-odd"><td><strong>np</strong></td>
-<td>(array_like (npx, npy)) The shape of the process mesh. This is the number of domains per direction. The product of the items shall equal to the size of communicator. For example, for 64 rank job, np = (8, 8) is a good choice. Since for now only 3d simulations are supported, np must be of length-2. The default is try to split the total number of ranks equally. (eg, for a 64 rank job, default is (8, 8)</td>
-</tr>
-<tr class="row-even"><td><strong>comm</strong></td>
-<td>(<code class="xref py py-class docutils literal"><span class="pre">MPI.Comm</span></code>) the MPI communicator, (default is MPI.COMM_WORLD)</td>
-</tr>
-<tr class="row-odd"><td><strong>Nmesh</strong></td>
-<td>(int) number of mesh points per side. Only 3d simulations are supported by now, and the true mesh is [Nmesh, Nmesh, Nmesh]</td>
-</tr>
-<tr class="row-even"><td><strong>BoxSize</strong></td>
-<td>(float) size of box</td>
-</tr>
-<tr class="row-odd"><td><strong>domain</strong></td>
-<td>(<a class="reference internal" href="pmesh.domain.html#pmesh.domain.GridND" title="pmesh.domain.GridND"><code class="xref py py-class docutils literal"><span class="pre">pmesh.domain.GridND</span></code></a>) domain decomposition (private)</td>
-</tr>
-<tr class="row-even"><td><strong>partition</strong></td>
-<td>(<code class="xref py py-class docutils literal"><span class="pre">pfft.Partition</span></code>) domain partition (private)</td>
-</tr>
-<tr class="row-odd"><td><strong>real</strong></td>
-<td>(array_like) the real FFT array (private)</td>
-</tr>
-<tr class="row-even"><td><strong>complex</strong></td>
-<td>(array_like) the complex FFT array (private)</td>
-</tr>
-<tr class="row-odd"><td><strong>w</strong></td>
-<td>(list) a list of the circular frequencies along each direction (-pi to pi)</td>
-</tr>
-<tr class="row-even"><td><strong>k</strong></td>
-<td>(list) a list of the wave numbers k along each direction (- pi N/ L to pi N/ L)</td>
-</tr>
-<tr class="row-odd"><td><strong>x</strong></td>
-<td>(list) a list of the position along each direction (-L/2 to L/ 2). x is conjugate of k.</td>
-</tr>
-<tr class="row-even"><td><strong>r</strong></td>
-<td>(list) a list of the mesh position along each direction (-N/2 to N/2). r is conjugate of w.</td>
-</tr>
-<tr class="row-odd"><td><strong>T</strong></td>
-<td>(<a class="reference internal" href="pmesh.tools.html#pmesh.tools.Timers" title="pmesh.tools.Timers"><code class="xref py py-class docutils literal"><span class="pre">pmesh.tools.Timers</span></code></a>) profiling timers</td>
+<tr class="field-odd field"><th class="field-name">Attributes:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>np</strong> <span class="classifier-delimiter">:</span> <span class="classifier">array_like (npx, npy)</span></dt>
+<dd><p class="first last">The shape of the process mesh. This is the number of domains per direction.
+The product of the items shall equal to the size of communicator. 
+For example, for 64 rank job, np = (8, 8) is a good choice.
+Since for now only 3d simulations are supported, np must be of length-2.
+The default is try to split the total number of ranks equally. (eg, for
+a 64 rank job, default is (8, 8)</p>
+</dd>
+<dt><strong>comm</strong> <span class="classifier-delimiter">:</span> <span class="classifier"><code class="xref py py-class docutils literal notranslate"><span class="pre">MPI.Comm</span></code></span></dt>
+<dd><p class="first last">the MPI communicator, (default is MPI.COMM_WORLD)</p>
+</dd>
+<dt><strong>Nmesh</strong> <span class="classifier-delimiter">:</span> <span class="classifier">int</span></dt>
+<dd><p class="first last">number of mesh points per side. Only 3d simulations are supported by now,
+and the true mesh is [Nmesh, Nmesh, Nmesh]</p>
+</dd>
+<dt><strong>BoxSize</strong> <span class="classifier-delimiter">:</span> <span class="classifier">float</span></dt>
+<dd><p class="first last">size of box</p>
+</dd>
+<dt><strong>domain</strong> <span class="classifier-delimiter">:</span> <span class="classifier"><a class="reference internal" href="pmesh.domain.html#pmesh.domain.GridND" title="pmesh.domain.GridND"><code class="xref py py-class docutils literal notranslate"><span class="pre">pmesh.domain.GridND</span></code></a></span></dt>
+<dd><p class="first last">domain decomposition (private)</p>
+</dd>
+<dt><strong>partition</strong> <span class="classifier-delimiter">:</span> <span class="classifier"><code class="xref py py-class docutils literal notranslate"><span class="pre">pfft.Partition</span></code></span></dt>
+<dd><p class="first last">domain partition (private)</p>
+</dd>
+<dt><strong>real</strong> <span class="classifier-delimiter">:</span> <span class="classifier">array_like</span></dt>
+<dd><p class="first last">the real FFT array (private)</p>
+</dd>
+<dt><strong>complex</strong> <span class="classifier-delimiter">:</span> <span class="classifier">array_like</span></dt>
+<dd><p class="first last">the complex FFT array (private)</p>
+</dd>
+<dt><strong>w</strong> <span class="classifier-delimiter">:</span> <span class="classifier">list</span></dt>
+<dd><p class="first last">a list of the circular frequencies along each direction (-pi to pi)</p>
+</dd>
+<dt><strong>k</strong> <span class="classifier-delimiter">:</span> <span class="classifier">list</span></dt>
+<dd><p class="first last">a list of the wave numbers k along each direction (- pi N/ L to pi N/ L)</p>
+</dd>
+<dt><strong>x</strong> <span class="classifier-delimiter">:</span> <span class="classifier">list</span></dt>
+<dd><p class="first last">a list of the position along each direction (-L/2 to L/ 2). x is conjugate of k.</p>
+</dd>
+<dt><strong>r</strong> <span class="classifier-delimiter">:</span> <span class="classifier">list</span></dt>
+<dd><p class="first last">a list of the mesh position along each direction (-N/2 to N/2). r is conjugate of w.</p>
+</dd>
+<dt><strong>T</strong> <span class="classifier-delimiter">:</span> <span class="classifier"><a class="reference internal" href="pmesh.tools.html#pmesh.tools.Timers" title="pmesh.tools.Timers"><code class="xref py py-class docutils literal notranslate"><span class="pre">pmesh.tools.Timers</span></code></a></span></dt>
+<dd><p class="first last">profiling timers</p>
+</dd>
+</dl>
+</td>
 </tr>
 </tbody>
 </table>
@@ -125,10 +123,11 @@ Be aware the transfer functions may take more memory.</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>transfer_functions</strong> : list of <code class="xref py py-class docutils literal"><span class="pre">transfer.TransferFunction</span></code></p>
-<blockquote class="last">
-<div><p>A chain of transfer functions to apply to the complex field.</p>
-</div></blockquote>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>transfer_functions</strong> <span class="classifier-delimiter">:</span> <span class="classifier">list of <code class="xref py py-class docutils literal notranslate"><span class="pre">transfer.TransferFunction</span></code></span></dt>
+<dd><p class="first last">A chain of transfer functions to apply to the complex field.</p>
+</dd>
+</dl>
 </td>
 </tr>
 </tbody>
@@ -139,10 +138,10 @@ Be aware the transfer functions may take more memory.</p>
 <dt id="pmesh.particlemesh.ParticleMesh.clear">
 <code class="descname">clear</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/pmesh/particlemesh.html#ParticleMesh.clear"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pmesh.particlemesh.ParticleMesh.clear" title="Permalink to this definition">¶</a></dt>
 <dd><p>Clear the internal real canvas.</p>
-<p>This function simply set real[:] = 0. After <a class="reference internal" href="#pmesh.particlemesh.ParticleMesh.clear" title="pmesh.particlemesh.ParticleMesh.clear"><code class="xref py py-meth docutils literal"><span class="pre">clear()</span></code></a>, 
-<a class="reference internal" href="#pmesh.particlemesh.ParticleMesh.paint" title="pmesh.particlemesh.ParticleMesh.paint"><code class="xref py py-meth docutils literal"><span class="pre">paint()</span></code></a> can correctly paint to the canvas.</p>
+<p>This function simply set real[:] = 0. After <a class="reference internal" href="#pmesh.particlemesh.ParticleMesh.clear" title="pmesh.particlemesh.ParticleMesh.clear"><code class="xref py py-meth docutils literal notranslate"><span class="pre">clear()</span></code></a>, 
+<a class="reference internal" href="#pmesh.particlemesh.ParticleMesh.paint" title="pmesh.particlemesh.ParticleMesh.paint"><code class="xref py py-meth docutils literal notranslate"><span class="pre">paint()</span></code></a> can correctly paint to the canvas.</p>
 <p class="rubric">Notes</p>
-<p>A freshly created <a class="reference internal" href="#pmesh.particlemesh.ParticleMesh" title="pmesh.particlemesh.ParticleMesh"><code class="xref py py-class docutils literal"><span class="pre">ParticleMesh</span></code></a> object come with
+<p>A freshly created <a class="reference internal" href="#pmesh.particlemesh.ParticleMesh" title="pmesh.particlemesh.ParticleMesh"><code class="xref py py-class docutils literal notranslate"><span class="pre">ParticleMesh</span></code></a> object come with
 a cleared canvas.</p>
 </dd></dl>
 
@@ -155,17 +154,20 @@ coordinates.</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>pos</strong> : array_like (, ndim)</p>
-<blockquote>
-<div><p>position of particles in simulation  unit</p>
-</div></blockquote>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
+<dt><strong>pos</strong> <span class="classifier-delimiter">:</span> <span class="classifier">array_like (, ndim)</span></dt>
+<dd><p class="first last">position of particles in simulation  unit</p>
+</dd>
+</dl>
 </td>
 </tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>layout</strong> : :py:class:domain.Layout</p>
-<blockquote>
-<div><p>layout that can be used to migrate particles and images</p>
-</div></blockquote>
-<p class="last">to the correct MPI ranks that hosts the PM local mesh</p>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>layout</strong> <span class="classifier-delimiter">:</span> <span class="classifier">:py:class:domain.Layout</span></dt>
+<dd><p class="first last">layout that can be used to migrate particles and images</p>
+</dd>
+<dt><strong>to the correct MPI ranks that hosts the PM local mesh</strong></dt>
+<dd></dd>
+</dl>
 </td>
 </tr>
 </tbody>
@@ -182,20 +184,20 @@ it in the internal storage.
 A multi-linear CIC approximation scheme is used.</p>
 <p>The function can be called multiple times: 
 the result is cummulative. In a multi-step simulation where
-<a class="reference internal" href="#pmesh.particlemesh.ParticleMesh" title="pmesh.particlemesh.ParticleMesh"><code class="xref py py-class docutils literal"><span class="pre">ParticleMesh</span></code></a> object is reused,  before calling 
-<a class="reference internal" href="#pmesh.particlemesh.ParticleMesh.paint" title="pmesh.particlemesh.ParticleMesh.paint"><code class="xref py py-meth docutils literal"><span class="pre">paint()</span></code></a>, make sure the canvas is cleared with <a class="reference internal" href="#pmesh.particlemesh.ParticleMesh.clear" title="pmesh.particlemesh.ParticleMesh.clear"><code class="xref py py-meth docutils literal"><span class="pre">clear()</span></code></a>.</p>
+<a class="reference internal" href="#pmesh.particlemesh.ParticleMesh" title="pmesh.particlemesh.ParticleMesh"><code class="xref py py-class docutils literal notranslate"><span class="pre">ParticleMesh</span></code></a> object is reused,  before calling 
+<a class="reference internal" href="#pmesh.particlemesh.ParticleMesh.paint" title="pmesh.particlemesh.ParticleMesh.paint"><code class="xref py py-meth docutils literal notranslate"><span class="pre">paint()</span></code></a>, make sure the canvas is cleared with <a class="reference internal" href="#pmesh.particlemesh.ParticleMesh.clear" title="pmesh.particlemesh.ParticleMesh.clear"><code class="xref py py-meth docutils literal notranslate"><span class="pre">clear()</span></code></a>.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>pos</strong> : array_like (, ndim)</p>
-<blockquote>
-<div><p>position of particles in simulation  unit</p>
-</div></blockquote>
-<p><strong>mass</strong> : scalar or array_like (,)</p>
-<blockquote class="last">
-<div><p>mass of particles in simulation  unit</p>
-</div></blockquote>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>pos</strong> <span class="classifier-delimiter">:</span> <span class="classifier">array_like (, ndim)</span></dt>
+<dd><p class="first last">position of particles in simulation  unit</p>
+</dd>
+<dt><strong>mass</strong> <span class="classifier-delimiter">:</span> <span class="classifier">scalar or array_like (,)</span></dt>
+<dd><p class="first last">mass of particles in simulation  unit</p>
+</dd>
+</dl>
 </td>
 </tr>
 </tbody>
@@ -208,7 +210,7 @@ the result is cummulative. In a multi-step simulation where
 <dt id="pmesh.particlemesh.ParticleMesh.pop">
 <code class="descname">pop</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/pmesh/particlemesh.html#ParticleMesh.pop"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pmesh.particlemesh.ParticleMesh.pop" title="Permalink to this definition">¶</a></dt>
 <dd><p>Restore the complex field</p>
-<p>The complex field was saved to an internal stack by <a class="reference internal" href="#pmesh.particlemesh.ParticleMesh.push" title="pmesh.particlemesh.ParticleMesh.push"><code class="xref py py-meth docutils literal"><span class="pre">push()</span></code></a>.</p>
+<p>The complex field was saved to an internal stack by <a class="reference internal" href="#pmesh.particlemesh.ParticleMesh.push" title="pmesh.particlemesh.ParticleMesh.push"><code class="xref py py-meth docutils literal notranslate"><span class="pre">push()</span></code></a>.</p>
 </dd></dl>
 
 <dl class="method">
@@ -216,7 +218,7 @@ the result is cummulative. In a multi-step simulation where
 <code class="descname">push</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/pmesh/particlemesh.html#ParticleMesh.push"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pmesh.particlemesh.ParticleMesh.push" title="Permalink to this definition">¶</a></dt>
 <dd><p>Save the complex field</p>
 <p>The complex field is saved to an internal stack. Recover the
-complex field with <a class="reference internal" href="#pmesh.particlemesh.ParticleMesh.pop" title="pmesh.particlemesh.ParticleMesh.pop"><code class="xref py py-meth docutils literal"><span class="pre">pop()</span></code></a>.</p>
+complex field with <a class="reference internal" href="#pmesh.particlemesh.ParticleMesh.pop" title="pmesh.particlemesh.ParticleMesh.pop"><code class="xref py py-meth docutils literal notranslate"><span class="pre">pop()</span></code></a>.</p>
 </dd></dl>
 
 <dl class="method">
@@ -237,16 +239,18 @@ is applyed, c2r produces <img class="math" src="_images/math/51963dd5cb0bf9a874e
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>pos</strong> : array_like (, ndim)</p>
-<blockquote>
-<div><p>position of particles in simulation  unit</p>
-</div></blockquote>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
+<dt><strong>pos</strong> <span class="classifier-delimiter">:</span> <span class="classifier">array_like (, ndim)</span></dt>
+<dd><p class="first last">position of particles in simulation  unit</p>
+</dd>
+</dl>
 </td>
 </tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>rt</strong> : array_like (,)</p>
-<blockquote class="last">
-<div><p>read out values from the real field.</p>
-</div></blockquote>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>rt</strong> <span class="classifier-delimiter">:</span> <span class="classifier">array_like (,)</span></dt>
+<dd><p class="first last">read out values from the real field.</p>
+</dd>
+</dl>
 </td>
 </tr>
 </tbody>
@@ -258,15 +262,16 @@ is applyed, c2r produces <img class="math" src="_images/math/51963dd5cb0bf9a874e
 <code class="descname">transfer</code><span class="sig-paren">(</span><em>transfer_functions</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pmesh/particlemesh.html#ParticleMesh.transfer"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pmesh.particlemesh.ParticleMesh.transfer" title="Permalink to this definition">¶</a></dt>
 <dd><p>Apply transfer functions</p>
 <p>Apply a chain of transfer functions to the complex field, in place.
-If the original field shall be preserved, use <a class="reference internal" href="#pmesh.particlemesh.ParticleMesh.push" title="pmesh.particlemesh.ParticleMesh.push"><code class="xref py py-meth docutils literal"><span class="pre">push()</span></code></a>.</p>
+If the original field shall be preserved, use <a class="reference internal" href="#pmesh.particlemesh.ParticleMesh.push" title="pmesh.particlemesh.ParticleMesh.push"><code class="xref py py-meth docutils literal notranslate"><span class="pre">push()</span></code></a>.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>transfer_functions</strong> : list of :py:class:transfer.TransferFunction</p>
-<blockquote class="last">
-<div><p>A chain of transfer functions to apply to the complex field.</p>
-</div></blockquote>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>transfer_functions</strong> <span class="classifier-delimiter">:</span> <span class="classifier">list of :py:class:transfer.TransferFunction</span></dt>
+<dd><p class="first last">A chain of transfer functions to apply to the complex field.</p>
+</dd>
+</dl>
 </td>
 </tr>
 </tbody>
@@ -281,16 +286,18 @@ If the original field shall be preserved, use <a class="reference internal" href
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>x</strong> : array_like (, ndim)</p>
-<blockquote>
-<div><p>coordinates in simulation unit</p>
-</div></blockquote>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
+<dt><strong>x</strong> <span class="classifier-delimiter">:</span> <span class="classifier">array_like (, ndim)</span></dt>
+<dd><p class="first last">coordinates in simulation unit</p>
+</dd>
+</dl>
 </td>
 </tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>ret</strong> : array_like (, ndim)</p>
-<blockquote class="last">
-<div><p>coordinates in local grid unit</p>
-</div></blockquote>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>ret</strong> <span class="classifier-delimiter">:</span> <span class="classifier">array_like (, ndim)</span></dt>
+<dd><p class="first last">coordinates in local grid unit</p>
+</dd>
+</dl>
 </td>
 </tr>
 </tbody>
@@ -305,16 +312,18 @@ If the original field shall be preserved, use <a class="reference internal" href
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>x</strong> : array_like (, ndim)</p>
-<blockquote>
-<div><p>coordinates in simulation unit</p>
-</div></blockquote>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
+<dt><strong>x</strong> <span class="classifier-delimiter">:</span> <span class="classifier">array_like (, ndim)</span></dt>
+<dd><p class="first last">coordinates in simulation unit</p>
+</dd>
+</dl>
 </td>
 </tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>ret</strong> : array_like (, ndim)</p>
-<blockquote class="last">
-<div><p>coordinates in global grid unit</p>
-</div></blockquote>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>ret</strong> <span class="classifier-delimiter">:</span> <span class="classifier">array_like (, ndim)</span></dt>
+<dd><p class="first last">coordinates in global grid unit</p>
+</dd>
+</dl>
 </td>
 </tr>
 </tbody>
@@ -346,12 +355,14 @@ If the original field shall be preserved, use <a class="reference internal" href
    </div>
 <div id="searchbox" style="display: none" role="search">
   <h3>Quick search</h3>
+    <div class="searchformwrapper">
     <form class="search" action="search.html" method="get">
-      <div><input type="text" name="q" /></div>
-      <div><input type="submit" value="Go" /></div>
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
       <input type="hidden" name="check_keywords" value="yes" />
       <input type="hidden" name="area" value="default" />
     </form>
+    </div>
 </div>
 <script type="text/javascript">$('#searchbox').show(0);</script>
         </div>
@@ -373,14 +384,14 @@ If the original field shall be preserved, use <a class="reference internal" href
         <li class="right" >
           <a href="pmesh.lanczos.html" title="pmesh.lanczos module"
              >previous</a> |</li>
-        <li class="nav-item nav-item-0"><a href="index.html">pmesh 0.1.32 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-0"><a href="index.html">pmesh 0.1.46 documentation</a> &#187;</li>
           <li class="nav-item nav-item-1"><a href="modules.html" >pmesh</a> &#187;</li>
           <li class="nav-item nav-item-2"><a href="pmesh.html" >pmesh package</a> &#187;</li> 
       </ul>
     </div>
     <div class="footer" role="contentinfo">
         &#169; Copyright 2017, Yu Feng.
-      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.6.3.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.7.5.
     </div>
   </body>
 </html>

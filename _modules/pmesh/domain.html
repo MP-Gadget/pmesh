@@ -4,27 +4,18 @@
 
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>pmesh.domain &#8212; pmesh 0.1.32 documentation</title>
+    <title>pmesh.domain &#8212; pmesh 0.1.46 documentation</title>
     <link rel="stylesheet" href="../../_static/classic.css" type="text/css" />
     <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
-    <script type="text/javascript">
-      var DOCUMENTATION_OPTIONS = {
-        URL_ROOT:    '../../',
-        VERSION:     '0.1.32',
-        COLLAPSE_INDEX: false,
-        FILE_SUFFIX: '.html',
-        HAS_SOURCE:  true,
-        SOURCELINK_SUFFIX: '.txt'
-      };
-    </script>
+    <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
     <script type="text/javascript" src="../../_static/jquery.js"></script>
     <script type="text/javascript" src="../../_static/underscore.js"></script>
     <script type="text/javascript" src="../../_static/doctools.js"></script>
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" /> 
-  </head>
-  <body>
+  </head><body>
     <div class="related" role="navigation" aria-label="related navigation">
       <h3>Navigation</h3>
       <ul>
@@ -34,7 +25,7 @@
         <li class="right" >
           <a href="../../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li class="nav-item nav-item-0"><a href="../../index.html">pmesh 0.1.32 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">pmesh 0.1.46 documentation</a> &#187;</li>
           <li class="nav-item nav-item-1"><a href="../index.html" accesskey="U">Module code</a> &#187;</li> 
       </ul>
     </div>  
@@ -67,6 +58,7 @@
 <span class="sd">&quot;&quot;&quot;</span>
 <span class="kn">from</span> <span class="nn">mpi4py</span> <span class="k">import</span> <span class="n">MPI</span>
 <span class="kn">import</span> <span class="nn">numpy</span>
+<span class="kn">import</span> <span class="nn">heapq</span>
 
 <div class="viewcode-block" id="bincountv"><a class="viewcode-back" href="../../pmesh.domain.html#pmesh.domain.bincountv">[docs]</a><span class="k">def</span> <span class="nf">bincountv</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">weights</span><span class="p">,</span> <span class="n">minlength</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">out</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot; bincount with vector weights &quot;&quot;&quot;</span>
@@ -95,12 +87,20 @@
 <div class="viewcode-block" id="promote"><a class="viewcode-back" href="../../pmesh.domain.html#pmesh.domain.promote">[docs]</a><span class="k">def</span> <span class="nf">promote</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">comm</span><span class="p">):</span>
     <span class="n">data</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
     <span class="n">dtypes</span> <span class="o">=</span> <span class="n">comm</span><span class="o">.</span><span class="n">allgather</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">dtype</span><span class="o">.</span><span class="n">str</span><span class="p">)</span>
-    <span class="n">dtype</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">find_common_type</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">dtypes</span><span class="p">)),</span> <span class="p">[])</span>
-    <span class="n">data</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">dtype</span><span class="p">)</span>
-    <span class="n">allshape</span> <span class="o">=</span> <span class="n">comm</span><span class="o">.</span><span class="n">allgather</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">:])</span>
-    <span class="k">if</span> <span class="nb">any</span><span class="p">([</span><span class="n">numpy</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">shape</span> <span class="o">!=</span> <span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">:])</span> <span class="k">for</span> <span class="n">shape</span> <span class="ow">in</span> <span class="n">allshape</span><span class="p">]):</span>
-        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;the shape of the data does not match accross ranks.&#39;</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">data</span></div>
+    <span class="k">if</span> <span class="nb">any</span><span class="p">([</span><span class="s1">&#39;V&#39;</span> <span class="ow">in</span> <span class="n">dtype</span> <span class="k">for</span> <span class="n">dtype</span> <span class="ow">in</span> <span class="n">dtypes</span><span class="p">]):</span>
+        <span class="c1"># structs? common type doesn&#39;t work here.</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">all</span><span class="p">([</span><span class="n">dtypes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="n">dtype</span> <span class="k">for</span> <span class="n">dtype</span> <span class="ow">in</span> <span class="n">dtypes</span><span class="p">]):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;type of data is incompatible -- some are structs, some are not&quot;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># refuse to promote the type of structs</span>
+            <span class="k">return</span> <span class="n">data</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">dtype</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">find_common_type</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">dtypes</span><span class="p">)),</span> <span class="p">[])</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">dtype</span><span class="p">)</span>
+        <span class="n">allshape</span> <span class="o">=</span> <span class="n">comm</span><span class="o">.</span><span class="n">allgather</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">:])</span>
+        <span class="k">if</span> <span class="nb">any</span><span class="p">([</span><span class="n">numpy</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">shape</span> <span class="o">!=</span> <span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">:])</span> <span class="k">for</span> <span class="n">shape</span> <span class="ow">in</span> <span class="n">allshape</span><span class="p">]):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;the shape of the data does not match accross ranks.&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">data</span></div>
 
 <div class="viewcode-block" id="Layout"><a class="viewcode-back" href="../../pmesh.domain.html#pmesh.domain.Layout">[docs]</a><span class="k">class</span> <span class="nc">Layout</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot; </span>
@@ -362,32 +362,151 @@
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> 
             <span class="n">edges</span><span class="p">,</span>
             <span class="n">comm</span><span class="o">=</span><span class="n">MPI</span><span class="o">.</span><span class="n">COMM_WORLD</span><span class="p">,</span>
-            <span class="n">periodic</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+            <span class="n">periodic</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+            <span class="n">DomainAssign</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; </span>
+<span class="sd">        DomainAssign records each domain is assigned to which rank</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">shape</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="nb">len</span><span class="p">(</span><span class="n">g</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span> <span class="k">for</span> <span class="n">g</span> <span class="ow">in</span> <span class="n">edges</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="s1">&#39;int32&#39;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">ndim</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">edges</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">edges</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">periodic</span> <span class="o">=</span> <span class="n">periodic</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">comm</span> <span class="o">=</span> <span class="n">comm</span>
-        <span class="k">assert</span> <span class="n">comm</span><span class="o">.</span><span class="n">size</span> <span class="o">&gt;=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">product</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">size</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">product</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
 
-        <span class="c1"># the primary region is empty for the extra tranks if there are more ranks than domains;</span>
-        <span class="c1"># in which case we set the primary_region to None.</span>
+        <span class="k">if</span> <span class="n">DomainAssign</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">comm</span><span class="o">.</span><span class="n">size</span> <span class="o">&gt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">size</span><span class="p">:</span>
+                <span class="n">DomainAssign</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">size</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="s1">&#39;int32&#39;</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">DomainAssign</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">size</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="s1">&#39;int32&#39;</span><span class="p">)</span>
+                <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">comm</span><span class="o">.</span><span class="n">size</span><span class="p">):</span>
+                    <span class="n">start</span> <span class="o">=</span> <span class="n">i</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">size</span> <span class="o">//</span> <span class="n">comm</span><span class="o">.</span><span class="n">size</span>
+                    <span class="n">end</span> <span class="o">=</span> <span class="p">(</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">size</span> <span class="o">//</span> <span class="n">comm</span><span class="o">.</span><span class="n">size</span>
+                    <span class="n">DomainAssign</span><span class="p">[</span><span class="n">start</span><span class="p">:</span><span class="n">end</span><span class="p">]</span> <span class="o">=</span> <span class="n">i</span>
 
-        <span class="k">try</span><span class="p">:</span>
-            <span class="n">rank_index</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">unravel_index</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">comm</span><span class="o">.</span><span class="n">rank</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="s1">&#39;C&#39;</span><span class="p">)</span>
-            <span class="n">primary_region</span> <span class="o">=</span> <span class="p">{}</span>
-            <span class="n">primary_region</span><span class="p">[</span><span class="s1">&#39;start&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">g</span><span class="p">[</span><span class="n">r</span><span class="p">]</span> <span class="k">for</span> <span class="n">g</span><span class="p">,</span> <span class="n">r</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">edges</span><span class="p">,</span> <span class="n">rank_index</span><span class="p">)])</span>
-            <span class="n">primary_region</span><span class="p">[</span><span class="s1">&#39;end&#39;</span><span class="p">]</span>   <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">g</span><span class="p">[</span><span class="n">r</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span> <span class="k">for</span> <span class="n">g</span><span class="p">,</span> <span class="n">r</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">edges</span><span class="p">,</span> <span class="n">rank_index</span><span class="p">)])</span>
-            <span class="n">degenerated</span> <span class="o">=</span> <span class="p">(</span><span class="n">primary_region</span><span class="p">[</span><span class="s1">&#39;start&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="n">primary_region</span><span class="p">[</span><span class="s1">&#39;end&#39;</span><span class="p">])</span><span class="o">.</span><span class="n">any</span><span class="p">()</span>
-        <span class="k">except</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">DomainAssign</span> <span class="o">=</span> <span class="n">DomainAssign</span>
+
+        <span class="n">dd</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="s1">&#39;int16&#39;</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">edge</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">edges</span><span class="p">):</span>
+            <span class="n">edge</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">edge</span><span class="p">)</span>
+            <span class="n">dd1</span> <span class="o">=</span> <span class="n">edge</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span> <span class="o">==</span> <span class="n">edge</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+            <span class="n">dd1</span> <span class="o">=</span> <span class="n">dd1</span><span class="o">.</span><span class="n">reshape</span><span class="p">([</span><span class="o">-</span><span class="mi">1</span> <span class="k">if</span> <span class="n">ii</span> <span class="o">==</span> <span class="n">i</span> <span class="k">else</span> <span class="mi">1</span> <span class="k">for</span> <span class="n">ii</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ndim</span><span class="p">)])</span>
+            <span class="n">dd</span><span class="p">[</span><span class="o">...</span><span class="p">]</span> <span class="o">|=</span> <span class="n">dd1</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">DomainDegenerate</span> <span class="o">=</span> <span class="n">dd</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_update_primary_regions</span><span class="p">()</span>
+
+<div class="viewcode-block" id="GridND.load"><a class="viewcode-back" href="../../pmesh.domain.html#pmesh.domain.GridND.load">[docs]</a>    <span class="k">def</span> <span class="nf">load</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pos</span><span class="p">,</span> <span class="n">transform</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">gamma</span><span class="o">=</span><span class="mi">2</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns the load of each domain, assuming that the load is a power-law N^gamma, where N is the number of particles within it.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        pos       :  array_like (, ndim)</span>
+<span class="sd">            position of particles, ndim can be more than the dimenions</span>
+<span class="sd">            of the domains, in which case only the first few directions are used.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        domainload       :  array_like</span>
+<span class="sd">            The load of each domain.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="c1"># FIXME: this function looks like decompose; might be able to merge them into one?</span>
+        
+        <span class="n">pos</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">pos</span><span class="p">)</span>
+
+        <span class="k">assert</span> <span class="n">pos</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ndim</span>
+
+        <span class="k">if</span> <span class="n">transform</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">transform</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span>
+        <span class="n">Npoint</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">pos</span><span class="p">)</span>
+        <span class="n">periodic</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">periodic</span>
+
+        <span class="k">if</span> <span class="n">Npoint</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">sil</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">empty</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">ndim</span><span class="p">,</span> <span class="n">Npoint</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="s1">&#39;i2&#39;</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="s1">&#39;C&#39;</span><span class="p">)</span>
+            <span class="n">chunksize</span> <span class="o">=</span> <span class="mi">1024</span> <span class="o">*</span> <span class="mi">48</span> 
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">Npoint</span><span class="p">,</span> <span class="n">chunksize</span><span class="p">):</span>
+                <span class="n">s</span> <span class="o">=</span> <span class="nb">slice</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">i</span> <span class="o">+</span> <span class="n">chunksize</span><span class="p">)</span>
+                <span class="n">chunk</span> <span class="o">=</span> <span class="n">transform</span><span class="p">(</span><span class="n">pos</span><span class="p">[</span><span class="n">s</span><span class="p">])</span>
+                <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ndim</span><span class="p">):</span>
+                    <span class="k">if</span> <span class="n">periodic</span><span class="p">:</span>
+                        <span class="n">tmp</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">remainder</span><span class="p">(</span><span class="n">chunk</span><span class="p">[:,</span> <span class="n">j</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">edges</span><span class="p">[</span><span class="n">j</span><span class="p">][</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">tmp</span> <span class="o">=</span> <span class="n">chunk</span><span class="p">[:,</span> <span class="n">j</span><span class="p">]</span>
+                    <span class="n">sil</span><span class="p">[</span><span class="n">j</span><span class="p">,</span> <span class="n">s</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_digitize</span><span class="p">(</span><span class="n">tmp</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">edges</span><span class="p">[</span><span class="n">j</span><span class="p">])</span> <span class="o">-</span> <span class="mi">1</span>
+
+            <span class="k">if</span> <span class="n">periodic</span><span class="p">:</span>
+                <span class="n">mode</span> <span class="o">=</span> <span class="s1">&#39;raise&#39;</span> <span class="c1"># periodic box, must be in 0 ~ self.shape due to remainder</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">mode</span> <span class="o">=</span> <span class="s1">&#39;clip&#39;</span> <span class="c1"># non periodic box, assign particles outside edges to the edge domains.</span>
+                              <span class="c1"># FIXME: perhaps better to raise here? it may be very unbalanced if</span>
+                              <span class="c1"># the edge is very far off!</span>
+
+            <span class="n">particle_domain</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">ravel_multi_index</span><span class="p">(</span><span class="n">sil</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="n">mode</span><span class="p">)</span>
+            <span class="n">tmp</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">bincount</span><span class="p">(</span><span class="n">particle_domain</span><span class="p">,</span> <span class="n">minlength</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">size</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">tmp</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">size</span><span class="p">)</span>
+
+        <span class="n">domainload</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">comm</span><span class="o">.</span><span class="n">allreduce</span><span class="p">(</span><span class="n">tmp</span><span class="p">,</span> <span class="n">op</span><span class="o">=</span><span class="n">MPI</span><span class="o">.</span><span class="n">SUM</span><span class="p">)</span>
+
+        <span class="n">domainload</span> <span class="o">=</span> <span class="n">domainload</span> <span class="o">**</span> <span class="n">gamma</span>
+
+        <span class="k">return</span> <span class="n">domainload</span></div>
+
+
+<div class="viewcode-block" id="GridND.loadbalance"><a class="viewcode-back" href="../../pmesh.domain.html#pmesh.domain.GridND.loadbalance">[docs]</a>    <span class="k">def</span> <span class="nf">loadbalance</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">domainload</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Balancing the load of different ranks given the load of each domain. </span>
+<span class="sd">        The result is recorded in self.DomainAssign.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        domainload       :  array_like</span>
+<span class="sd">            The load of each domain. Can be calculated from self.load()</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">size</span> <span class="o">&lt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">comm</span><span class="o">.</span><span class="n">size</span><span class="p">:</span>
+            <span class="k">return</span>
+
+        <span class="n">domains</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">([</span> <span class="p">(</span><span class="n">domainload</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">i</span><span class="p">)</span>
+                              <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">size</span><span class="p">)],</span>
+                            <span class="n">reverse</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+        <span class="c1"># initially every rank is empty</span>
+        <span class="n">processes</span> <span class="o">=</span> <span class="p">[(</span><span class="mi">0</span><span class="p">,</span> <span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">comm</span><span class="o">.</span><span class="n">size</span><span class="p">)]</span>
+
+        <span class="n">heapq</span><span class="o">.</span><span class="n">heapify</span><span class="p">(</span><span class="n">processes</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">dload</span><span class="p">,</span> <span class="n">dindex</span> <span class="ow">in</span> <span class="n">domains</span><span class="p">:</span>
+            <span class="n">pload</span><span class="p">,</span> <span class="n">rank</span> <span class="o">=</span> <span class="n">heapq</span><span class="o">.</span><span class="n">heappop</span><span class="p">(</span><span class="n">processes</span><span class="p">)</span>
+            <span class="n">pload</span> <span class="o">+=</span> <span class="n">dload</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">DomainAssign</span><span class="p">[</span><span class="n">dindex</span><span class="p">]</span> <span class="o">=</span> <span class="n">rank</span>
+            <span class="n">heapq</span><span class="o">.</span><span class="n">heappush</span><span class="p">(</span><span class="n">processes</span><span class="p">,</span> <span class="p">(</span><span class="n">pload</span><span class="p">,</span> <span class="n">rank</span><span class="p">))</span>
+
+        <span class="c1">#update the primary region after balancing the load</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_update_primary_regions</span><span class="p">()</span></div>
+
+    <span class="k">def</span> <span class="nf">_update_primary_regions</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+
+        <span class="n">my_domains</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">DomainAssign</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">comm</span><span class="o">.</span><span class="n">rank</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+
+        <span class="n">N</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">my_domains</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">N</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
             <span class="n">primary_region</span> <span class="o">=</span> <span class="kc">None</span>
-            <span class="n">degenerated</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">primary_region</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="n">primary_region</span><span class="p">[</span><span class="s1">&#39;start&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">empty</span><span class="p">((</span><span class="n">N</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ndim</span><span class="p">))</span>
+            <span class="n">primary_region</span><span class="p">[</span><span class="s1">&#39;end&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">empty</span><span class="p">((</span><span class="n">N</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ndim</span><span class="p">))</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">N</span><span class="p">):</span>
+                <span class="n">domain_index</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">unravel_index</span><span class="p">(</span><span class="n">my_domains</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="s1">&#39;C&#39;</span><span class="p">)</span>
+                <span class="n">primary_region</span><span class="p">[</span><span class="s1">&#39;start&#39;</span><span class="p">][</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">g</span><span class="p">[</span><span class="n">r</span><span class="p">]</span> <span class="k">for</span> <span class="n">g</span><span class="p">,</span> <span class="n">r</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">edges</span><span class="p">,</span> <span class="n">domain_index</span><span class="p">)])</span>
+                <span class="n">primary_region</span><span class="p">[</span><span class="s1">&#39;end&#39;</span><span class="p">][</span><span class="n">i</span><span class="p">]</span>   <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">g</span><span class="p">[</span><span class="n">r</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span> <span class="k">for</span> <span class="n">g</span><span class="p">,</span> <span class="n">r</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">edges</span><span class="p">,</span> <span class="n">domain_index</span><span class="p">)])</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">primary_region</span> <span class="o">=</span> <span class="n">primary_region</span>
-
-        <span class="bp">self</span><span class="o">.</span><span class="n">degenerated</span> <span class="o">=</span> <span class="n">degenerated</span>
 
 <div class="viewcode-block" id="GridND.isprimary"><a class="viewcode-back" href="../../pmesh.domain.html#pmesh.domain.GridND.isprimary">[docs]</a>    <span class="k">def</span> <span class="nf">isprimary</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pos</span><span class="p">,</span> <span class="n">transform</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
@@ -413,7 +532,7 @@
         <span class="k">if</span> <span class="n">transform</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">transform</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span>
 
-        <span class="n">r</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">pos</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="s1">&#39;?&#39;</span><span class="p">)</span>
+        <span class="n">r</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">pos</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="s1">&#39;?&#39;</span><span class="p">)</span>
 
         <span class="n">x0</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">primary_region</span><span class="p">[</span><span class="s1">&#39;start&#39;</span><span class="p">]</span>
         <span class="n">x1</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">primary_region</span><span class="p">[</span><span class="s1">&#39;end&#39;</span><span class="p">]</span>
@@ -426,8 +545,9 @@
             <span class="n">chunk</span> <span class="o">=</span> <span class="n">transform</span><span class="p">(</span><span class="n">pos</span><span class="p">[</span><span class="n">s</span><span class="p">])[</span><span class="o">...</span><span class="p">,</span> <span class="p">:</span><span class="bp">self</span><span class="o">.</span><span class="n">ndim</span><span class="p">]</span>
             <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">periodic</span><span class="p">:</span>
                 <span class="n">chunk</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">remainder</span><span class="p">(</span><span class="n">chunk</span><span class="p">,</span>  <span class="n">BoxSize</span><span class="p">)</span>
-            <span class="n">r</span><span class="p">[</span><span class="n">s</span><span class="p">]</span> <span class="o">=</span> <span class="p">((</span><span class="n">chunk</span> <span class="o">&gt;=</span> <span class="n">x0</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">chunk</span> <span class="o">&lt;</span> <span class="n">x1</span><span class="p">))</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">axis</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>
-
+            <span class="c1"># looping over all primary regions.</span>
+            <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">x0</span><span class="p">)):</span>
+                <span class="n">r</span><span class="p">[</span><span class="n">s</span><span class="p">]</span> <span class="o">+=</span> <span class="p">((</span><span class="n">chunk</span> <span class="o">&gt;=</span> <span class="n">x0</span><span class="p">[</span><span class="n">j</span><span class="p">])</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">chunk</span> <span class="o">&lt;</span> <span class="n">x1</span><span class="p">[</span><span class="n">j</span><span class="p">]))</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">axis</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">r</span></div>
 
 <div class="viewcode-block" id="GridND.decompose"><a class="viewcode-back" href="../../pmesh.domain.html#pmesh.domain.GridND.decompose">[docs]</a>    <span class="k">def</span> <span class="nf">decompose</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pos</span><span class="p">,</span> <span class="n">smoothing</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">transform</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
@@ -474,8 +594,6 @@
         <span class="n">counts</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">comm</span><span class="o">.</span><span class="n">size</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="s1">&#39;int32&#39;</span><span class="p">)</span>
         <span class="n">periodic</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">periodic</span>
 
-        <span class="n">domain_is_degenerate</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">comm</span><span class="o">.</span><span class="n">allgather</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">degenerated</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="s1">&#39;i2&#39;</span><span class="p">)</span>
-
         <span class="k">if</span> <span class="n">Npoint</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
             <span class="n">sil</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">empty</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">ndim</span><span class="p">,</span> <span class="n">Npoint</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="s1">&#39;i2&#39;</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="s1">&#39;C&#39;</span><span class="p">)</span>
             <span class="n">sir</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">empty</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">ndim</span><span class="p">,</span> <span class="n">Npoint</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="s1">&#39;i2&#39;</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="s1">&#39;C&#39;</span><span class="p">)</span>
@@ -507,10 +625,11 @@
 <span class="c1">#                print(pos[i], smoothing, sil[..., i], sir[..., i])</span>
 
 
-            <span class="bp">self</span><span class="o">.</span><span class="n">_fill</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">counts</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">sil</span><span class="p">,</span> <span class="n">sir</span><span class="p">,</span> <span class="n">domain_is_degenerate</span><span class="p">,</span> <span class="n">periodic</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_fill</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">counts</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">sil</span><span class="p">,</span> <span class="n">sir</span><span class="p">,</span> <span class="n">periodic</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">DomainDegenerate</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">DomainAssign</span><span class="p">)</span>
 
             <span class="c1"># now lets build the indices array.</span>
-            <span class="n">indices</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_fill</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">counts</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">sil</span><span class="p">,</span> <span class="n">sir</span><span class="p">,</span> <span class="n">domain_is_degenerate</span><span class="p">,</span> <span class="n">periodic</span><span class="p">)</span>
+            <span class="n">indices</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_fill</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">counts</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">sil</span><span class="p">,</span> <span class="n">sir</span><span class="p">,</span> <span class="n">periodic</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">DomainDegenerate</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">DomainAssign</span><span class="p">)</span>
+
             <span class="n">indices</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">indices</span><span class="p">,</span> <span class="n">copy</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">indices</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="s1">&#39;int32&#39;</span><span class="p">)</span>
@@ -533,12 +652,14 @@
         <div class="sphinxsidebarwrapper">
 <div id="searchbox" style="display: none" role="search">
   <h3>Quick search</h3>
+    <div class="searchformwrapper">
     <form class="search" action="../../search.html" method="get">
-      <div><input type="text" name="q" /></div>
-      <div><input type="submit" value="Go" /></div>
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
       <input type="hidden" name="check_keywords" value="yes" />
       <input type="hidden" name="area" value="default" />
     </form>
+    </div>
 </div>
 <script type="text/javascript">$('#searchbox').show(0);</script>
         </div>
@@ -554,13 +675,13 @@
         <li class="right" >
           <a href="../../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li class="nav-item nav-item-0"><a href="../../index.html">pmesh 0.1.32 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">pmesh 0.1.46 documentation</a> &#187;</li>
           <li class="nav-item nav-item-1"><a href="../index.html" >Module code</a> &#187;</li> 
       </ul>
     </div>
     <div class="footer" role="contentinfo">
         &#169; Copyright 2017, Yu Feng.
-      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.6.3.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.7.5.
     </div>
   </body>
 </html>

@@ -1,0 +1,7 @@
+pmesh.testmpi module
+====================
+
+.. automodule:: pmesh.testmpi
+    :members:
+    :undoc-members:
+    :show-inheritance:

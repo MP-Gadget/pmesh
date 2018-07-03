@@ -1,0 +1,7 @@
+pmesh.coarray module
+====================
+
+.. automodule:: pmesh.coarray
+    :members:
+    :undoc-members:
+    :show-inheritance:

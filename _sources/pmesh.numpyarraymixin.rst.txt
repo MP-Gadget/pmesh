@@ -1,0 +1,7 @@
+pmesh.numpyarraymixin module
+============================
+
+.. automodule:: pmesh.numpyarraymixin
+    :members:
+    :undoc-members:
+    :show-inheritance:

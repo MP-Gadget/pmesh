@@ -1,0 +1,428 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>pmesh.coarray &#8212; pmesh 0.1.46 documentation</title>
+    <link rel="stylesheet" href="../../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">pmesh 0.1.46 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../index.html" accesskey="U">Module code</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for pmesh.coarray</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    CoArray/MPI in Python</span>
+
+<span class="sd">    This is a failed attempt to implement the CoArray 1.0 standard:</span>
+
+<span class="sd">        http://caf.rice.edu/documentation/index.html</span>
+
+<span class="sd">    The implementation uses the MPI 1.0 subset, mostly because I am</span>
+<span class="sd">    not quite familar with MPI.Win objects and how they interact</span>
+<span class="sd">    with numpy. mpi4py also has a few test blacklists for versions</span>
+<span class="sd">    of openmpi that looked a bit scary.</span>
+
+<span class="sd">    The main entry object is coarray a subclass of numpy.ndarray,</span>
+
+<span class="sd">    A coarray can be created via `coarray.zeros` or `coarray.fromarray`</span>
+
+<span class="sd">    A sync operation must be invoked to issue data transport.</span>
+<span class="sd">    The standard does not expect any data transfer before sync is called.</span>
+
+<span class="sd">    Comparing to CoFortran, the use of [] and () is inverted,</span>
+<span class="sd">    because in Python [] is for slicing.</span>
+
+<span class="sd">    Fortran methods (thisimage, sync) are implemented as properties.</span>
+
+<span class="sd">    The standard mentioned `rank`, which is `ndims`. co-rank becomes condims.</span>
+
+<span class="sd">    default attributes from numpy refers to local properties.</span>
+
+<span class="sd">    No methods are provided for the global shape, global ndims.</span>
+
+<span class="sd">    What doesn&#39;t work:</span>
+
+<span class="sd">    Currently the co-ndims is limited to 1:</span>
+
+<span class="sd">    This can be done either use MPI&#39;s Cart Comm, or do some simple encoding.</span>
+<span class="sd">    Because MPI.Comm doesn&#39;t quite work with the life cycle of python objects,</span>
+<span class="sd">    requiring explicit MPI.Comm.Free,</span>
+<span class="sd">    reshaping the co-ndims will be difficult if we hold MPI Cart Comm objects</span>
+<span class="sd">    inside coarrays; unless we don&#39;t care about correctness.</span>
+
+<span class="sd">    Broadcast and Gather are not supported.</span>
+
+<span class="sd">    Treating the coarray dimension as an array dimension (co-transpose) doesn&#39;t</span>
+<span class="sd">    work neither.</span>
+
+<span class="sd">    Currently there is no way to notify the source rank which coarray to use</span>
+<span class="sd">    for the send operation.</span>
+
+<span class="sd">    We need to add all coarrays to a central repo to</span>
+<span class="sd">    do that; and then may need to crawl a dependency graph. I think there will</span>
+<span class="sd">    be a lot of trouble ahead.</span>
+
+<span class="sd">    But things may be simplified if we make use of the fact that all operations</span>
+<span class="sd">    are ran symmetrically.</span>
+
+<span class="sd">    Yu Feng &lt;rainwoodman@gmail.com&gt;</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span>
+
+<span class="kn">from</span> <span class="nn">mpi4py</span> <span class="k">import</span> <span class="n">MPI</span>
+
+<div class="viewcode-block" id="coaproxy"><a class="viewcode-back" href="../../pmesh.coarray.html#pmesh.coarray.coaproxy">[docs]</a><span class="k">class</span> <span class="nc">coaproxy</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">coa</span><span class="p">,</span> <span class="n">coindex</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">coindex</span> <span class="o">=</span> <span class="n">coindex</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">coa</span> <span class="o">=</span> <span class="n">coa</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">comm</span> <span class="o">=</span> <span class="n">coa</span><span class="o">.</span><span class="n">__coameta__</span><span class="o">.</span><span class="n">comm</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__coameta__</span> <span class="o">=</span> <span class="n">coa</span><span class="o">.</span><span class="n">__coameta__</span>
+
+        <span class="c1"># root node of a proxy</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">index</span> <span class="o">=</span> <span class="bp">Ellipsis</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">parent</span> <span class="o">=</span> <span class="kc">None</span>
+
+<div class="viewcode-block" id="coaproxy.fancyindex"><a class="viewcode-back" href="../../pmesh.coarray.html#pmesh.coarray.coaproxy.fancyindex">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">fancyindex</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">parent</span><span class="p">,</span> <span class="n">index</span><span class="p">):</span>
+        <span class="bp">self</span> <span class="o">=</span> <span class="nb">object</span><span class="o">.</span><span class="fm">__new__</span><span class="p">(</span><span class="bp">cls</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">coindex</span> <span class="o">=</span> <span class="n">parent</span><span class="o">.</span><span class="n">coindex</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">coa</span> <span class="o">=</span> <span class="n">parent</span><span class="o">.</span><span class="n">coa</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">comm</span> <span class="o">=</span> <span class="n">parent</span><span class="o">.</span><span class="n">comm</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">index</span> <span class="o">=</span> <span class="n">index</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">parent</span> <span class="o">=</span> <span class="n">parent</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__coameta__</span> <span class="o">=</span> <span class="n">parent</span><span class="o">.</span><span class="n">__coameta__</span>
+        <span class="k">return</span> <span class="bp">self</span></div>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">indices</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">indices</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">while</span> <span class="bp">self</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">indices</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">index</span><span class="p">)</span>
+            <span class="bp">self</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span>
+        <span class="k">return</span> <span class="nb">list</span><span class="p">(</span><span class="nb">reversed</span><span class="p">(</span><span class="n">indices</span><span class="p">))</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">isgroup</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">coindex</span> <span class="ow">is</span> <span class="bp">Ellipsis</span>
+
+    <span class="k">def</span> <span class="nf">__getitem__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">index</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">coaproxy</span><span class="o">.</span><span class="n">fancyindex</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">index</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">__setitem__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">index</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="n">proxy</span> <span class="o">=</span> <span class="bp">self</span><span class="p">[</span><span class="n">index</span><span class="p">]</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">isgroup</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">__coameta__</span><span class="o">.</span><span class="n">operations</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Scatter</span><span class="p">(</span><span class="n">proxy</span><span class="p">,</span> <span class="n">value</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">__coameta__</span><span class="o">.</span><span class="n">operations</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Push</span><span class="p">(</span><span class="n">proxy</span><span class="p">,</span> <span class="n">value</span><span class="p">))</span>
+
+    <span class="k">def</span> <span class="nf">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="s1">&#39;coaproxy:</span><span class="si">%d</span><span class="s1">/</span><span class="si">%d</span><span class="s1"> </span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">coindex</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">comm</span><span class="o">.</span><span class="n">size</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">indices</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="s1">&#39;coaproxy:</span><span class="si">%d</span><span class="s1">/</span><span class="si">%d</span><span class="s1"> </span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">coindex</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">comm</span><span class="o">.</span><span class="n">size</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">indices</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Op"><a class="viewcode-back" href="../../pmesh.coarray.html#pmesh.coarray.Op">[docs]</a><span class="k">class</span> <span class="nc">Op</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span> <span class="k">pass</span></div>
+
+<div class="viewcode-block" id="Pull"><a class="viewcode-back" href="../../pmesh.coarray.html#pmesh.coarray.Pull">[docs]</a><span class="k">class</span> <span class="nc">Pull</span><span class="p">(</span><span class="n">Op</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">coa</span><span class="p">,</span> <span class="n">localindex</span><span class="p">,</span> <span class="n">proxy</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">localindex</span> <span class="o">=</span> <span class="n">localindex</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">coa</span> <span class="o">=</span> <span class="n">coa</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">proxy</span> <span class="o">=</span> <span class="n">proxy</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">buffer</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">coa</span><span class="p">[</span><span class="n">localindex</span><span class="p">],</span> <span class="n">order</span><span class="o">=</span><span class="s1">&#39;C&#39;</span><span class="p">)</span> <span class="c1"># continuous</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">done</span> <span class="o">=</span> <span class="kc">False</span>
+
+<div class="viewcode-block" id="Pull.start"><a class="viewcode-back" href="../../pmesh.coarray.html#pmesh.coarray.Pull.start">[docs]</a>    <span class="k">def</span> <span class="nf">start</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">comm</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">proxy</span><span class="o">.</span><span class="n">comm</span>
+    <span class="c1">#    print(&#39;irecv into&#39;, self.proxy.coindex, self.buffer.data)</span>
+        <span class="k">return</span> <span class="n">comm</span><span class="o">.</span><span class="n">Irecv</span><span class="p">(</span><span class="n">buf</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">buffer</span><span class="p">,</span> <span class="n">source</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">proxy</span><span class="o">.</span><span class="n">coindex</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Pull.finish"><a class="viewcode-back" href="../../pmesh.coarray.html#pmesh.coarray.Pull.finish">[docs]</a>    <span class="k">def</span> <span class="nf">finish</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">coa</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">localindex</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">buffer</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">buffer</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">done</span> <span class="o">=</span> <span class="kc">True</span></div></div>
+
+<div class="viewcode-block" id="Push"><a class="viewcode-back" href="../../pmesh.coarray.html#pmesh.coarray.Push">[docs]</a><span class="k">class</span> <span class="nc">Push</span><span class="p">(</span><span class="n">Op</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">proxy</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">proxy</span> <span class="o">=</span> <span class="n">proxy</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">buffer</span> <span class="o">=</span> <span class="n">value</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">done</span> <span class="o">=</span> <span class="kc">False</span>
+
+<div class="viewcode-block" id="Push.start"><a class="viewcode-back" href="../../pmesh.coarray.html#pmesh.coarray.Push.start">[docs]</a>    <span class="k">def</span> <span class="nf">start</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">comm</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">proxy</span><span class="o">.</span><span class="n">comm</span>
+    <span class="c1">#    print(&#39;isend to &#39;, self.proxy.coindex, self.buffer.data)</span>
+        <span class="k">return</span> <span class="n">comm</span><span class="o">.</span><span class="n">Isend</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">buffer</span><span class="p">,</span> <span class="n">dest</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">proxy</span><span class="o">.</span><span class="n">coindex</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Push.finish"><a class="viewcode-back" href="../../pmesh.coarray.html#pmesh.coarray.Push.finish">[docs]</a>    <span class="k">def</span> <span class="nf">finish</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">done</span> <span class="o">=</span> <span class="kc">True</span></div></div>
+
+<div class="viewcode-block" id="coameta"><a class="viewcode-back" href="../../pmesh.coarray.html#pmesh.coarray.coameta">[docs]</a><span class="k">class</span> <span class="nc">coameta</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">comm</span><span class="p">,</span> <span class="n">coarray</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">comm</span> <span class="o">=</span> <span class="n">comm</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">operations</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="c1"># in the future get the buffer and create MPI.Win</span>
+
+    <span class="k">def</span> <span class="nf">_solve</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">images</span><span class="p">):</span>
+        <span class="n">comm</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">comm</span>
+
+        <span class="n">sendactions</span> <span class="o">=</span> <span class="p">[[]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">comm</span><span class="o">.</span><span class="n">size</span><span class="p">)]</span>
+        <span class="n">recvactions</span> <span class="o">=</span> <span class="p">[[]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">comm</span><span class="o">.</span><span class="n">size</span><span class="p">)]</span>
+
+        <span class="c1"># build the list of operations to the targets side</span>
+        <span class="k">for</span> <span class="n">op</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">operations</span><span class="p">:</span>
+            <span class="n">proxy</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">proxy</span>
+            <span class="k">assert</span> <span class="n">proxy</span><span class="o">.</span><span class="n">comm</span> <span class="o">==</span> <span class="n">comm</span> <span class="c1"># must be from the same communicator!</span>
+
+            <span class="k">if</span> <span class="n">proxy</span><span class="o">.</span><span class="n">coindex</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">images</span><span class="p">:</span> <span class="k">continue</span>
+
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">op</span><span class="p">,</span> <span class="n">Pull</span><span class="p">):</span>
+                <span class="n">sendactions</span><span class="p">[</span><span class="n">proxy</span><span class="o">.</span><span class="n">coindex</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">proxy</span><span class="o">.</span><span class="n">indices</span><span class="p">,</span> <span class="n">comm</span><span class="o">.</span><span class="n">rank</span><span class="p">))</span>
+
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">op</span><span class="p">,</span> <span class="n">Push</span><span class="p">):</span>
+                <span class="n">recvactions</span><span class="p">[</span><span class="n">proxy</span><span class="o">.</span><span class="n">coindex</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">proxy</span><span class="o">.</span><span class="n">indices</span><span class="p">,</span> <span class="n">comm</span><span class="o">.</span><span class="n">rank</span><span class="p">))</span>
+
+        <span class="n">sendactions</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">comm</span><span class="o">.</span><span class="n">alltoall</span><span class="p">(</span><span class="n">sendactions</span><span class="p">),</span> <span class="p">[])</span>
+        <span class="n">recvactions</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">comm</span><span class="o">.</span><span class="n">alltoall</span><span class="p">(</span><span class="n">recvactions</span><span class="p">),</span> <span class="p">[])</span>
+
+        <span class="k">return</span> <span class="n">sendactions</span><span class="p">,</span> <span class="n">recvactions</span>
+
+    <span class="k">def</span> <span class="nf">_start_operations</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">images</span><span class="p">):</span>
+        <span class="n">comm</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">comm</span>
+
+        <span class="n">requests</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">ops</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">op</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">operations</span><span class="p">:</span>
+            <span class="n">proxy</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">proxy</span>
+            <span class="k">assert</span> <span class="n">proxy</span><span class="o">.</span><span class="n">comm</span> <span class="o">==</span> <span class="n">comm</span> <span class="c1"># must be from the same communicator!</span>
+
+            <span class="k">if</span> <span class="n">proxy</span><span class="o">.</span><span class="n">coindex</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">images</span><span class="p">:</span> <span class="k">continue</span>
+
+            <span class="n">request</span> <span class="o">=</span> <span class="n">op</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+            <span class="n">requests</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">request</span><span class="p">)</span>
+            <span class="n">ops</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">op</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">requests</span><span class="p">,</span> <span class="n">ops</span></div>
+
+<div class="viewcode-block" id="coarray"><a class="viewcode-back" href="../../pmesh.coarray.html#pmesh.coarray.coarray">[docs]</a><span class="k">class</span> <span class="nc">coarray</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__new__</span><span class="p">(</span><span class="n">kls</span><span class="p">,</span> <span class="n">comm</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="bp">self</span> <span class="o">=</span> <span class="nb">super</span><span class="p">(</span><span class="n">coarray</span><span class="p">,</span> <span class="bp">cls</span><span class="p">)</span><span class="o">.</span><span class="fm">__new__</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__coameta__</span> <span class="o">=</span> <span class="n">coameta</span><span class="p">(</span><span class="n">comm</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span>
+
+<div class="viewcode-block" id="coarray.fromarray"><a class="viewcode-back" href="../../pmesh.coarray.html#pmesh.coarray.coarray.fromarray">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">fromarray</span><span class="p">(</span><span class="n">kls</span><span class="p">,</span> <span class="n">comm</span><span class="p">,</span> <span class="n">array</span><span class="p">):</span>
+        <span class="bp">self</span> <span class="o">=</span> <span class="n">array</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">kls</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__coameta__</span> <span class="o">=</span> <span class="n">coameta</span><span class="p">(</span><span class="n">comm</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span></div>
+
+<div class="viewcode-block" id="coarray.zeros"><a class="viewcode-back" href="../../pmesh.coarray.html#pmesh.coarray.coarray.zeros">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">zeros</span><span class="p">(</span><span class="n">kls</span><span class="p">,</span> <span class="n">comm</span><span class="p">,</span> <span class="n">shape</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="s1">&#39;f8&#39;</span><span class="p">):</span>
+        <span class="n">local</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">shape</span><span class="p">,</span> <span class="n">dtype</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">kls</span><span class="o">.</span><span class="n">fromarray</span><span class="p">(</span><span class="n">comm</span><span class="p">,</span> <span class="n">local</span><span class="p">)</span></div>
+
+    <span class="k">def</span> <span class="nf">__setitem__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">index</span><span class="p">,</span> <span class="n">obj</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="n">coaproxy</span><span class="p">):</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_setitem_proxy</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="n">obj</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="nb">super</span><span class="p">(</span><span class="n">coarray</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__setitem__</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="n">obj</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">__array_finalize__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">obj</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">obj</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span> <span class="k">return</span>
+
+        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="s1">&#39;__coameta__&#39;</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">__coameta__</span> <span class="o">=</span> <span class="n">obj</span><span class="o">.</span><span class="n">__coameta__</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">__coameta__</span> <span class="o">=</span> <span class="n">coameta</span><span class="p">(</span><span class="n">MPI</span><span class="o">.</span><span class="n">COMM_SELF</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="s1">&#39;coarray:</span><span class="si">%d</span><span class="s1">/</span><span class="si">%d</span><span class="s1"> &#39;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">thisimage</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_images</span><span class="p">)</span> <span class="o">+</span> <span class="nb">repr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">))</span>
+
+    <span class="k">def</span> <span class="nf">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="s1">&#39;coarray:</span><span class="si">%d</span><span class="s1">/</span><span class="si">%d</span><span class="s1"> &#39;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">thisimage</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_images</span><span class="p">)</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">))</span>
+
+    <span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">coindex</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; indexing the coarray dimensions &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">getimage</span><span class="p">(</span><span class="n">coindex</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">thisimage</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__coameta__</span><span class="o">.</span><span class="n">comm</span><span class="o">.</span><span class="n">rank</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">num_images</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__coameta__</span><span class="o">.</span><span class="n">comm</span><span class="o">.</span><span class="n">size</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">coshape</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">num_images</span><span class="p">,)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">condims</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span> <span class="c1"># rank in coarray fortran</span>
+        <span class="k">return</span> <span class="mi">1</span>
+
+<div class="viewcode-block" id="coarray.getimage"><a class="viewcode-back" href="../../pmesh.coarray.html#pmesh.coarray.coarray.getimage">[docs]</a>    <span class="k">def</span> <span class="nf">getimage</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">coindex</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">coaproxy</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">coindex</span><span class="p">)</span></div>
+
+    <span class="k">def</span> <span class="nf">_setitem_proxy</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">index</span><span class="p">,</span> <span class="n">proxy</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__coameta__</span><span class="o">.</span><span class="n">operations</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Pull</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">index</span><span class="p">,</span> <span class="n">proxy</span><span class="p">))</span>
+
+<div class="viewcode-block" id="coarray.sync"><a class="viewcode-back" href="../../pmesh.coarray.html#pmesh.coarray.coarray.sync">[docs]</a>    <span class="k">def</span> <span class="nf">sync</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">images</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">images</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">images</span> <span class="o">=</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">num_images</span><span class="p">)</span>
+
+        <span class="n">comm</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__coameta__</span><span class="o">.</span><span class="n">comm</span>
+
+        <span class="n">sendactions</span><span class="p">,</span> <span class="n">recvactions</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__coameta__</span><span class="o">.</span><span class="n">_solve</span><span class="p">(</span><span class="n">images</span><span class="p">)</span>
+
+        <span class="n">requests</span><span class="p">,</span> <span class="n">ops</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__coameta__</span><span class="o">.</span><span class="n">_start_operations</span><span class="p">(</span><span class="n">images</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">sendindices</span><span class="p">,</span> <span class="n">senddest</span> <span class="ow">in</span> <span class="n">sendactions</span><span class="p">:</span>
+            <span class="n">value</span> <span class="o">=</span> <span class="bp">self</span>
+            <span class="k">for</span> <span class="n">index</span> <span class="ow">in</span> <span class="n">sendindices</span><span class="p">:</span>
+                <span class="n">value</span> <span class="o">=</span> <span class="n">value</span><span class="p">[</span><span class="n">index</span><span class="p">]</span>
+
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;sending to&#39;</span><span class="p">,</span> <span class="n">senddest</span><span class="p">,</span> <span class="n">value</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span>
+            <span class="n">comm</span><span class="o">.</span><span class="n">Send</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">dest</span><span class="o">=</span><span class="n">senddest</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">recvindices</span><span class="p">,</span> <span class="n">recvsource</span> <span class="ow">in</span> <span class="n">recvactions</span><span class="p">:</span>
+            <span class="n">value</span> <span class="o">=</span> <span class="bp">self</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">recvindices</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">recvindices</span> <span class="o">=</span> <span class="n">recvindices</span> <span class="o">+</span> <span class="p">[</span><span class="bp">Ellipsis</span><span class="p">]</span>
+
+            <span class="k">for</span> <span class="n">index</span> <span class="ow">in</span> <span class="n">recvindices</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]:</span>
+                <span class="n">value</span> <span class="o">=</span> <span class="n">value</span><span class="p">[</span><span class="n">index</span><span class="p">]</span>
+
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;receiving from &#39;</span><span class="p">,</span> <span class="n">recvsource</span><span class="p">,</span> <span class="n">value</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>
+            <span class="c1"># trigger setitem</span>
+            <span class="n">buf</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">value</span><span class="p">[</span><span class="n">recvindices</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]])</span>
+            <span class="n">comm</span><span class="o">.</span><span class="n">Recv</span><span class="p">(</span><span class="n">buf</span><span class="p">,</span> <span class="n">recvsource</span><span class="p">)</span>
+            <span class="n">value</span><span class="p">[</span><span class="n">recvindices</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]]</span> <span class="o">=</span> <span class="n">buf</span>
+
+        <span class="n">MPI</span><span class="o">.</span><span class="n">Request</span><span class="o">.</span><span class="n">waitall</span><span class="p">(</span><span class="n">requests</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">op</span> <span class="ow">in</span> <span class="n">ops</span><span class="p">:</span> <span class="n">op</span><span class="o">.</span><span class="n">finish</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">__coameta__</span><span class="o">.</span><span class="n">operations</span> <span class="o">=</span> <span class="p">[</span><span class="n">op</span>
+                <span class="k">for</span> <span class="n">op</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">__coameta__</span><span class="o">.</span><span class="n">operations</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">op</span><span class="o">.</span><span class="n">done</span> <span class="p">]</span></div></div>
+
+<div class="viewcode-block" id="test_coarray"><a class="viewcode-back" href="../../pmesh.coarray.html#pmesh.coarray.test_coarray">[docs]</a><span class="k">def</span> <span class="nf">test_coarray</span><span class="p">(</span><span class="n">comm</span><span class="p">):</span>
+    <span class="n">coa</span> <span class="o">=</span> <span class="n">coarray</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">comm</span><span class="p">,</span> <span class="p">(</span><span class="mi">8</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="s1">&#39;f8&#39;</span><span class="p">)</span>
+
+    <span class="n">coa</span><span class="p">[</span><span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">coa</span><span class="o">.</span><span class="n">thisimage</span>
+
+    <span class="n">left</span> <span class="o">=</span> <span class="p">(</span><span class="n">coa</span><span class="o">.</span><span class="n">thisimage</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">%</span> <span class="n">coa</span><span class="o">.</span><span class="n">num_images</span>
+    <span class="n">right</span> <span class="o">=</span> <span class="p">(</span><span class="n">coa</span><span class="o">.</span><span class="n">thisimage</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">%</span> <span class="n">coa</span><span class="o">.</span><span class="n">num_images</span>
+
+<span class="c1">#    print(coa(left)[:3])</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;left, right&#39;</span><span class="p">,</span> <span class="n">coa</span><span class="o">.</span><span class="n">thisimage</span><span class="p">,</span> <span class="n">left</span><span class="p">,</span> <span class="n">right</span><span class="p">)</span>
+
+    <span class="n">coa</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">coa</span><span class="p">(</span><span class="n">left</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">coa</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">coa</span><span class="p">(</span><span class="n">right</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+
+    <span class="n">coa</span><span class="o">.</span><span class="n">sync</span><span class="p">([</span><span class="n">left</span><span class="p">])</span>
+    <span class="k">assert</span> <span class="p">(</span><span class="n">coa</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="n">left</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">()</span>
+    <span class="k">assert</span> <span class="p">(</span><span class="n">coa</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="n">coa</span><span class="o">.</span><span class="n">thisimage</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">()</span>
+
+    <span class="n">coa</span><span class="o">.</span><span class="n">sync</span><span class="p">([</span><span class="n">right</span><span class="p">])</span>
+    <span class="k">assert</span> <span class="p">(</span><span class="n">coa</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="n">left</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">()</span>
+    <span class="k">assert</span> <span class="p">(</span><span class="n">coa</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="n">right</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">()</span>
+
+    <span class="n">coa</span><span class="p">(</span><span class="n">left</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">coa</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+    <span class="n">coa</span><span class="p">(</span><span class="n">right</span><span class="p">)[</span><span class="o">-</span><span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">coa</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">]</span>
+
+    <span class="n">coa</span><span class="o">.</span><span class="n">sync</span><span class="p">([</span><span class="n">left</span><span class="p">])</span>
+    <span class="k">assert</span> <span class="p">(</span><span class="n">coa</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="n">right</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">()</span>
+
+    <span class="n">coa</span><span class="o">.</span><span class="n">sync</span><span class="p">([</span><span class="n">right</span><span class="p">])</span>
+    <span class="k">assert</span> <span class="p">(</span><span class="n">coa</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">]</span> <span class="o">==</span> <span class="n">left</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">()</span></div>
+
+<span class="c1">#    coa(right)[3:4, :2] = coa[3:4, :2]</span>
+
+<div class="viewcode-block" id="test_cotranspose"><a class="viewcode-back" href="../../pmesh.coarray.html#pmesh.coarray.test_cotranspose">[docs]</a><span class="k">def</span> <span class="nf">test_cotranspose</span><span class="p">(</span><span class="n">comm</span><span class="p">):</span>
+    <span class="n">coa1</span> <span class="o">=</span> <span class="n">coarray</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">comm</span><span class="p">,</span> <span class="p">(</span><span class="n">comm</span><span class="o">.</span><span class="n">size</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="s1">&#39;f8&#39;</span><span class="p">)</span>
+    <span class="n">coa2</span> <span class="o">=</span> <span class="n">coarray</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">comm</span><span class="p">,</span> <span class="p">(</span><span class="n">comm</span><span class="o">.</span><span class="n">size</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="s1">&#39;f8&#39;</span><span class="p">)</span>
+
+    <span class="n">coa2</span><span class="p">[</span><span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">coa2</span><span class="o">.</span><span class="n">thisimage</span>
+
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">coa1</span><span class="o">.</span><span class="n">num_images</span><span class="p">):</span>
+        <span class="n">coa1</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">coa2</span><span class="p">(</span><span class="n">i</span><span class="p">)[</span><span class="n">coa1</span><span class="o">.</span><span class="n">thisimage</span><span class="p">]</span>
+
+    <span class="n">coa1</span><span class="o">.</span><span class="n">sync</span><span class="p">()</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="n">coa1</span><span class="p">)</span></div>
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s1">&#39;__main__&#39;</span><span class="p">:</span>
+<span class="c1">#    test_coarray(MPI.COMM_WORLD)</span>
+    <span class="n">test_cotranspose</span><span class="p">(</span><span class="n">MPI</span><span class="o">.</span><span class="n">COMM_WORLD</span><span class="p">)</span>
+
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">pmesh 0.1.46 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../index.html" >Module code</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2017, Yu Feng.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.7.5.
+    </div>
+  </body>
+</html>

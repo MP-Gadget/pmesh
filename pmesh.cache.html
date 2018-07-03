@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>pmesh.tools module &#8212; pmesh 0.1.46 documentation</title>
+    <title>pmesh.cache module &#8212; pmesh 0.1.46 documentation</title>
     <link rel="stylesheet" href="_static/classic.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
@@ -15,8 +15,8 @@
     <script type="text/javascript" src="_static/doctools.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="pmesh.transfer module" href="pmesh.transfer.html" />
-    <link rel="prev" title="pmesh.testmpi module" href="pmesh.testmpi.html" /> 
+    <link rel="next" title="pmesh.cic module" href="pmesh.cic.html" />
+    <link rel="prev" title="pmesh.abopt module" href="pmesh.abopt.html" /> 
   </head><body>
     <div class="related" role="navigation" aria-label="related navigation">
       <h3>Navigation</h3>
@@ -28,10 +28,10 @@
           <a href="py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
         <li class="right" >
-          <a href="pmesh.transfer.html" title="pmesh.transfer module"
+          <a href="pmesh.cic.html" title="pmesh.cic module"
              accesskey="N">next</a> |</li>
         <li class="right" >
-          <a href="pmesh.testmpi.html" title="pmesh.testmpi module"
+          <a href="pmesh.abopt.html" title="pmesh.abopt module"
              accesskey="P">previous</a> |</li>
         <li class="nav-item nav-item-0"><a href="index.html">pmesh 0.1.46 documentation</a> &#187;</li>
           <li class="nav-item nav-item-1"><a href="modules.html" >pmesh</a> &#187;</li>
@@ -44,32 +44,27 @@
         <div class="bodywrapper">
           <div class="body" role="main">
             
-  <div class="section" id="module-pmesh.tools">
-<span id="pmesh-tools-module"></span><h1>pmesh.tools module<a class="headerlink" href="#module-pmesh.tools" title="Permalink to this headline">¶</a></h1>
-<div class="deprecated">
-<p><span class="versionmodified">Deprecated since version 0.1.</span></p>
-</div>
-<dl class="function">
-<dt id="pmesh.tools.FromRoot">
-<code class="descclassname">pmesh.tools.</code><code class="descname">FromRoot</code><span class="sig-paren">(</span><em>comm</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pmesh/tools.html#FromRoot"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pmesh.tools.FromRoot" title="Permalink to this definition">¶</a></dt>
+  <div class="section" id="module-pmesh.cache">
+<span id="pmesh-cache-module"></span><h1>pmesh.cache module<a class="headerlink" href="#module-pmesh.cache" title="Permalink to this headline">¶</a></h1>
+<p>module for caching objects</p>
+<p>MPI Communicator is a finite resource. Plans and Procmeshs uses
+MPI Communicator, and there fore are finite resources too.</p>
+<p>Using a cache for them allows us to reduce the number of usages</p>
+<dl class="class">
+<dt id="pmesh.cache.Cache">
+<em class="property">class </em><code class="descclassname">pmesh.cache.</code><code class="descname">Cache</code><span class="sig-paren">(</span><em>) -&gt; new empty dictionary dict(mapping) -&gt; new dictionary initialized from a mapping object's (key</em>, <em>value) pairs dict(iterable) -&gt; new dictionary initialized as if via: d = {} for k</em>, <em>v in iterable: d[k] = v dict(**kwargs) -&gt; new dictionary initialized with the name=value pairs in the keyword argument list.  For example:  dict(one=1</em>, <em>two=2</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pmesh/cache.html#Cache"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pmesh.cache.Cache" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">dict</span></code></p>
+<dl class="method">
+<dt id="pmesh.cache.Cache.expire">
+<code class="descname">expire</code><span class="sig-paren">(</span><em>*keys</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pmesh/cache.html#Cache.expire"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pmesh.cache.Cache.expire" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
-<dl class="class">
-<dt id="pmesh.tools.Rotator">
-<em class="property">class </em><code class="descclassname">pmesh.tools.</code><code class="descname">Rotator</code><span class="sig-paren">(</span><em>comm</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pmesh/tools.html#Rotator"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pmesh.tools.Rotator" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="method">
+<dt id="pmesh.cache.Cache.get">
+<code class="descname">get</code><span class="sig-paren">(</span><em>create</em>, <em>*keys</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pmesh/cache.html#Cache.get"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pmesh.cache.Cache.get" title="Permalink to this definition">¶</a></dt>
+<dd><p>create() is a function to create the object if it is not there</p>
 </dd></dl>
 
-<dl class="class">
-<dt id="pmesh.tools.Timer">
-<em class="property">class </em><code class="descclassname">pmesh.tools.</code><code class="descname">Timer</code><span class="sig-paren">(</span><em>comm</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pmesh/tools.html#Timer"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pmesh.tools.Timer" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
-</dd></dl>
-
-<dl class="class">
-<dt id="pmesh.tools.Timers">
-<em class="property">class </em><code class="descclassname">pmesh.tools.</code><code class="descname">Timers</code><span class="sig-paren">(</span><em>) -&gt; new empty dictionary dict(mapping) -&gt; new dictionary initialized from a mapping object's (key</em>, <em>value) pairs dict(iterable) -&gt; new dictionary initialized as if via: d = {} for k</em>, <em>v in iterable: d[k] = v dict(**kwargs) -&gt; new dictionary initialized with the name=value pairs in the keyword argument list.  For example:  dict(one=1</em>, <em>two=2</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pmesh/tools.html#Timers"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pmesh.tools.Timers" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">dict</span></code></p>
 </dd></dl>
 
 </div>
@@ -81,15 +76,15 @@
       <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
         <div class="sphinxsidebarwrapper">
   <h4>Previous topic</h4>
-  <p class="topless"><a href="pmesh.testmpi.html"
-                        title="previous chapter">pmesh.testmpi module</a></p>
+  <p class="topless"><a href="pmesh.abopt.html"
+                        title="previous chapter">pmesh.abopt module</a></p>
   <h4>Next topic</h4>
-  <p class="topless"><a href="pmesh.transfer.html"
-                        title="next chapter">pmesh.transfer module</a></p>
+  <p class="topless"><a href="pmesh.cic.html"
+                        title="next chapter">pmesh.cic module</a></p>
   <div role="note" aria-label="source link">
     <h3>This Page</h3>
     <ul class="this-page-menu">
-      <li><a href="_sources/pmesh.tools.rst.txt"
+      <li><a href="_sources/pmesh.cache.rst.txt"
             rel="nofollow">Show Source</a></li>
     </ul>
    </div>
@@ -119,10 +114,10 @@
           <a href="py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
         <li class="right" >
-          <a href="pmesh.transfer.html" title="pmesh.transfer module"
+          <a href="pmesh.cic.html" title="pmesh.cic module"
              >next</a> |</li>
         <li class="right" >
-          <a href="pmesh.testmpi.html" title="pmesh.testmpi module"
+          <a href="pmesh.abopt.html" title="pmesh.abopt module"
              >previous</a> |</li>
         <li class="nav-item nav-item-0"><a href="index.html">pmesh 0.1.46 documentation</a> &#187;</li>
           <li class="nav-item nav-item-1"><a href="modules.html" >pmesh</a> &#187;</li>

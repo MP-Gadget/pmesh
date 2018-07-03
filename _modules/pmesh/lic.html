@@ -1,0 +1,158 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>pmesh.lic &#8212; pmesh 0.1.46 documentation</title>
+    <link rel="stylesheet" href="../../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">pmesh 0.1.46 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../index.html" accesskey="U">Module code</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for pmesh.lic</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">numpy</span>
+<span class="kn">from</span> <span class="nn">.window</span> <span class="k">import</span> <span class="n">FindResampler</span>
+
+<div class="viewcode-block" id="lic"><a class="viewcode-back" href="../../pmesh.lic.html#pmesh.lic.lic">[docs]</a><span class="k">def</span> <span class="nf">lic</span><span class="p">(</span><span class="n">vectors</span><span class="p">,</span> <span class="n">kernel</span><span class="p">,</span> <span class="n">length</span><span class="p">,</span> <span class="n">ds</span><span class="p">,</span> <span class="n">resampler</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">texture</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">normalize</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Line Intergral Convolution for visualizing vector fields.</span>
+
+<span class="sd">        The vectors must be normalized to norm of 1.0 for LIC to give a reasonable</span>
+<span class="sd">        image.</span>
+
+<span class="sd">        The image looks bad if the vectors are noisy.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        vectors : list of RealField</span>
+<span class="sd">            vx, vy, vz, ... must be normalized.</span>
+
+<span class="sd">        kernel : function kernel(s)</span>
+<span class="sd">            the line integral kernel function. s is the line coordinate variable between</span>
+<span class="sd">            -1 and 1.</span>
+
+<span class="sd">        length : float</span>
+<span class="sd">            the length of the line, in pixels.</span>
+
+<span class="sd">        ds : float</span>
+<span class="sd">            step size in the line integration. in pixels.</span>
+
+<span class="sd">        resampler: string, ResamplerWindow</span>
+<span class="sd">            the resampler window. See pmesh.window module for a full list. if None, use pm&#39;s</span>
+<span class="sd">            default sampler, pm.resampler, where pm is infered from the first vector.</span>
+
+<span class="sd">        texture : RealField, or None</span>
+<span class="sd">            the texture to use. If None, a default gaussian texture is used.</span>
+
+<span class="sd">        normalize : bool</span>
+<span class="sd">            True if normalize the vectors to 1.0</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        lic : RealField</span>
+<span class="sd">            the integration result.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">pm</span> <span class="o">=</span> <span class="n">vectors</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">pm</span>
+
+    <span class="k">if</span> <span class="n">normalize</span><span class="p">:</span>
+        <span class="n">vabs</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">vi</span><span class="o">**</span><span class="mi">2</span> <span class="k">for</span> <span class="n">vi</span> <span class="ow">in</span> <span class="n">vectors</span><span class="p">)</span> <span class="o">**</span> <span class="mf">0.5</span>
+        <span class="n">mask</span> <span class="o">=</span> <span class="n">vabs</span><span class="p">[</span><span class="o">...</span><span class="p">]</span> <span class="o">==</span> <span class="mf">0.0</span>
+        <span class="n">vabs</span><span class="p">[</span><span class="n">mask</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.0</span>
+        <span class="n">vectors</span> <span class="o">=</span> <span class="p">[</span><span class="n">vi</span> <span class="o">/</span> <span class="n">vabs</span> <span class="k">for</span> <span class="n">vi</span> <span class="ow">in</span> <span class="n">vectors</span><span class="p">]</span>
+
+    <span class="k">if</span> <span class="n">texture</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">texture</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">generate_whitenoise</span><span class="p">(</span><span class="n">seed</span><span class="o">=</span><span class="mi">990919</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="s1">&#39;real&#39;</span><span class="p">)</span>
+
+    <span class="n">Q</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">generate_uniform_particle_grid</span><span class="p">(</span><span class="n">shift</span><span class="o">=</span><span class="mf">0.0</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">resampler</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">resampler</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">resampler</span>
+
+    <span class="n">resampler</span> <span class="o">=</span> <span class="n">FindResampler</span><span class="p">(</span><span class="n">resampler</span><span class="p">)</span>
+
+    <span class="n">f</span> <span class="o">=</span> <span class="n">texture</span><span class="o">.</span><span class="n">readout</span><span class="p">(</span><span class="n">Q</span><span class="p">,</span> <span class="n">resampler</span><span class="o">=</span><span class="s1">&#39;nearest&#39;</span><span class="p">)</span>
+    <span class="n">vmax</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="n">v</span><span class="p">[</span><span class="o">...</span><span class="p">])</span><span class="o">.</span><span class="n">max</span><span class="p">()</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">vectors</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">sign</span> <span class="ow">in</span> <span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">+</span><span class="mi">1</span><span class="p">]:</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">Q</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="n">s</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">while</span> <span class="n">s</span> <span class="o">&lt;</span> <span class="n">length</span> <span class="o">*</span> <span class="mf">0.5</span><span class="p">:</span>
+            <span class="n">k</span> <span class="o">=</span> <span class="n">kernel</span><span class="p">(</span><span class="n">s</span> <span class="o">*</span> <span class="n">sign</span> <span class="o">/</span> <span class="p">(</span><span class="n">length</span> <span class="o">*</span> <span class="mf">0.5</span><span class="p">))</span>
+            <span class="n">dx</span> <span class="o">=</span> <span class="n">x</span> <span class="o">*</span> <span class="mf">0.0</span>
+            <span class="n">layout</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">decompose</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">smoothing</span><span class="o">=</span><span class="n">vmax</span> <span class="o">*</span> <span class="n">ds</span> <span class="o">*</span> <span class="mf">0.5</span> <span class="o">+</span> <span class="n">resampler</span><span class="o">.</span><span class="n">support</span> <span class="o">*</span> <span class="mf">0.5</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">d</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">vectors</span><span class="p">):</span>
+                <span class="n">dx</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">d</span><span class="p">]</span> <span class="o">=</span> <span class="n">v</span><span class="o">.</span><span class="n">readout</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">layout</span><span class="o">=</span><span class="n">layout</span><span class="p">,</span> <span class="n">resampler</span><span class="o">=</span><span class="n">resampler</span><span class="p">)</span> <span class="o">*</span> <span class="n">ds</span>
+            <span class="n">x</span><span class="p">[</span><span class="o">...</span><span class="p">]</span> <span class="o">+=</span> <span class="n">dx</span> <span class="o">*</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">sign</span>
+            <span class="n">f</span><span class="p">[</span><span class="o">...</span><span class="p">]</span> <span class="o">+=</span> <span class="n">texture</span><span class="o">.</span><span class="n">readout</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">layout</span><span class="o">=</span><span class="n">layout</span><span class="p">,</span> <span class="n">resampler</span><span class="o">=</span><span class="n">resampler</span><span class="p">)</span> <span class="o">*</span> <span class="n">k</span> <span class="o">*</span> <span class="n">ds</span>
+            <span class="n">x</span><span class="p">[</span><span class="o">...</span><span class="p">]</span> <span class="o">+=</span> <span class="n">dx</span> <span class="o">*</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">sign</span>
+
+            <span class="n">s</span> <span class="o">+=</span> <span class="n">ds</span>
+
+    <span class="k">return</span> <span class="n">pm</span><span class="o">.</span><span class="n">paint</span><span class="p">(</span><span class="n">Q</span><span class="p">,</span> <span class="n">f</span><span class="p">,</span> <span class="n">resampler</span><span class="o">=</span><span class="s1">&#39;nearest&#39;</span><span class="p">)</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">pmesh 0.1.46 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../index.html" >Module code</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2017, Yu Feng.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.7.5.
+    </div>
+  </body>
+</html>

@@ -6,11 +6,17 @@ Submodules
 
 .. toctree::
 
+   pmesh.abopt
+   pmesh.cache
    pmesh.cic
+   pmesh.coarray
    pmesh.domain
    pmesh.lanczos
+   pmesh.lic
+   pmesh.numpyarraymixin
    pmesh.particlemesh
    pmesh.pm
+   pmesh.testmpi
    pmesh.tools
    pmesh.transfer
    pmesh.tsc

@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>pmesh.tools module &#8212; pmesh 0.1.46 documentation</title>
+    <title>pmesh.lic module &#8212; pmesh 0.1.46 documentation</title>
     <link rel="stylesheet" href="_static/classic.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
@@ -15,8 +15,8 @@
     <script type="text/javascript" src="_static/doctools.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="pmesh.transfer module" href="pmesh.transfer.html" />
-    <link rel="prev" title="pmesh.testmpi module" href="pmesh.testmpi.html" /> 
+    <link rel="next" title="pmesh.numpyarraymixin module" href="pmesh.numpyarraymixin.html" />
+    <link rel="prev" title="pmesh.lanczos module" href="pmesh.lanczos.html" /> 
   </head><body>
     <div class="related" role="navigation" aria-label="related navigation">
       <h3>Navigation</h3>
@@ -28,10 +28,10 @@
           <a href="py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
         <li class="right" >
-          <a href="pmesh.transfer.html" title="pmesh.transfer module"
+          <a href="pmesh.numpyarraymixin.html" title="pmesh.numpyarraymixin module"
              accesskey="N">next</a> |</li>
         <li class="right" >
-          <a href="pmesh.testmpi.html" title="pmesh.testmpi module"
+          <a href="pmesh.lanczos.html" title="pmesh.lanczos module"
              accesskey="P">previous</a> |</li>
         <li class="nav-item nav-item-0"><a href="index.html">pmesh 0.1.46 documentation</a> &#187;</li>
           <li class="nav-item nav-item-1"><a href="modules.html" >pmesh</a> &#187;</li>
@@ -44,32 +44,55 @@
         <div class="bodywrapper">
           <div class="body" role="main">
             
-  <div class="section" id="module-pmesh.tools">
-<span id="pmesh-tools-module"></span><h1>pmesh.tools module<a class="headerlink" href="#module-pmesh.tools" title="Permalink to this headline">¶</a></h1>
-<div class="deprecated">
-<p><span class="versionmodified">Deprecated since version 0.1.</span></p>
-</div>
+  <div class="section" id="module-pmesh.lic">
+<span id="pmesh-lic-module"></span><h1>pmesh.lic module<a class="headerlink" href="#module-pmesh.lic" title="Permalink to this headline">¶</a></h1>
 <dl class="function">
-<dt id="pmesh.tools.FromRoot">
-<code class="descclassname">pmesh.tools.</code><code class="descname">FromRoot</code><span class="sig-paren">(</span><em>comm</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pmesh/tools.html#FromRoot"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pmesh.tools.FromRoot" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="class">
-<dt id="pmesh.tools.Rotator">
-<em class="property">class </em><code class="descclassname">pmesh.tools.</code><code class="descname">Rotator</code><span class="sig-paren">(</span><em>comm</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pmesh/tools.html#Rotator"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pmesh.tools.Rotator" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
-</dd></dl>
-
-<dl class="class">
-<dt id="pmesh.tools.Timer">
-<em class="property">class </em><code class="descclassname">pmesh.tools.</code><code class="descname">Timer</code><span class="sig-paren">(</span><em>comm</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pmesh/tools.html#Timer"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pmesh.tools.Timer" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
-</dd></dl>
-
-<dl class="class">
-<dt id="pmesh.tools.Timers">
-<em class="property">class </em><code class="descclassname">pmesh.tools.</code><code class="descname">Timers</code><span class="sig-paren">(</span><em>) -&gt; new empty dictionary dict(mapping) -&gt; new dictionary initialized from a mapping object's (key</em>, <em>value) pairs dict(iterable) -&gt; new dictionary initialized as if via: d = {} for k</em>, <em>v in iterable: d[k] = v dict(**kwargs) -&gt; new dictionary initialized with the name=value pairs in the keyword argument list.  For example:  dict(one=1</em>, <em>two=2</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pmesh/tools.html#Timers"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pmesh.tools.Timers" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">dict</span></code></p>
+<dt id="pmesh.lic.lic">
+<code class="descclassname">pmesh.lic.</code><code class="descname">lic</code><span class="sig-paren">(</span><em>vectors</em>, <em>kernel</em>, <em>length</em>, <em>ds</em>, <em>resampler=None</em>, <em>texture=None</em>, <em>normalize=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pmesh/lic.html#lic"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pmesh.lic.lic" title="Permalink to this definition">¶</a></dt>
+<dd><p>Line Intergral Convolution for visualizing vector fields.</p>
+<p>The vectors must be normalized to norm of 1.0 for LIC to give a reasonable
+image.</p>
+<p>The image looks bad if the vectors are noisy.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
+<dt><strong>vectors</strong> <span class="classifier-delimiter">:</span> <span class="classifier">list of RealField</span></dt>
+<dd><p class="first last">vx, vy, vz, … must be normalized.</p>
+</dd>
+<dt><strong>kernel</strong> <span class="classifier-delimiter">:</span> <span class="classifier">function kernel(s)</span></dt>
+<dd><p class="first last">the line integral kernel function. s is the line coordinate variable between
+-1 and 1.</p>
+</dd>
+<dt><strong>length</strong> <span class="classifier-delimiter">:</span> <span class="classifier">float</span></dt>
+<dd><p class="first last">the length of the line, in pixels.</p>
+</dd>
+<dt><strong>ds</strong> <span class="classifier-delimiter">:</span> <span class="classifier">float</span></dt>
+<dd><p class="first last">step size in the line integration. in pixels.</p>
+</dd>
+<dt><strong>resampler: string, ResamplerWindow</strong></dt>
+<dd><p class="first last">the resampler window. See pmesh.window module for a full list. if None, use pm’s
+default sampler, pm.resampler, where pm is infered from the first vector.</p>
+</dd>
+<dt><strong>texture</strong> <span class="classifier-delimiter">:</span> <span class="classifier">RealField, or None</span></dt>
+<dd><p class="first last">the texture to use. If None, a default gaussian texture is used.</p>
+</dd>
+<dt><strong>normalize</strong> <span class="classifier-delimiter">:</span> <span class="classifier">bool</span></dt>
+<dd><p class="first last">True if normalize the vectors to 1.0</p>
+</dd>
+</dl>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>lic</strong> <span class="classifier-delimiter">:</span> <span class="classifier">RealField</span></dt>
+<dd><p class="first last">the integration result.</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
 </dd></dl>
 
 </div>
@@ -81,15 +104,15 @@
       <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
         <div class="sphinxsidebarwrapper">
   <h4>Previous topic</h4>
-  <p class="topless"><a href="pmesh.testmpi.html"
-                        title="previous chapter">pmesh.testmpi module</a></p>
+  <p class="topless"><a href="pmesh.lanczos.html"
+                        title="previous chapter">pmesh.lanczos module</a></p>
   <h4>Next topic</h4>
-  <p class="topless"><a href="pmesh.transfer.html"
-                        title="next chapter">pmesh.transfer module</a></p>
+  <p class="topless"><a href="pmesh.numpyarraymixin.html"
+                        title="next chapter">pmesh.numpyarraymixin module</a></p>
   <div role="note" aria-label="source link">
     <h3>This Page</h3>
     <ul class="this-page-menu">
-      <li><a href="_sources/pmesh.tools.rst.txt"
+      <li><a href="_sources/pmesh.lic.rst.txt"
             rel="nofollow">Show Source</a></li>
     </ul>
    </div>
@@ -119,10 +142,10 @@
           <a href="py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
         <li class="right" >
-          <a href="pmesh.transfer.html" title="pmesh.transfer module"
+          <a href="pmesh.numpyarraymixin.html" title="pmesh.numpyarraymixin module"
              >next</a> |</li>
         <li class="right" >
-          <a href="pmesh.testmpi.html" title="pmesh.testmpi module"
+          <a href="pmesh.lanczos.html" title="pmesh.lanczos module"
              >previous</a> |</li>
         <li class="nav-item nav-item-0"><a href="index.html">pmesh 0.1.46 documentation</a> &#187;</li>
           <li class="nav-item nav-item-1"><a href="modules.html" >pmesh</a> &#187;</li>

@@ -1,0 +1,466 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>pmesh.abopt &#8212; pmesh 0.1.46 documentation</title>
+    <link rel="stylesheet" href="../../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">pmesh 0.1.46 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../index.html" accesskey="U">Module code</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for pmesh.abopt</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">__future__</span> <span class="k">import</span> <span class="n">absolute_import</span>
+
+<span class="kn">from</span> <span class="nn">warnings</span> <span class="k">import</span> <span class="n">warn</span>
+
+<span class="n">warn</span><span class="p">(</span><span class="s2">&quot;This module is deprecated and likely no longer maintained; a maintained version is moved to cosmo4d to minimize changes in pmesh.&quot;</span><span class="p">,</span> <span class="ne">DeprecationWarning</span><span class="p">)</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span>
+<span class="kn">from</span> <span class="nn">abopt.vmad2</span> <span class="k">import</span> <span class="n">ZERO</span><span class="p">,</span> <span class="n">Engine</span><span class="p">,</span> <span class="n">statement</span><span class="p">,</span> <span class="n">programme</span><span class="p">,</span> <span class="n">CodeSegment</span><span class="p">,</span> <span class="n">Literal</span>
+<span class="kn">from</span> <span class="nn">abopt.abopt2</span> <span class="k">import</span> <span class="n">VectorSpace</span>
+<span class="kn">from</span> <span class="nn">pmesh.pm</span> <span class="k">import</span> <span class="n">ParticleMesh</span><span class="p">,</span> <span class="n">RealField</span><span class="p">,</span> <span class="n">ComplexField</span>
+
+<div class="viewcode-block" id="nyquist_mask"><a class="viewcode-back" href="../../pmesh.abopt.html#pmesh.abopt.nyquist_mask">[docs]</a><span class="k">def</span> <span class="nf">nyquist_mask</span><span class="p">(</span><span class="n">factor</span><span class="p">,</span> <span class="n">v</span><span class="p">):</span>
+    <span class="c1"># any nyquist modes are set to 0 if the transfer function is complex</span>
+    <span class="n">mask</span> <span class="o">=</span> <span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">imag</span><span class="p">(</span><span class="n">factor</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="o">|</span> \
+            <span class="o">~</span><span class="n">numpy</span><span class="o">.</span><span class="n">bitwise_and</span><span class="o">.</span><span class="n">reduce</span><span class="p">([(</span><span class="n">ii</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="o">|</span> <span class="p">(</span><span class="n">ii</span> <span class="o">==</span> <span class="n">ni</span> <span class="o">//</span> <span class="mi">2</span><span class="p">)</span> <span class="k">for</span> <span class="n">ii</span><span class="p">,</span> <span class="n">ni</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">v</span><span class="o">.</span><span class="n">i</span><span class="p">,</span> <span class="n">v</span><span class="o">.</span><span class="n">Nmesh</span><span class="p">)])</span>
+    <span class="k">return</span> <span class="n">factor</span> <span class="o">*</span> <span class="n">mask</span></div>
+
+<div class="viewcode-block" id="ParticleMeshVectorSpace"><a class="viewcode-back" href="../../pmesh.abopt.html#pmesh.abopt.ParticleMeshVectorSpace">[docs]</a><span class="k">class</span> <span class="nc">ParticleMeshVectorSpace</span><span class="p">(</span><span class="n">VectorSpace</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pm</span><span class="p">,</span> <span class="n">q</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">qshape</span> <span class="o">=</span> <span class="n">q</span><span class="o">.</span><span class="n">shape</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pm</span> <span class="o">=</span> <span class="n">pm</span>
+
+<div class="viewcode-block" id="ParticleMeshVectorSpace.addmul"><a class="viewcode-back" href="../../pmesh.abopt.html#pmesh.abopt.ParticleMeshVectorSpace.addmul">[docs]</a>    <span class="k">def</span> <span class="nf">addmul</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">c</span><span class="p">,</span> <span class="n">p</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="n">RealField</span><span class="p">):</span>
+            <span class="n">r</span> <span class="o">=</span> <span class="n">b</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+            <span class="n">r</span><span class="p">[</span><span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">a</span> <span class="o">+</span> <span class="n">b</span> <span class="o">*</span> <span class="n">c</span> <span class="o">**</span> <span class="n">p</span>
+            <span class="k">return</span> <span class="n">r</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="n">ComplexField</span><span class="p">):</span>
+            <span class="n">r</span> <span class="o">=</span> <span class="n">b</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">c</span><span class="p">,</span> <span class="n">ComplexField</span><span class="p">):</span>
+                <span class="n">c</span> <span class="o">=</span> <span class="n">c</span><span class="o">.</span><span class="n">plain</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">ComplexField</span><span class="p">):</span>
+                <span class="n">a</span> <span class="o">=</span> <span class="n">a</span><span class="o">.</span><span class="n">plain</span>
+            <span class="n">r</span><span class="o">.</span><span class="n">plain</span><span class="p">[</span><span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">a</span> <span class="o">+</span> <span class="n">b</span><span class="o">.</span><span class="n">plain</span> <span class="o">*</span> <span class="n">c</span> <span class="o">**</span> <span class="n">p</span>
+            <span class="k">return</span> <span class="n">r</span>
+        <span class="k">elif</span> <span class="n">numpy</span><span class="o">.</span><span class="n">isscalar</span><span class="p">(</span><span class="n">b</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">a</span> <span class="o">+</span> <span class="n">b</span> <span class="o">*</span> <span class="n">c</span> <span class="o">**</span> <span class="n">p</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="n">numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
+            <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">b</span><span class="p">)</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">qshape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="k">return</span> <span class="n">a</span> <span class="o">+</span> <span class="n">b</span> <span class="o">*</span> <span class="n">c</span> <span class="o">**</span> <span class="n">p</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;type unknown&quot;</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="ParticleMeshVectorSpace.dot"><a class="viewcode-back" href="../../pmesh.abopt.html#pmesh.abopt.ParticleMeshVectorSpace.dot">[docs]</a>    <span class="k">def</span> <span class="nf">dot</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">a</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">type</span><span class="p">(</span><span class="n">b</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;type mismatch&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">RealField</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">a</span><span class="o">.</span><span class="n">cdot</span><span class="p">(</span><span class="n">b</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">ComplexField</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">a</span><span class="o">.</span><span class="n">cdot</span><span class="p">(</span><span class="n">b</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
+            <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">a</span><span class="p">)</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">b</span><span class="p">)</span>
+            <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">a</span><span class="p">)</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">qshape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">pm</span><span class="o">.</span><span class="n">comm</span><span class="o">.</span><span class="n">allreduce</span><span class="p">(</span><span class="n">a</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">b</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;type unknown&quot;</span><span class="p">)</span></div></div>
+
+<div class="viewcode-block" id="ParticleMeshEngine"><a class="viewcode-back" href="../../pmesh.abopt.html#pmesh.abopt.ParticleMeshEngine">[docs]</a><span class="k">class</span> <span class="nc">ParticleMeshEngine</span><span class="p">(</span><span class="n">Engine</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pm</span><span class="p">,</span> <span class="n">q</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pm</span> <span class="o">=</span> <span class="n">pm</span>
+        <span class="k">if</span> <span class="n">q</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">q</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">generate_uniform_particle_grid</span><span class="p">(</span><span class="n">shift</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="s1">&#39;f4&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">q</span> <span class="o">=</span> <span class="n">q</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">vs</span> <span class="o">=</span> <span class="n">ParticleMeshVectorSpace</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">pm</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">q</span><span class="p">)</span>
+
+<div class="viewcode-block" id="ParticleMeshEngine.get_x"><a class="viewcode-back" href="../../pmesh.abopt.html#pmesh.abopt.ParticleMeshEngine.get_x">[docs]</a>    <span class="nd">@programme</span><span class="p">(</span><span class="n">ain</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;s&#39;</span><span class="p">],</span> <span class="n">aout</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;x&#39;</span><span class="p">])</span>
+    <span class="k">def</span> <span class="nf">get_x</span><span class="p">(</span><span class="n">engine</span><span class="p">,</span> <span class="n">s</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+        <span class="n">code</span> <span class="o">=</span> <span class="n">CodeSegment</span><span class="p">(</span><span class="n">engine</span><span class="p">)</span>
+        <span class="n">code</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">x1</span><span class="o">=</span><span class="s1">&#39;s&#39;</span><span class="p">,</span> <span class="n">x2</span><span class="o">=</span><span class="n">Literal</span><span class="p">(</span><span class="n">engine</span><span class="o">.</span><span class="n">q</span><span class="p">),</span> <span class="n">y</span><span class="o">=</span><span class="s1">&#39;x&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">code</span></div>
+
+<div class="viewcode-block" id="ParticleMeshEngine.c2r"><a class="viewcode-back" href="../../pmesh.abopt.html#pmesh.abopt.ParticleMeshEngine.c2r">[docs]</a>    <span class="nd">@statement</span><span class="p">(</span><span class="n">aout</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;real&#39;</span><span class="p">],</span> <span class="n">ain</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;complex&#39;</span><span class="p">])</span>
+    <span class="k">def</span> <span class="nf">c2r</span><span class="p">(</span><span class="n">engine</span><span class="p">,</span> <span class="n">real</span><span class="p">,</span> <span class="nb">complex</span><span class="p">):</span>
+        <span class="n">real</span><span class="p">[</span><span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="nb">complex</span><span class="o">.</span><span class="n">c2r</span><span class="p">()</span></div>
+
+    <span class="nd">@c2r</span><span class="o">.</span><span class="n">defvjp</span>
+    <span class="k">def</span> <span class="nf">_</span><span class="p">(</span><span class="n">engine</span><span class="p">,</span> <span class="n">_real</span><span class="p">,</span> <span class="n">_complex</span><span class="p">):</span>
+        <span class="n">_complex</span><span class="p">[</span><span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">_real</span><span class="o">.</span><span class="n">c2r_vjp</span><span class="p">()</span>
+
+    <span class="nd">@c2r</span><span class="o">.</span><span class="n">defjvp</span>
+    <span class="k">def</span> <span class="nf">_</span><span class="p">(</span><span class="n">engine</span><span class="p">,</span> <span class="n">real_</span><span class="p">,</span> <span class="n">complex_</span><span class="p">):</span>
+        <span class="n">real_</span><span class="p">[</span><span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">complex_</span><span class="o">.</span><span class="n">c2r</span><span class="p">()</span>
+
+<div class="viewcode-block" id="ParticleMeshEngine.r2c"><a class="viewcode-back" href="../../pmesh.abopt.html#pmesh.abopt.ParticleMeshEngine.r2c">[docs]</a>    <span class="nd">@statement</span><span class="p">(</span><span class="n">aout</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;complex&#39;</span><span class="p">],</span> <span class="n">ain</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;real&#39;</span><span class="p">])</span>
+    <span class="k">def</span> <span class="nf">r2c</span><span class="p">(</span><span class="n">engine</span><span class="p">,</span> <span class="nb">complex</span><span class="p">,</span> <span class="n">real</span><span class="p">):</span>
+        <span class="nb">complex</span><span class="p">[</span><span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">real</span><span class="o">.</span><span class="n">r2c</span><span class="p">()</span></div>
+
+    <span class="nd">@r2c</span><span class="o">.</span><span class="n">defvjp</span>
+    <span class="k">def</span> <span class="nf">_</span><span class="p">(</span><span class="n">engine</span><span class="p">,</span> <span class="n">_complex</span><span class="p">,</span> <span class="n">_real</span><span class="p">):</span>
+        <span class="n">_real</span><span class="p">[</span><span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">_complex</span><span class="o">.</span><span class="n">r2c_vjp</span><span class="p">()</span>
+
+    <span class="nd">@r2c</span><span class="o">.</span><span class="n">defjvp</span>
+    <span class="k">def</span> <span class="nf">_</span><span class="p">(</span><span class="n">engine</span><span class="p">,</span> <span class="n">complex_</span><span class="p">,</span> <span class="n">real_</span><span class="p">):</span>
+        <span class="n">complex_</span><span class="p">[</span><span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">real_</span><span class="o">.</span><span class="n">r2c</span><span class="p">()</span>
+
+<div class="viewcode-block" id="ParticleMeshEngine.decompress"><a class="viewcode-back" href="../../pmesh.abopt.html#pmesh.abopt.ParticleMeshEngine.decompress">[docs]</a>    <span class="nd">@statement</span><span class="p">(</span><span class="n">aout</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;complex&#39;</span><span class="p">],</span> <span class="n">ain</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;complex&#39;</span><span class="p">])</span>
+    <span class="k">def</span> <span class="nf">decompress</span><span class="p">(</span><span class="n">engine</span><span class="p">,</span> <span class="nb">complex</span><span class="p">):</span>
+        <span class="k">return</span></div>
+
+    <span class="nd">@decompress</span><span class="o">.</span><span class="n">defvjp</span>
+    <span class="k">def</span> <span class="nf">_</span><span class="p">(</span><span class="n">engine</span><span class="p">,</span> <span class="n">_complex</span><span class="p">):</span>
+        <span class="n">_complex</span><span class="o">.</span><span class="n">decompress_vjp</span><span class="p">(</span><span class="n">out</span><span class="o">=</span><span class="bp">Ellipsis</span><span class="p">)</span>
+
+    <span class="nd">@decompress</span><span class="o">.</span><span class="n">defjvp</span>
+    <span class="k">def</span> <span class="nf">_</span><span class="p">(</span><span class="n">engine</span><span class="p">,</span> <span class="n">complex_</span><span class="p">):</span>
+        <span class="k">pass</span> <span class="c1"># XXX: is this correct?</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">_lowpass_filter</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">Neff</span><span class="p">):</span>
+        <span class="n">k0s</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">numpy</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="n">v</span><span class="o">.</span><span class="n">BoxSize</span>
+        <span class="n">mask</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">bitwise_and</span><span class="o">.</span><span class="n">reduce</span><span class="p">([</span><span class="nb">abs</span><span class="p">(</span><span class="n">ki</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="n">Neff</span><span class="o">//</span><span class="mi">2</span> <span class="o">*</span> <span class="n">k0</span> <span class="k">for</span> <span class="n">ki</span><span class="p">,</span> <span class="n">k0</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">k0s</span><span class="p">)])</span>
+        <span class="k">return</span> <span class="n">v</span> <span class="o">*</span> <span class="n">mask</span>
+
+<div class="viewcode-block" id="ParticleMeshEngine.lowpass"><a class="viewcode-back" href="../../pmesh.abopt.html#pmesh.abopt.ParticleMeshEngine.lowpass">[docs]</a>    <span class="nd">@statement</span><span class="p">(</span><span class="n">aout</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;real&#39;</span><span class="p">],</span> <span class="n">ain</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;real&#39;</span><span class="p">])</span>
+    <span class="k">def</span> <span class="nf">lowpass</span><span class="p">(</span><span class="n">engine</span><span class="p">,</span> <span class="n">real</span><span class="p">,</span> <span class="n">Neff</span><span class="p">):</span>
+        <span class="n">real</span><span class="o">.</span><span class="n">r2c</span><span class="p">(</span><span class="n">out</span><span class="o">=</span><span class="bp">Ellipsis</span><span class="p">)</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span>
+            <span class="k">lambda</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span><span class="p">:</span> <span class="n">engine</span><span class="o">.</span><span class="n">_lowpass_filter</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">Neff</span><span class="p">),</span>
+            <span class="n">out</span><span class="o">=</span><span class="bp">Ellipsis</span><span class="p">)</span><span class="o">.</span><span class="n">c2r</span><span class="p">(</span><span class="n">out</span><span class="o">=</span><span class="bp">Ellipsis</span><span class="p">)</span></div>
+
+    <span class="nd">@lowpass</span><span class="o">.</span><span class="n">defvjp</span>
+    <span class="k">def</span> <span class="nf">_</span><span class="p">(</span><span class="n">engine</span><span class="p">,</span> <span class="n">_real</span><span class="p">,</span> <span class="n">Neff</span><span class="p">):</span>
+        <span class="n">_real</span><span class="o">.</span><span class="n">c2r_vjp</span><span class="p">()</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span>
+            <span class="k">lambda</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span><span class="p">:</span> <span class="n">engine</span><span class="o">.</span><span class="n">_lowpass_filter</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">Neff</span><span class="p">),</span>
+            <span class="n">out</span><span class="o">=</span><span class="bp">Ellipsis</span><span class="p">)</span><span class="o">.</span><span class="n">r2c_vjp</span><span class="p">(</span><span class="n">out</span><span class="o">=</span><span class="bp">Ellipsis</span><span class="p">)</span>
+
+    <span class="nd">@lowpass</span><span class="o">.</span><span class="n">defjvp</span>
+    <span class="k">def</span> <span class="nf">_</span><span class="p">(</span><span class="n">engine</span><span class="p">,</span> <span class="n">real_</span><span class="p">,</span> <span class="n">Neff</span><span class="p">):</span>
+        <span class="n">real_</span><span class="o">.</span><span class="n">r2c</span><span class="p">()</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span>
+            <span class="k">lambda</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span><span class="p">:</span> <span class="n">engine</span><span class="o">.</span><span class="n">_lowpass_filter</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">Neff</span><span class="p">),</span>
+            <span class="n">out</span><span class="o">=</span><span class="bp">Ellipsis</span><span class="p">)</span><span class="o">.</span><span class="n">c2r</span><span class="p">(</span><span class="n">out</span><span class="o">=</span><span class="bp">Ellipsis</span><span class="p">)</span>
+
+<div class="viewcode-block" id="ParticleMeshEngine.decompose"><a class="viewcode-back" href="../../pmesh.abopt.html#pmesh.abopt.ParticleMeshEngine.decompose">[docs]</a>    <span class="nd">@statement</span><span class="p">(</span><span class="n">aout</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;layout&#39;</span><span class="p">],</span> <span class="n">ain</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;x&#39;</span><span class="p">])</span>
+    <span class="k">def</span> <span class="nf">decompose</span><span class="p">(</span><span class="n">engine</span><span class="p">,</span> <span class="n">layout</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+        <span class="n">pm</span> <span class="o">=</span> <span class="n">engine</span><span class="o">.</span><span class="n">pm</span>
+        <span class="n">layout</span><span class="p">[</span><span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">decompose</span><span class="p">(</span><span class="n">x</span><span class="p">)</span></div>
+
+    <span class="nd">@decompose</span><span class="o">.</span><span class="n">defvjp</span>
+    <span class="k">def</span> <span class="nf">_</span><span class="p">(</span><span class="n">engine</span><span class="p">,</span> <span class="n">_layout</span><span class="p">,</span> <span class="n">_x</span><span class="p">):</span>
+        <span class="n">_x</span><span class="p">[</span><span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">ZERO</span>
+
+    <span class="nd">@decompose</span><span class="o">.</span><span class="n">defjvp</span>
+    <span class="k">def</span> <span class="nf">_</span><span class="p">(</span><span class="n">engine</span><span class="p">,</span> <span class="n">layout_</span><span class="p">,</span> <span class="n">x_</span><span class="p">):</span>
+        <span class="n">layout_</span><span class="p">[</span><span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">ZERO</span>
+
+<div class="viewcode-block" id="ParticleMeshEngine.paint"><a class="viewcode-back" href="../../pmesh.abopt.html#pmesh.abopt.ParticleMeshEngine.paint">[docs]</a>    <span class="nd">@statement</span><span class="p">(</span><span class="n">aout</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;mesh&#39;</span><span class="p">],</span> <span class="n">ain</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;x&#39;</span><span class="p">,</span> <span class="s1">&#39;layout&#39;</span><span class="p">])</span>
+    <span class="k">def</span> <span class="nf">paint</span><span class="p">(</span><span class="n">engine</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">mesh</span><span class="p">,</span> <span class="n">layout</span><span class="p">):</span>
+        <span class="n">pm</span> <span class="o">=</span> <span class="n">engine</span><span class="o">.</span><span class="n">pm</span>
+        <span class="n">N</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">comm</span><span class="o">.</span><span class="n">allreduce</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">))</span>
+        <span class="n">mesh</span><span class="p">[</span><span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">paint</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">layout</span><span class="o">=</span><span class="n">layout</span><span class="p">,</span> <span class="n">hold</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="c1"># to have 1 + \delta on the mesh</span>
+        <span class="n">mesh</span><span class="p">[</span><span class="o">...</span><span class="p">][</span><span class="o">...</span><span class="p">]</span> <span class="o">*=</span> <span class="mf">1.0</span> <span class="o">*</span> <span class="n">pm</span><span class="o">.</span><span class="n">Nmesh</span><span class="o">.</span><span class="n">prod</span><span class="p">()</span> <span class="o">/</span> <span class="n">N</span></div>
+
+    <span class="nd">@paint</span><span class="o">.</span><span class="n">defvjp</span>
+    <span class="k">def</span> <span class="nf">_</span><span class="p">(</span><span class="n">engine</span><span class="p">,</span> <span class="n">_x</span><span class="p">,</span> <span class="n">_mesh</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">layout</span><span class="p">,</span> <span class="n">_layout</span><span class="p">):</span>
+        <span class="n">pm</span> <span class="o">=</span> <span class="n">engine</span><span class="o">.</span><span class="n">pm</span>
+        <span class="n">_layout</span><span class="p">[</span><span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">ZERO</span>
+        <span class="n">N</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">comm</span><span class="o">.</span><span class="n">allreduce</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">))</span>
+        <span class="n">_x</span><span class="p">[</span><span class="o">...</span><span class="p">],</span> <span class="n">junk</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">paint_vjp</span><span class="p">(</span><span class="n">_mesh</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">layout</span><span class="o">=</span><span class="n">layout</span><span class="p">,</span> <span class="n">out_mass</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="n">_x</span><span class="p">[</span><span class="o">...</span><span class="p">][</span><span class="o">...</span><span class="p">]</span> <span class="o">*=</span> <span class="mf">1.0</span> <span class="o">*</span> <span class="n">pm</span><span class="o">.</span><span class="n">Nmesh</span><span class="o">.</span><span class="n">prod</span><span class="p">()</span> <span class="o">/</span> <span class="n">N</span>
+
+    <span class="nd">@paint</span><span class="o">.</span><span class="n">defjvp</span>
+    <span class="k">def</span> <span class="nf">_</span><span class="p">(</span><span class="n">engine</span><span class="p">,</span> <span class="n">x_</span><span class="p">,</span> <span class="n">mesh_</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">layout</span><span class="p">,</span> <span class="n">layout_</span><span class="p">):</span>
+        <span class="n">pm</span> <span class="o">=</span> <span class="n">engine</span><span class="o">.</span><span class="n">pm</span>
+        <span class="k">if</span> <span class="n">x_</span> <span class="ow">is</span> <span class="n">ZERO</span><span class="p">:</span> <span class="n">x_</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="n">mesh_</span><span class="p">[</span><span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">paint_jvp</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">v_pos</span><span class="o">=</span><span class="n">x_</span><span class="p">,</span> <span class="n">layout</span><span class="o">=</span><span class="n">layout</span><span class="p">)</span>
+
+<div class="viewcode-block" id="ParticleMeshEngine.readout"><a class="viewcode-back" href="../../pmesh.abopt.html#pmesh.abopt.ParticleMeshEngine.readout">[docs]</a>    <span class="nd">@statement</span><span class="p">(</span><span class="n">aout</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;value&#39;</span><span class="p">],</span> <span class="n">ain</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;x&#39;</span><span class="p">,</span> <span class="s1">&#39;mesh&#39;</span><span class="p">,</span> <span class="s1">&#39;layout&#39;</span><span class="p">])</span>
+    <span class="k">def</span> <span class="nf">readout</span><span class="p">(</span><span class="n">engine</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">mesh</span><span class="p">,</span> <span class="n">layout</span><span class="p">):</span>
+        <span class="n">pm</span> <span class="o">=</span> <span class="n">engine</span><span class="o">.</span><span class="n">pm</span>
+        <span class="n">N</span> <span class="o">=</span> <span class="n">pm</span><span class="o">.</span><span class="n">comm</span><span class="o">.</span><span class="n">allreduce</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">))</span>
+        <span class="n">value</span><span class="p">[</span><span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">mesh</span><span class="o">.</span><span class="n">readout</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">layout</span><span class="o">=</span><span class="n">layout</span><span class="p">)</span></div>
+
+    <span class="nd">@readout</span><span class="o">.</span><span class="n">defvjp</span>
+    <span class="k">def</span> <span class="nf">_</span><span class="p">(</span><span class="n">engine</span><span class="p">,</span> <span class="n">_value</span><span class="p">,</span> <span class="n">_x</span><span class="p">,</span> <span class="n">_mesh</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">layout</span><span class="p">,</span> <span class="n">mesh</span><span class="p">):</span>
+        <span class="n">pm</span> <span class="o">=</span> <span class="n">engine</span><span class="o">.</span><span class="n">pm</span>
+        <span class="n">_mesh</span><span class="p">[</span><span class="o">...</span><span class="p">],</span> <span class="n">_x</span><span class="p">[</span><span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">mesh</span><span class="o">.</span><span class="n">readout_vjp</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">_value</span><span class="p">,</span> <span class="n">layout</span><span class="o">=</span><span class="n">layout</span><span class="p">)</span>
+
+    <span class="nd">@readout</span><span class="o">.</span><span class="n">defjvp</span>
+    <span class="k">def</span> <span class="nf">_</span><span class="p">(</span><span class="n">engine</span><span class="p">,</span> <span class="n">value_</span><span class="p">,</span> <span class="n">x_</span><span class="p">,</span> <span class="n">mesh_</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">layout</span><span class="p">,</span> <span class="n">mesh</span><span class="p">,</span> <span class="n">layout_</span><span class="p">):</span>
+        <span class="n">pm</span> <span class="o">=</span> <span class="n">engine</span><span class="o">.</span><span class="n">pm</span>
+        <span class="k">if</span> <span class="n">mesh_</span> <span class="ow">is</span> <span class="n">ZERO</span><span class="p">:</span> <span class="n">mesh_</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="n">x_</span> <span class="ow">is</span> <span class="n">ZERO</span><span class="p">:</span> <span class="n">x_</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="n">value_</span><span class="p">[</span><span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">mesh</span><span class="o">.</span><span class="n">readout_jvp</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">v_self</span><span class="o">=</span><span class="n">mesh_</span><span class="p">,</span> <span class="n">v_pos</span><span class="o">=</span><span class="n">x_</span><span class="p">,</span> <span class="n">layout</span><span class="o">=</span><span class="n">layout</span><span class="p">)</span>
+
+<div class="viewcode-block" id="ParticleMeshEngine.transfer"><a class="viewcode-back" href="../../pmesh.abopt.html#pmesh.abopt.ParticleMeshEngine.transfer">[docs]</a>    <span class="nd">@statement</span><span class="p">(</span><span class="n">aout</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;complex&#39;</span><span class="p">],</span> <span class="n">ain</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;complex&#39;</span><span class="p">])</span>
+    <span class="k">def</span> <span class="nf">transfer</span><span class="p">(</span><span class="n">engine</span><span class="p">,</span> <span class="nb">complex</span><span class="p">,</span> <span class="n">tf</span><span class="p">):</span>
+        <span class="nb">complex</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="k">lambda</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span><span class="p">:</span> <span class="n">nyquist_mask</span><span class="p">(</span><span class="n">tf</span><span class="p">(</span><span class="n">k</span><span class="p">),</span> <span class="n">v</span><span class="p">)</span> <span class="o">*</span> <span class="n">v</span><span class="p">,</span> <span class="n">out</span><span class="o">=</span><span class="bp">Ellipsis</span><span class="p">)</span></div>
+
+    <span class="nd">@transfer</span><span class="o">.</span><span class="n">defvjp</span>
+    <span class="k">def</span> <span class="nf">_</span><span class="p">(</span><span class="n">engine</span><span class="p">,</span> <span class="n">tf</span><span class="p">,</span> <span class="n">_complex</span><span class="p">):</span>
+        <span class="n">_complex</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="k">lambda</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span><span class="p">:</span> <span class="n">nyquist_mask</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">conj</span><span class="p">(</span><span class="n">tf</span><span class="p">(</span><span class="n">k</span><span class="p">)),</span> <span class="n">v</span><span class="p">)</span> <span class="o">*</span> <span class="n">v</span><span class="p">,</span> <span class="n">out</span><span class="o">=</span><span class="bp">Ellipsis</span><span class="p">)</span>
+
+    <span class="nd">@transfer</span><span class="o">.</span><span class="n">defjvp</span>
+    <span class="k">def</span> <span class="nf">_</span><span class="p">(</span><span class="n">engine</span><span class="p">,</span> <span class="n">tf</span><span class="p">,</span> <span class="n">complex_</span><span class="p">):</span>
+        <span class="n">complex_</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="k">lambda</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span><span class="p">:</span> <span class="n">nyquist_mask</span><span class="p">(</span><span class="n">tf</span><span class="p">(</span><span class="n">k</span><span class="p">),</span> <span class="n">v</span><span class="p">)</span> <span class="o">*</span> <span class="n">v</span><span class="p">,</span> <span class="n">out</span><span class="o">=</span><span class="bp">Ellipsis</span><span class="p">)</span>
+
+<div class="viewcode-block" id="ParticleMeshEngine.residual"><a class="viewcode-back" href="../../pmesh.abopt.html#pmesh.abopt.ParticleMeshEngine.residual">[docs]</a>    <span class="nd">@statement</span><span class="p">(</span><span class="n">aout</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;residual&#39;</span><span class="p">],</span> <span class="n">ain</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;model&#39;</span><span class="p">])</span>
+    <span class="k">def</span> <span class="nf">residual</span><span class="p">(</span><span class="n">engine</span><span class="p">,</span> <span class="n">model</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">sigma</span><span class="p">,</span> <span class="n">residual</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">            residual = (model - data) / sigma</span>
+
+<span class="sd">            J = 1 / sigma</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">residual</span><span class="p">[</span><span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">model</span> <span class="o">-</span> <span class="n">data</span><span class="p">)</span> <span class="o">/</span> <span class="n">sigma</span></div>
+
+    <span class="nd">@residual</span><span class="o">.</span><span class="n">defvjp</span>
+    <span class="k">def</span> <span class="nf">_</span><span class="p">(</span><span class="n">engine</span><span class="p">,</span> <span class="n">_model</span><span class="p">,</span> <span class="n">_residual</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">sigma</span><span class="p">):</span>
+        <span class="n">_model</span><span class="p">[</span><span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">_residual</span> <span class="o">/</span> <span class="n">sigma</span>
+
+    <span class="nd">@residual</span><span class="o">.</span><span class="n">defjvp</span>
+    <span class="k">def</span> <span class="nf">_</span><span class="p">(</span><span class="n">engine</span><span class="p">,</span> <span class="n">model_</span><span class="p">,</span> <span class="n">residual_</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">sigma</span><span class="p">):</span>
+        <span class="n">residual_</span><span class="p">[</span><span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">model_</span> <span class="o">/</span> <span class="n">sigma</span>
+
+<div class="viewcode-block" id="ParticleMeshEngine.assign_component"><a class="viewcode-back" href="../../pmesh.abopt.html#pmesh.abopt.ParticleMeshEngine.assign_component">[docs]</a>    <span class="nd">@statement</span><span class="p">(</span><span class="n">ain</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;attribute&#39;</span><span class="p">,</span> <span class="s1">&#39;value&#39;</span><span class="p">],</span> <span class="n">aout</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;attribute&#39;</span><span class="p">])</span>
+    <span class="k">def</span> <span class="nf">assign_component</span><span class="p">(</span><span class="n">engine</span><span class="p">,</span> <span class="n">attribute</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">dim</span><span class="p">):</span>
+        <span class="n">attribute</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">dim</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span></div>
+
+    <span class="nd">@assign_component</span><span class="o">.</span><span class="n">defvjp</span>
+    <span class="k">def</span> <span class="nf">_</span><span class="p">(</span><span class="n">engine</span><span class="p">,</span> <span class="n">_attribute</span><span class="p">,</span> <span class="n">_value</span><span class="p">,</span> <span class="n">dim</span><span class="p">):</span>
+        <span class="n">_value</span><span class="p">[</span><span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">_attribute</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">dim</span><span class="p">]</span>
+
+    <span class="nd">@assign_component</span><span class="o">.</span><span class="n">defjvp</span>
+    <span class="k">def</span> <span class="nf">_</span><span class="p">(</span><span class="n">engine</span><span class="p">,</span> <span class="n">attribute_</span><span class="p">,</span> <span class="n">value_</span><span class="p">,</span> <span class="n">dim</span><span class="p">):</span>
+        <span class="n">attribute_</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">dim</span><span class="p">]</span> <span class="o">=</span> <span class="n">value_</span>
+
+<div class="viewcode-block" id="ParticleMeshEngine.assign"><a class="viewcode-back" href="../../pmesh.abopt.html#pmesh.abopt.ParticleMeshEngine.assign">[docs]</a>    <span class="nd">@statement</span><span class="p">(</span><span class="n">ain</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;x&#39;</span><span class="p">],</span> <span class="n">aout</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;y&#39;</span><span class="p">])</span>
+    <span class="k">def</span> <span class="nf">assign</span><span class="p">(</span><span class="n">engine</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">):</span>
+        <span class="n">y</span><span class="p">[</span><span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span></div>
+
+    <span class="nd">@assign</span><span class="o">.</span><span class="n">defvjp</span>
+    <span class="k">def</span> <span class="nf">_</span><span class="p">(</span><span class="n">engine</span><span class="p">,</span> <span class="n">_y</span><span class="p">,</span> <span class="n">_x</span><span class="p">):</span>
+        <span class="n">_x</span><span class="p">[</span><span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">_y</span>
+
+    <span class="nd">@assign</span><span class="o">.</span><span class="n">defjvp</span>
+    <span class="k">def</span> <span class="nf">_</span><span class="p">(</span><span class="n">engine</span><span class="p">,</span> <span class="n">y_</span><span class="p">,</span> <span class="n">x_</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+        <span class="n">y_</span><span class="p">[</span><span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="n">y_</span><span class="p">[</span><span class="o">...</span><span class="p">][</span><span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">x_</span>
+
+<div class="viewcode-block" id="ParticleMeshEngine.add"><a class="viewcode-back" href="../../pmesh.abopt.html#pmesh.abopt.ParticleMeshEngine.add">[docs]</a>    <span class="nd">@statement</span><span class="p">(</span><span class="n">ain</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;x1&#39;</span><span class="p">,</span> <span class="s1">&#39;x2&#39;</span><span class="p">],</span> <span class="n">aout</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;y&#39;</span><span class="p">])</span>
+    <span class="k">def</span> <span class="nf">add</span><span class="p">(</span><span class="n">engine</span><span class="p">,</span> <span class="n">x1</span><span class="p">,</span> <span class="n">x2</span><span class="p">,</span> <span class="n">y</span><span class="p">):</span>
+        <span class="n">y</span><span class="p">[</span><span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">x1</span> <span class="o">+</span> <span class="n">x2</span></div>
+
+    <span class="nd">@add</span><span class="o">.</span><span class="n">defvjp</span>
+    <span class="k">def</span> <span class="nf">_</span><span class="p">(</span><span class="n">engine</span><span class="p">,</span> <span class="n">_y</span><span class="p">,</span> <span class="n">_x1</span><span class="p">,</span> <span class="n">_x2</span><span class="p">):</span>
+        <span class="n">_x1</span><span class="p">[</span><span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">_y</span>
+        <span class="n">_x2</span><span class="p">[</span><span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">_y</span>
+
+    <span class="nd">@add</span><span class="o">.</span><span class="n">defjvp</span>
+    <span class="k">def</span> <span class="nf">_</span><span class="p">(</span><span class="n">engine</span><span class="p">,</span> <span class="n">y_</span><span class="p">,</span> <span class="n">x1_</span><span class="p">,</span> <span class="n">x2_</span><span class="p">):</span>
+        <span class="n">y_</span><span class="p">[</span><span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">x1_</span> <span class="o">+</span> <span class="n">x2_</span>
+
+<div class="viewcode-block" id="ParticleMeshEngine.multiply"><a class="viewcode-back" href="../../pmesh.abopt.html#pmesh.abopt.ParticleMeshEngine.multiply">[docs]</a>    <span class="nd">@statement</span><span class="p">(</span><span class="n">aout</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;y&#39;</span><span class="p">],</span> <span class="n">ain</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;x1&#39;</span><span class="p">,</span> <span class="s1">&#39;x2&#39;</span><span class="p">])</span>
+    <span class="k">def</span> <span class="nf">multiply</span><span class="p">(</span><span class="n">engine</span><span class="p">,</span> <span class="n">x1</span><span class="p">,</span> <span class="n">x2</span><span class="p">,</span> <span class="n">y</span><span class="p">):</span>
+        <span class="n">y</span><span class="p">[</span><span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">x1</span> <span class="o">*</span> <span class="n">x2</span></div>
+
+    <span class="nd">@multiply</span><span class="o">.</span><span class="n">defvjp</span>
+    <span class="k">def</span> <span class="nf">_</span><span class="p">(</span><span class="n">engine</span><span class="p">,</span> <span class="n">_x1</span><span class="p">,</span> <span class="n">_x2</span><span class="p">,</span> <span class="n">_y</span><span class="p">,</span> <span class="n">x1</span><span class="p">,</span> <span class="n">x2</span><span class="p">):</span>
+        <span class="n">_x1</span><span class="p">[</span><span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">_y</span> <span class="o">*</span> <span class="n">x2</span>
+        <span class="n">_x2</span><span class="p">[</span><span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">_y</span> <span class="o">*</span> <span class="n">x1</span>
+
+    <span class="nd">@multiply</span><span class="o">.</span><span class="n">defjvp</span>
+    <span class="k">def</span> <span class="nf">_</span><span class="p">(</span><span class="n">engine</span><span class="p">,</span> <span class="n">x1_</span><span class="p">,</span> <span class="n">x2_</span><span class="p">,</span> <span class="n">y_</span><span class="p">,</span> <span class="n">x1</span><span class="p">,</span> <span class="n">x2</span><span class="p">):</span>
+        <span class="n">y_</span><span class="p">[</span><span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">x1_</span> <span class="o">*</span> <span class="n">x2</span> <span class="o">+</span> <span class="n">x1</span> <span class="o">*</span> <span class="n">x2_</span>
+
+<div class="viewcode-block" id="ParticleMeshEngine.to_scalar"><a class="viewcode-back" href="../../pmesh.abopt.html#pmesh.abopt.ParticleMeshEngine.to_scalar">[docs]</a>    <span class="nd">@statement</span><span class="p">(</span><span class="n">ain</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;x&#39;</span><span class="p">],</span> <span class="n">aout</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;y&#39;</span><span class="p">])</span>
+    <span class="k">def</span> <span class="nf">to_scalar</span><span class="p">(</span><span class="n">engine</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">RealField</span><span class="p">):</span>
+            <span class="n">y</span><span class="p">[</span><span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">cnorm</span><span class="p">()</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">ComplexField</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;Computing the L-2 norm of complex is not a good idea, because the gradient propagation is ambiguous&quot;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">y</span><span class="p">[</span><span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">engine</span><span class="o">.</span><span class="n">pm</span><span class="o">.</span><span class="n">comm</span><span class="o">.</span><span class="n">allreduce</span><span class="p">((</span><span class="n">x</span><span class="p">[</span><span class="o">...</span><span class="p">]</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="s1">&#39;f8&#39;</span><span class="p">))</span></div>
+
+    <span class="nd">@to_scalar</span><span class="o">.</span><span class="n">defvjp</span>
+    <span class="k">def</span> <span class="nf">_</span><span class="p">(</span><span class="n">engine</span><span class="p">,</span> <span class="n">_y</span><span class="p">,</span> <span class="n">_x</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+        <span class="n">_x</span><span class="p">[</span><span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">x</span> <span class="o">*</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">_y</span><span class="p">)</span>
+
+    <span class="nd">@to_scalar</span><span class="o">.</span><span class="n">defjvp</span>
+    <span class="k">def</span> <span class="nf">_</span><span class="p">(</span><span class="n">engine</span><span class="p">,</span> <span class="n">y_</span><span class="p">,</span> <span class="n">x_</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">RealField</span><span class="p">):</span>
+            <span class="n">y_</span><span class="p">[</span><span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">cdot</span><span class="p">(</span><span class="n">x_</span><span class="p">)</span> <span class="o">*</span> <span class="mi">2</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">ComplexField</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;Computing the L-2 norm of complex is not a good idea, because the gradient propagation is ambiguous&quot;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">y_</span><span class="p">[</span><span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">engine</span><span class="o">.</span><span class="n">pm</span><span class="o">.</span><span class="n">comm</span><span class="o">.</span><span class="n">allreduce</span><span class="p">((</span><span class="n">x</span> <span class="o">*</span> <span class="n">x_</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="s1">&#39;f8&#39;</span><span class="p">))</span> <span class="o">*</span> <span class="mi">2</span></div>
+
+<div class="viewcode-block" id="check_grad"><a class="viewcode-back" href="../../pmesh.abopt.html#pmesh.abopt.check_grad">[docs]</a><span class="k">def</span> <span class="nf">check_grad</span><span class="p">(</span><span class="n">code</span><span class="p">,</span> <span class="n">yname</span><span class="p">,</span> <span class="n">xname</span><span class="p">,</span> <span class="n">init</span><span class="p">,</span> <span class="n">eps</span><span class="p">,</span> <span class="n">rtol</span><span class="p">,</span> <span class="n">atol</span><span class="o">=</span><span class="mf">1e-12</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+    <span class="kn">from</span> <span class="nn">numpy.testing</span> <span class="k">import</span> <span class="n">assert_allclose</span>
+    <span class="n">engine</span> <span class="o">=</span> <span class="n">code</span><span class="o">.</span><span class="n">engine</span>
+    <span class="n">comm</span> <span class="o">=</span> <span class="n">engine</span><span class="o">.</span><span class="n">pm</span><span class="o">.</span><span class="n">comm</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">init</span><span class="p">[</span><span class="n">xname</span><span class="p">],</span> <span class="n">numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="ow">and</span> <span class="n">init</span><span class="p">[</span><span class="n">xname</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span> <span class="o">==</span> <span class="n">engine</span><span class="o">.</span><span class="n">q</span><span class="o">.</span><span class="n">shape</span><span class="p">:</span>
+        <span class="n">cshape</span> <span class="o">=</span> <span class="n">engine</span><span class="o">.</span><span class="n">pm</span><span class="o">.</span><span class="n">comm</span><span class="o">.</span><span class="n">allreduce</span><span class="p">(</span><span class="n">engine</span><span class="o">.</span><span class="n">q</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span> <span class="n">engine</span><span class="o">.</span><span class="n">q</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+
+        <span class="k">def</span> <span class="nf">cperturb</span><span class="p">(</span><span class="n">pos</span><span class="p">,</span> <span class="n">ind</span><span class="p">,</span> <span class="n">eps</span><span class="p">):</span>
+            <span class="n">pos</span> <span class="o">=</span> <span class="n">pos</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+            <span class="n">start</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">comm</span><span class="o">.</span><span class="n">allgather</span><span class="p">(</span><span class="n">pos</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])[:</span><span class="n">comm</span><span class="o">.</span><span class="n">rank</span><span class="p">])</span>
+            <span class="n">end</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">comm</span><span class="o">.</span><span class="n">allgather</span><span class="p">(</span><span class="n">pos</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])[:</span><span class="n">comm</span><span class="o">.</span><span class="n">rank</span> <span class="o">+</span> <span class="mi">1</span><span class="p">])</span>
+            <span class="k">if</span> <span class="n">ind</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="n">start</span> <span class="ow">and</span> <span class="n">ind</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&lt;</span> <span class="n">end</span><span class="p">:</span>
+                <span class="n">old</span> <span class="o">=</span> <span class="n">pos</span><span class="p">[</span><span class="n">ind</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">start</span><span class="p">,</span> <span class="n">ind</span><span class="p">[</span><span class="mi">1</span><span class="p">]]</span>
+                <span class="n">coord</span> <span class="o">=</span> <span class="n">pos</span><span class="p">[</span><span class="n">ind</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">-</span><span class="n">start</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+                <span class="n">pos</span><span class="p">[</span><span class="n">ind</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">start</span><span class="p">,</span> <span class="n">ind</span><span class="p">[</span><span class="mi">1</span><span class="p">]]</span> <span class="o">=</span> <span class="n">old</span> <span class="o">+</span> <span class="n">eps</span>
+                <span class="n">new</span> <span class="o">=</span> <span class="n">pos</span><span class="p">[</span><span class="n">ind</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">start</span><span class="p">,</span> <span class="n">ind</span><span class="p">[</span><span class="mi">1</span><span class="p">]]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">old</span><span class="p">,</span> <span class="n">new</span><span class="p">,</span> <span class="n">coord</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span>
+            <span class="n">diff</span> <span class="o">=</span> <span class="n">comm</span><span class="o">.</span><span class="n">allreduce</span><span class="p">(</span><span class="n">new</span> <span class="o">-</span> <span class="n">old</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">pos</span>
+
+        <span class="k">def</span> <span class="nf">cget</span><span class="p">(</span><span class="n">pos</span><span class="p">,</span> <span class="n">ind</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">pos</span> <span class="ow">is</span> <span class="n">ZERO</span><span class="p">:</span> <span class="k">return</span> <span class="mi">0</span>
+            <span class="n">start</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">comm</span><span class="o">.</span><span class="n">allgather</span><span class="p">(</span><span class="n">pos</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])[:</span><span class="n">comm</span><span class="o">.</span><span class="n">rank</span><span class="p">])</span>
+            <span class="n">end</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">comm</span><span class="o">.</span><span class="n">allgather</span><span class="p">(</span><span class="n">pos</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])[:</span><span class="n">comm</span><span class="o">.</span><span class="n">rank</span> <span class="o">+</span> <span class="mi">1</span><span class="p">])</span>
+            <span class="k">if</span> <span class="n">ind</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="n">start</span> <span class="ow">and</span> <span class="n">ind</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&lt;</span> <span class="n">end</span><span class="p">:</span>
+                <span class="n">old</span> <span class="o">=</span> <span class="n">pos</span><span class="p">[</span><span class="n">ind</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">start</span><span class="p">,</span> <span class="n">ind</span><span class="p">[</span><span class="mi">1</span><span class="p">]]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">old</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="k">return</span> <span class="n">comm</span><span class="o">.</span><span class="n">allreduce</span><span class="p">(</span><span class="n">old</span><span class="p">)</span>
+
+    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">init</span><span class="p">[</span><span class="n">xname</span><span class="p">],</span> <span class="n">RealField</span><span class="p">):</span>
+        <span class="n">cshape</span> <span class="o">=</span> <span class="n">init</span><span class="p">[</span><span class="n">xname</span><span class="p">]</span><span class="o">.</span><span class="n">cshape</span>
+        <span class="k">def</span> <span class="nf">cget</span><span class="p">(</span><span class="n">real</span><span class="p">,</span> <span class="n">index</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">real</span> <span class="ow">is</span> <span class="n">ZERO</span><span class="p">:</span> <span class="k">return</span> <span class="mi">0</span>
+            <span class="k">return</span> <span class="n">real</span><span class="o">.</span><span class="n">cgetitem</span><span class="p">(</span><span class="n">index</span><span class="p">)</span>
+
+        <span class="k">def</span> <span class="nf">cperturb</span><span class="p">(</span><span class="n">real</span><span class="p">,</span> <span class="n">index</span><span class="p">,</span> <span class="n">eps</span><span class="p">):</span>
+            <span class="n">old</span> <span class="o">=</span> <span class="n">real</span><span class="o">.</span><span class="n">cgetitem</span><span class="p">(</span><span class="n">index</span><span class="p">)</span>
+            <span class="n">r1</span> <span class="o">=</span> <span class="n">real</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+            <span class="n">r1</span><span class="o">.</span><span class="n">csetitem</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="n">old</span> <span class="o">+</span> <span class="n">eps</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">r1</span>
+    <span class="n">code</span> <span class="o">=</span> <span class="n">code</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="n">code</span><span class="o">.</span><span class="n">to_scalar</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="n">yname</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="s1">&#39;y&#39;</span><span class="p">)</span>
+
+    <span class="n">y</span><span class="p">,</span> <span class="n">tape</span> <span class="o">=</span> <span class="n">code</span><span class="o">.</span><span class="n">compute</span><span class="p">(</span><span class="s1">&#39;y&#39;</span><span class="p">,</span> <span class="n">init</span><span class="o">=</span><span class="n">init</span><span class="p">,</span> <span class="n">return_tape</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">vjp</span> <span class="o">=</span> <span class="n">tape</span><span class="o">.</span><span class="n">get_vjp</span><span class="p">()</span>
+    <span class="n">jvp</span> <span class="o">=</span> <span class="n">tape</span><span class="o">.</span><span class="n">get_jvp</span><span class="p">()</span>
+
+    <span class="n">_x</span> <span class="o">=</span> <span class="n">vjp</span><span class="o">.</span><span class="n">compute</span><span class="p">(</span><span class="s1">&#39;_&#39;</span> <span class="o">+</span> <span class="n">xname</span><span class="p">,</span> <span class="n">init</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;_y&#39;</span> <span class="p">:</span> <span class="mf">1.0</span><span class="p">})</span>
+
+    <span class="n">center</span> <span class="o">=</span> <span class="n">init</span><span class="p">[</span><span class="n">xname</span><span class="p">]</span>
+    <span class="n">init2</span> <span class="o">=</span> <span class="n">init</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="n">ng_bg</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">fg_bg</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">index</span> <span class="ow">in</span> <span class="n">numpy</span><span class="o">.</span><span class="n">ndindex</span><span class="p">(</span><span class="o">*</span><span class="n">cshape</span><span class="p">):</span>
+        <span class="n">x1</span> <span class="o">=</span> <span class="n">cperturb</span><span class="p">(</span><span class="n">center</span><span class="p">,</span> <span class="n">index</span><span class="p">,</span> <span class="n">eps</span><span class="p">)</span>
+        <span class="n">x0</span> <span class="o">=</span> <span class="n">cperturb</span><span class="p">(</span><span class="n">center</span><span class="p">,</span> <span class="n">index</span><span class="p">,</span> <span class="o">-</span><span class="n">eps</span><span class="p">)</span>
+        <span class="n">analytic</span> <span class="o">=</span> <span class="n">cget</span><span class="p">(</span><span class="n">_x</span><span class="p">,</span> <span class="n">index</span><span class="p">)</span>
+        <span class="n">init2</span><span class="p">[</span><span class="n">xname</span><span class="p">]</span> <span class="o">=</span> <span class="n">x1</span>
+        <span class="n">y1</span> <span class="o">=</span> <span class="n">code</span><span class="o">.</span><span class="n">compute</span><span class="p">(</span><span class="s1">&#39;y&#39;</span><span class="p">,</span> <span class="n">init2</span><span class="p">)</span>
+        <span class="n">init2</span><span class="p">[</span><span class="n">xname</span><span class="p">]</span> <span class="o">=</span> <span class="n">x0</span>
+        <span class="n">y0</span> <span class="o">=</span> <span class="n">code</span><span class="o">.</span><span class="n">compute</span><span class="p">(</span><span class="s1">&#39;y&#39;</span><span class="p">,</span> <span class="n">init2</span><span class="p">)</span>
+
+        <span class="n">base</span> <span class="o">=</span> <span class="p">(</span><span class="n">x1</span> <span class="o">-</span> <span class="n">x0</span><span class="p">)</span>
+        <span class="n">y_</span> <span class="o">=</span> <span class="n">jvp</span><span class="o">.</span><span class="n">compute</span><span class="p">(</span><span class="s1">&#39;y_&#39;</span><span class="p">,</span> <span class="n">init</span><span class="o">=</span><span class="p">{</span><span class="n">xname</span> <span class="o">+</span> <span class="s1">&#39;_&#39;</span><span class="p">:</span> <span class="n">base</span><span class="p">})</span>
+
+        <span class="c1">#logger.DEBUG(&quot;CHECKGRAD: %s&quot; % (y1, y0, y1 - y0, get_pos(code.engine, _x, index) * 2 * eps))</span>
+        <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="p">(</span><span class="n">x1</span> <span class="o">-</span> <span class="n">x0</span><span class="p">)[</span><span class="o">...</span><span class="p">]</span><span class="o">.</span><span class="n">max</span><span class="p">(),</span> <span class="n">y</span><span class="p">,</span> <span class="n">y1</span> <span class="o">-</span> <span class="n">y0</span><span class="p">,</span> <span class="n">y_</span><span class="p">,</span> <span class="n">cget</span><span class="p">(</span><span class="n">_x</span><span class="p">,</span> <span class="n">index</span><span class="p">)</span> <span class="o">*</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">eps</span><span class="p">)</span>
+
+        <span class="n">fg_bg</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">index</span><span class="p">,</span> <span class="n">y_</span><span class="p">,</span> <span class="n">cget</span><span class="p">(</span><span class="n">_x</span><span class="p">,</span> <span class="n">index</span><span class="p">)</span> <span class="o">*</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">eps</span><span class="p">])</span>
+
+        <span class="n">ng_bg</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">index</span><span class="p">,</span> <span class="n">y1</span> <span class="o">-</span> <span class="n">y0</span><span class="p">,</span> <span class="n">cget</span><span class="p">(</span><span class="n">_x</span><span class="p">,</span> <span class="n">index</span><span class="p">)</span> <span class="o">*</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">eps</span><span class="p">])</span>
+
+    <span class="n">fg_bg</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">fg_bg</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="s1">&#39;O&#39;</span><span class="p">)</span>
+    <span class="n">ng_bg</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">ng_bg</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="s1">&#39;O&#39;</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">errorstat</span><span class="p">(</span><span class="n">stat</span><span class="p">,</span> <span class="n">rtol</span><span class="p">,</span> <span class="n">atol</span><span class="p">):</span>
+        <span class="n">g1</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">a</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="n">stat</span><span class="p">])</span>
+        <span class="n">g2</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">a</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="n">stat</span><span class="p">])</span>
+
+        <span class="n">ag1</span> <span class="o">=</span> <span class="nb">abs</span><span class="p">(</span><span class="n">g1</span><span class="p">)</span> <span class="o">+</span> <span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="n">g1</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="o">*</span> <span class="n">numpy</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="n">g1</span><span class="p">)</span>
+        <span class="n">ag2</span> <span class="o">=</span> <span class="nb">abs</span><span class="p">(</span><span class="n">g2</span><span class="p">)</span> <span class="o">+</span> <span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="n">g2</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="o">*</span> <span class="n">numpy</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="n">g2</span><span class="p">)</span>
+        <span class="n">sig</span> <span class="o">=</span> <span class="p">(</span><span class="n">g1</span> <span class="o">-</span> <span class="n">g2</span><span class="p">)</span> <span class="o">/</span> <span class="p">((</span><span class="n">ag1</span> <span class="o">+</span> <span class="n">ag2</span><span class="p">)</span> <span class="o">*</span> <span class="n">rtol</span> <span class="o">+</span> <span class="n">atol</span><span class="p">)</span>
+        <span class="n">bins</span> <span class="o">=</span> <span class="p">[</span><span class="o">-</span><span class="mi">100</span><span class="p">,</span> <span class="o">-</span><span class="mi">50</span><span class="p">,</span> <span class="o">-</span><span class="mi">20</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">20</span><span class="p">,</span> <span class="mi">50</span><span class="p">,</span> <span class="mi">100</span><span class="p">]</span>
+        <span class="n">d</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">digitize</span><span class="p">(</span><span class="n">sig</span><span class="p">,</span> <span class="n">bins</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">d</span>
+
+    <span class="n">d1</span> <span class="o">=</span> <span class="n">errorstat</span><span class="p">(</span><span class="n">fg_bg</span><span class="p">,</span> <span class="n">rtol</span><span class="p">,</span> <span class="n">atol</span><span class="p">)</span>
+
+    <span class="n">d2</span> <span class="o">=</span> <span class="n">errorstat</span><span class="p">(</span><span class="n">ng_bg</span><span class="p">,</span> <span class="n">rtol</span> <span class="o">*</span> <span class="mi">10000</span><span class="p">,</span> <span class="n">atol</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="n">d1</span> <span class="o">!=</span> <span class="mi">4</span><span class="p">)</span><span class="o">.</span><span class="n">any</span><span class="p">():</span>
+        <span class="k">raise</span> <span class="ne">AssertionError</span><span class="p">(</span><span class="s2">&quot;FG_BG Bad gradients: </span><span class="si">%s</span><span class="s2"> &quot;</span> <span class="o">%</span> <span class="n">numpy</span><span class="o">.</span><span class="n">bincount</span><span class="p">(</span><span class="n">d1</span><span class="p">))</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="n">d2</span> <span class="o">!=</span> <span class="mi">4</span><span class="p">)</span><span class="o">.</span><span class="n">any</span><span class="p">():</span>
+        <span class="k">raise</span> <span class="ne">AssertionError</span><span class="p">(</span><span class="s2">&quot;NG_BG Bad gradients: </span><span class="si">%s</span><span class="s2"> &quot;</span> <span class="o">%</span> <span class="n">numpy</span><span class="o">.</span><span class="n">bincount</span><span class="p">(</span><span class="n">d2</span><span class="p">))</span></div>
+
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">pmesh 0.1.46 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../index.html" >Module code</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2017, Yu Feng.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.7.5.
+    </div>
+  </body>
+</html>

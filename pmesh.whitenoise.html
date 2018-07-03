@@ -1,22 +1,27 @@
 
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<!doctype html>
 
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
     <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     <title>pmesh.whitenoise module &#8212; pmesh 0.1.46 documentation</title>
-    <link rel="stylesheet" href="_static/traditional.css" type="text/css" />
+    <link rel="stylesheet" href="_static/bizstyle.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
     <script type="text/javascript" src="_static/jquery.js"></script>
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/bizstyle.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
     <link rel="next" title="pmesh.window module" href="pmesh.window.html" />
-    <link rel="prev" title="pmesh.version module" href="pmesh.version.html" /> 
+    <link rel="prev" title="pmesh.version module" href="pmesh.version.html" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <!--[if lt IE 9]>
+    <script type="text/javascript" src="_static/css3-mediaqueries.js"></script>
+    <![endif]-->
   </head><body>
     <div class="related" role="navigation" aria-label="related navigation">
       <h3>Navigation</h3>
@@ -37,34 +42,7 @@
           <li class="nav-item nav-item-1"><a href="modules.html" >pmesh</a> &#187;</li>
           <li class="nav-item nav-item-2"><a href="pmesh.html" accesskey="U">pmesh package</a> &#187;</li> 
       </ul>
-    </div>  
-
-    <div class="document">
-      <div class="documentwrapper">
-        <div class="bodywrapper">
-          <div class="body" role="main">
-            
-  <div class="section" id="module-pmesh.whitenoise">
-<span id="pmesh-whitenoise-module"></span><h1>pmesh.whitenoise module<a class="headerlink" href="#module-pmesh.whitenoise" title="Permalink to this headline">¶</a></h1>
-<dl class="function">
-<dt id="pmesh.whitenoise.generate">
-<code class="descclassname">pmesh.whitenoise.</code><code class="descname">generate</code><span class="sig-paren">(</span><em>complex</em>, <em>start</em>, <em>Nmesh</em>, <em>seed</em>, <em>unitary</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pmesh/whitenoise.html#generate"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pmesh.whitenoise.generate" title="Permalink to this definition">¶</a></dt>
-<dd><p>The result is always hermitian.</p>
-<p>Depending on the shape of complex, the routine will fill
-either the half or the full representation of the field.</p>
-<dl class="docutils">
-<dt>unitary <span class="classifier-delimiter">:</span> <span class="classifier">bool</span></dt>
-<dd>True for a unitary gaussian field (amplitude is fixed to 1)
-False for a true gaussian field</dd>
-</dl>
-</dd></dl>
-
-</div>
-
-
-          </div>
-        </div>
-      </div>
+    </div>
       <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
         <div class="sphinxsidebarwrapper">
   <h4>Previous topic</h4>
@@ -92,6 +70,33 @@ False for a true gaussian field</dd>
     </div>
 </div>
 <script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="module-pmesh.whitenoise">
+<span id="pmesh-whitenoise-module"></span><h1>pmesh.whitenoise module<a class="headerlink" href="#module-pmesh.whitenoise" title="Permalink to this headline">¶</a></h1>
+<dl class="function">
+<dt id="pmesh.whitenoise.generate">
+<code class="descclassname">pmesh.whitenoise.</code><code class="descname">generate</code><span class="sig-paren">(</span><em>complex</em>, <em>start</em>, <em>Nmesh</em>, <em>seed</em>, <em>unitary</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pmesh/whitenoise.html#generate"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pmesh.whitenoise.generate" title="Permalink to this definition">¶</a></dt>
+<dd><p>The result is always hermitian.</p>
+<p>Depending on the shape of complex, the routine will fill
+either the half or the full representation of the field.</p>
+<dl class="docutils">
+<dt>unitary <span class="classifier-delimiter">:</span> <span class="classifier">bool</span></dt>
+<dd>True for a unitary gaussian field (amplitude is fixed to 1)
+False for a true gaussian field</dd>
+</dl>
+</dd></dl>
+
+</div>
+
+
+          </div>
         </div>
       </div>
       <div class="clearer"></div>

@@ -1474,6 +1474,33 @@ class ParticleMesh(object):
                             resampler=self.resampler,
                             np=self.np)
 
+    def respawn(self, comm, np=None):
+        """
+            Create a new ParticleMesh object with the same geometry but on a new communicator.
+
+            Notes
+            -----
+            Usually the communicator shall be a subcommunicator of self.comm, because otherwise
+            there is no way to correctly make a barrier.
+
+            Parameters
+            ----------
+            comm : MPI.Comm
+                the new communicator
+            np : list or int
+                the process mesh topology
+
+            Returns
+            -------
+            A new ParticleMesh on the given communicator;
+        """
+        return ParticleMesh(BoxSize=self.BoxSize,
+                            Nmesh=self.Nmesh,
+                            dtype=self.dtype,
+                            comm=comm,
+                            resampler=self.resampler,
+                            np=np)
+
     def create(self, type=None, base=None, value=None, mode=None):
         """
             Create a field object.

@@ -808,6 +808,13 @@ def test_grid_shifted(comm):
     real = pm.paint(grid, layout=layout)
     assert_allclose(real, 1.0)
 
+@MPITest(commsize=(1, 4))
+def test_respawn(comm):
+    pm = ParticleMesh(BoxSize=8.0, Nmesh=[4, 4, 4], comm=comm, dtype='f8')
+    from mpi4py import MPI
+    pm1 = pm.respawn(MPI.COMM_SELF)
+    assert pm1.comm.size == 1
+
 @MPITest(commsize=(1))
 def test_leak(comm):
     # 1024 is long enough to crash MPICH.

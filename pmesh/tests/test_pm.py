@@ -120,7 +120,7 @@ def test_fft(comm):
     numpy.random.seed(1234)
 
     real = pm.create(type='real', value=0)
-    raw = real.base.view_raw()
+    raw = real._base.view_raw()
     real[...] = 2
     real[::2, ::2] = -2
     real3 = real.copy()
@@ -171,12 +171,12 @@ def test_inplace_fft(comm):
     complex = real.r2c()
     complex2 = real.r2c(out=Ellipsis)
 
-    assert real.base in complex2.base
+    assert real._base in complex2._base
     assert_almost_equal(numpy.asarray(complex), numpy.asarray(complex2), decimal=7)
 
     real = complex2.c2r()
     real2 = complex2.c2r(out=Ellipsis)
-    assert real2.base in complex2.base
+    assert real2._base in complex2._base
     assert_almost_equal(numpy.asarray(real), numpy.asarray(real2), decimal=7)
 
 @MPITest(commsize=(1,4))

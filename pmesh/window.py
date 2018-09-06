@@ -42,6 +42,12 @@ class Affine(object):
         self.period = period
         self.ndim = ndim
 
+    def rescale(self, amount):
+        """ Returns a new Affine where the scale is multipled by amount.
+        """
+
+        return Affine(self.ndim, self.scale * amount, self.translate, self.period)
+
     def shift(self, amount):
         """ Returns a new Affine where the translate is shifted by amount.
             Amount is in integer mesh units, as translate. """

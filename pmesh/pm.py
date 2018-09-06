@@ -277,9 +277,9 @@ class Field(NDArrayLike):
         # create a new base object based on the given base object
         base = pfft.LocalBuffer(partition, base=base)
 
-        self.base = base
+        self._base = base
         self.pm = pm
-        self.partition = partition
+        self._partition = partition
         self.BoxSize = pm.BoxSize
         self.Nmesh = pm.Nmesh
         self.ndim = len(pm.Nmesh)
@@ -486,7 +486,7 @@ class Field(NDArrayLike):
         if out is None:
             out = self.pm.create(type=type)
         else:
-            out = self.pm.create(type=type, base=out.base)
+            out = self.pm.create(type=type, base=out._base)
 
         assert isinstance(out, type)
 
@@ -498,7 +498,7 @@ class Field(NDArrayLike):
             self.c2r(out)
         if isinstance(self, BaseComplexField) and isinstance(out, BaseComplexField):
             if _gettype(self) is not _gettype(out):
-                tmp = self.pm.create(type=RealField, base=out.base)
+                tmp = self.pm.create(type=RealField, base=out._base)
                 # do a c2r r2c to account for the transpose
                 self.c2r(out=tmp).r2c(out=out)
             else:
@@ -524,7 +524,7 @@ class Field(NDArrayLike):
 
         self = self.cast(type=TransposedComplexField)
 
-        complex = out.pm.create(type=TransposedComplexField, base=out.base, value=0)
+        complex = out.pm.create(type=TransposedComplexField, base=out._base, value=0)
 
         tmp = numpy.empty_like(self.value)
 
@@ -660,7 +660,7 @@ class RealField(Field):
             out = self
 
         if out is self:
-            out = TransposedComplexField(self.pm, base=self.base)
+            out = TransposedComplexField(self.pm, base=self._base)
 
         assert isinstance(out, (BaseComplexField,))
 
@@ -668,9 +668,9 @@ class RealField(Field):
             # non-padded destroys input, so we fall back
             # to use the inplace transform
             # view out as self's type and copy the value
-            self = self.pm.create(type=type(self), value=self.value, base=out.base)
+            self = self.pm.create(type=type(self), value=self.value, base=out._base)
 
-        if self.base in out.base and out.base in self.base:
+        if self._base in out._base and out._base in self._base:
             # in place
             if isinstance(out, UntransposedComplexField):
                 plan = self.pm.plans['ipforwardU']
@@ -682,7 +682,7 @@ class RealField(Field):
             else:
                 plan = self.pm.plans['forwardT']
 
-        plan.execute(self.base, out.base)
+        plan.execute(self._base, out._base)
 
         # PFFT normalization, same as FastPM
         out.value[...] *= numpy.prod(self.Nmesh ** -1.0)
@@ -997,7 +997,7 @@ class BaseComplexField(Field):
             out = self
 
         if out is self:
-            out = RealField(self.pm, self.base)
+            out = RealField(self.pm, self._base)
 
         assert isinstance(out, RealField)
 
@@ -1006,9 +1006,9 @@ class BaseComplexField(Field):
             # to using an inplace transform
 
             # view out as self, and copy the value
-            self = self.pm.create(type=type(self), base=out.base, value=self.value)
+            self = self.pm.create(type=type(self), base=out._base, value=self.value)
 
-        if out.base in self.base and self.base in out.base:
+        if out._base in self._base and self._base in out._base:
             # inplace
             if isinstance(self, UntransposedComplexField):
                 plan = self.pm.plans['ipbackwardU']
@@ -1020,7 +1020,7 @@ class BaseComplexField(Field):
             else:
                 plan = self.pm.plans['backwardT']
 
-        plan.execute(self.base, out.base)
+        plan.execute(self._base, out._base)
 
         return out
 
@@ -1513,7 +1513,7 @@ class ParticleMesh(object):
 
             base : object, None
                 Reusing the base attribute (physical memory) of an existing field
-                object. Provide the attribute, not the field object. (`obj.base` not `obj`)
+                object. Provide the attribute, not the field object. (`obj._base` not `obj`)
 
             value : array_like, None
                 initialize the field with the values.
@@ -1860,7 +1860,7 @@ class ParticleMesh(object):
 
         # transform from my mesh to source's mesh
         transform = Affine(self.ndim,
-                    translate=-source.partition.local_i_start,
+                    translate=-source.start,
                     scale=1.0 * source.Nmesh / self.Nmesh,
                     period=source.Nmesh)
 
@@ -1871,10 +1871,10 @@ class ParticleMesh(object):
 
         #q1 = layout.exchange(q)
         #v1 = source.readout(q1, resampler=resampler, transform=transform)
-        #print(source.partition.local_i_start, transform.translate)
+        #print(source.start, transform.translate)
         #for a, b in zip(q1, v1):
         #    if all(a == [0, 0]):
-        #        print(source.partition.local_i_start, a, a * transform.scale + transform.translate, b)
+        #        print(source.start, a, a * transform.scale + transform.translate, b)
         if not keep_mean:
             f *= (source.pm.Nmesh.prod() / source.pm.BoxSize.prod()) / (self.Nmesh.prod() / self.BoxSize.prod())
 
@@ -1911,10 +1911,7 @@ class ParticleMesh(object):
         f = source.readout(q, resampler='nnb', transform=source.pm.affine_grid)
 
         # transform from ssource' mesh to my mesh
-        transform = Affine(self.ndim,
-                    translate=-self.partition.local_i_start,
-                    scale=1.0 * self.Nmesh / source.Nmesh,
-                    period=self.Nmesh)
+        transform = self.affine_grid.rescale(1.0 * self.Nmesh / source.Nmesh)
 
         if keep_mean:
             f /= (source.pm.Nmesh.prod() / source.pm.BoxSize.prod()) / (self.Nmesh.prod() / self.BoxSize.prod())

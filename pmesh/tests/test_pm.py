@@ -811,15 +811,18 @@ def test_grid_shifted(comm):
 @MPITest(commsize=(1))
 def test_coords(comm):
     pm = ParticleMesh(BoxSize=8.0, Nmesh=[4, 4, 4], comm=comm, dtype='f8')
-    grid_x, grid_i = pm.create_coords('real')
+    grid_x = pm.create_coords('real')
+    assert len(grid_x) == 3
+    grid_i = pm.create_coords('real', return_indices=True)
+    assert len(grid_i) == 3
+
+    grid_x = pm.create_coords('complex')
+    grid_i = pm.create_coords('complex', return_indices=True)
     assert len(grid_x) == 3
     assert len(grid_i) == 3
 
-    grid_x, grid_i = pm.create_coords('complex')
-    assert len(grid_x) == 3
-    assert len(grid_i) == 3
-
-    grid_x, grid_i = pm.create_coords('transposedcomplex')
+    grid_x = pm.create_coords('transposedcomplex')
+    grid_i = pm.create_coords('transposedcomplex', return_indices=True)
     assert len(grid_x) == 3
     assert len(grid_i) == 3
 

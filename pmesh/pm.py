@@ -228,17 +228,18 @@ class Field(NDArrayLike):
             self.value = base.view_input()
             self.start = partition.local_i_start
             self.cshape = numpy.array([e[-1] for e in partition.i_edges], dtype='intp')
-            self.x, self.i = pm.create_coords(type(self))
         elif isinstance(self, (TransposedComplexField, UntransposedComplexField)):
             self.value = base.view_output()
             self.start = partition.local_o_start
             self.cshape = numpy.array([e[-1] for e in partition.o_edges], dtype='intp')
-            self.x, self.i = pm.create_coords(type(self))
             self.real = self.value.real
             self.imag = self.value.imag
             self.plain = self.value.view(dtype=(self.real.dtype, 2))
         else:
             raise TypeError("Only RealField and ComplexField. No more subclassing");
+
+        self.x = pm.create_coords(type(self), return_indices=False)
+        self.i = pm.create_coords(type(self), return_indices=True)
 
         # copy over a few ndarray attributes
         self.flat = self.value.flat
@@ -1437,21 +1438,30 @@ class ParticleMesh(object):
             raise TypeError("not support type, internall Error")
         return partition
 
-    def create_coords(self, field_type):
-        """ Create coordinate arrays.
+    def create_coords(self, field_type, return_indices=False):
+        """ Create coordinate arrays. If return_indices is True, return
+            the integer indices instead.
 
             Returns
-            x : list of arrays, broadcastable to the right shape of the field;
+            -------
+            x : (when return_indices is False) list of arrays, broadcastable to the right shape of the field;
                 distance or wavenumber; between negative and positive.
 
-            i : list of arrays, integers (ranging from 0 to Nmesh)
+            i : (when return_indices is True) list of arrays, integers (ranging from 0 to Nmesh)
         """
         field_type = _typestr_to_type(field_type)
         partition = self._get_partition(field_type)
         if issubclass(field_type, RealField):
-            return _init_i_coords(partition, self.Nmesh, self.BoxSize)
+            x, i = _init_i_coords(partition, self.Nmesh, self.BoxSize)
+            if return_indices:
+                return i
+            return x
         if issubclass(field_type, BaseComplexField):
-            return _init_o_coords(partition, self.Nmesh, self.BoxSize)
+            k, i = _init_o_coords(partition, self.Nmesh, self.BoxSize)
+            if return_indices:
+                return i
+            return k
+
         raise TypeError
 
     @property

@@ -209,70 +209,10 @@ class Field(NDArrayLike):
     def copy(self):
         return self.pm.create(_gettype(self), value=self.value)
 
-    def _init_i_coords(self, partition, Nmesh, BoxSize):
-        x = []
-        r = []
-        i_ind = []
-
-        for d in range(partition.ndim):
-            t = numpy.ones(partition.ndim, dtype='intp')
-            t[d] = partition.local_i_shape[d]
-
-            i_indi = numpy.arange(t[d], dtype='intp') + partition.local_i_start[d]
-
-            ri = numpy.arange(t[d], dtype='f4') + partition.local_i_start[d]
-
-            ri[ri >= Nmesh[d] // 2] -= Nmesh[d]
-
-            xi = ri * BoxSize[d] / Nmesh[d]
-
-            i_ind.append(i_indi.reshape(t))
-            r.append(ri.reshape(t))
-            x.append(xi.reshape(t))
-
-        # FIXME: r
-        return x, i_ind
-
-    def _init_o_coords(self, partition, Nmesh, BoxSize):
-        k = []
-        w = []
-        o_ind = []
-
-        for d in range(partition.ndim):
-            s = numpy.ones(partition.ndim, dtype='intp')
-            s[d] = partition.local_o_shape[d]
-
-            o_indi = numpy.arange(s[d], dtype='intp') + partition.local_o_start[d]
-
-            wi = numpy.arange(s[d], dtype='f4') + partition.local_o_start[d]
-
-            wi[wi >= Nmesh[d] // 2] -= Nmesh[d]
-
-            wi *= (2 * numpy.pi / Nmesh[d])
-            ki = wi * Nmesh[d] / BoxSize[d]
-
-            o_ind.append(o_indi.reshape(s))
-            w.append(wi.reshape(s))
-            k.append(ki.reshape(s))
-
-        # FIXME: w
-        return k, o_ind
-
     def __init__(self, pm, base=None):
         """ Used internally to add shortcuts of attributes from pm """
 
-        if isinstance(self, RealField):
-            # usually we use the transpsoed partition;
-            # which is compatible for the real field either transposed
-            # or not
-            partition = pm.plans['partitionT']
-        elif isinstance(self, UntransposedComplexField):
-            # for untransposed complex field.
-            partition = pm.plans['partitionU']
-        elif isinstance(self, TransposedComplexField):
-            partition = pm.plans['partitionT']
-        else:
-            raise TypeError("not support type, internall Error")
+        partition = pm._get_partition(type(self))
 
         # create a new base object based on the given base object
         base = pfft.LocalBuffer(partition, base=base)
@@ -288,12 +228,12 @@ class Field(NDArrayLike):
             self.value = base.view_input()
             self.start = partition.local_i_start
             self.cshape = numpy.array([e[-1] for e in partition.i_edges], dtype='intp')
-            self.x, self.i = self._init_i_coords(partition, self.Nmesh, self.BoxSize)
+            self.x, self.i = pm.create_coords(type(self))
         elif isinstance(self, (TransposedComplexField, UntransposedComplexField)):
             self.value = base.view_output()
             self.start = partition.local_o_start
             self.cshape = numpy.array([e[-1] for e in partition.o_edges], dtype='intp')
-            self.x, self.i = self._init_o_coords(partition, self.Nmesh, self.BoxSize)
+            self.x, self.i = pm.create_coords(type(self))
             self.real = self.value.real
             self.imag = self.value.imag
             self.plain = self.value.view(dtype=(self.real.dtype, 2))
@@ -1190,6 +1130,56 @@ def _typestr_to_type(typestr):
 
     return typestr
 
+def _init_i_coords(partition, Nmesh, BoxSize):
+    x = []
+    r = []
+    i_ind = []
+
+    for d in range(partition.ndim):
+        t = numpy.ones(partition.ndim, dtype='intp')
+        t[d] = partition.local_i_shape[d]
+
+        i_indi = numpy.arange(t[d], dtype='intp') + partition.local_i_start[d]
+
+        ri = numpy.arange(t[d], dtype='f4') + partition.local_i_start[d]
+
+        ri[ri >= Nmesh[d] // 2] -= Nmesh[d]
+
+        xi = ri * BoxSize[d] / Nmesh[d]
+
+        i_ind.append(i_indi.reshape(t))
+        r.append(ri.reshape(t))
+        x.append(xi.reshape(t))
+
+    # FIXME: r
+    return x, i_ind
+
+def _init_o_coords(partition, Nmesh, BoxSize):
+    k = []
+    w = []
+    o_ind = []
+
+    for d in range(partition.ndim):
+        s = numpy.ones(partition.ndim, dtype='intp')
+        s[d] = partition.local_o_shape[d]
+
+        o_indi = numpy.arange(s[d], dtype='intp') + partition.local_o_start[d]
+
+        wi = numpy.arange(s[d], dtype='f4') + partition.local_o_start[d]
+
+        wi[wi >= Nmesh[d] // 2] -= Nmesh[d]
+
+        wi *= (2 * numpy.pi / Nmesh[d])
+        ki = wi * Nmesh[d] / BoxSize[d]
+
+        o_ind.append(o_indi.reshape(s))
+        w.append(wi.reshape(s))
+        k.append(ki.reshape(s))
+
+    # FIXME: w
+    return k, o_ind
+
+
 from weakref import WeakValueDictionary
 
 _pm_cache = WeakValueDictionary()
@@ -1431,6 +1421,38 @@ class ParticleMesh(object):
         self.template = template
 
         _pm_cache[_cache_args] = template
+
+    def _get_partition(self, field_type):
+        if issubclass(field_type, RealField):
+            # usually we use the transpsoed partition;
+            # which is compatible for the real field either transposed
+            # or not
+            partition = self.plans['partitionT']
+        elif issubclass(field_type, UntransposedComplexField):
+            # for untransposed complex field.
+            partition = self.plans['partitionU']
+        elif issubclass(field_type, TransposedComplexField):
+            partition = self.plans['partitionT']
+        else:
+            raise TypeError("not support type, internall Error")
+        return partition
+
+    def create_coords(self, field_type):
+        """ Create coordinate arrays.
+
+            Returns
+            x : list of arrays, broadcastable to the right shape of the field;
+                distance or wavenumber; between negative and positive.
+
+            i : list of arrays, integers (ranging from 0 to Nmesh)
+        """
+        field_type = _typestr_to_type(field_type)
+        partition = self._get_partition(field_type)
+        if issubclass(field_type, RealField):
+            return _init_i_coords(partition, self.Nmesh, self.BoxSize)
+        if issubclass(field_type, BaseComplexField):
+            return _init_o_coords(partition, self.Nmesh, self.BoxSize)
+        raise TypeError
 
     @property
     def partition(self):

@@ -36,6 +36,6 @@ $(window).resize(function(){
         $("li.nav-item-0 a").text("Top");
     }
     else {
-        $("li.nav-item-0 a").text("pmesh 0.1.46 documentation");
+        $("li.nav-item-0 a").text("pmesh 0.1.51 documentation");
     }
 });

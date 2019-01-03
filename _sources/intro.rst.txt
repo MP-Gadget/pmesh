@@ -47,7 +47,7 @@ Here is an example for calculating linear order displacement from perturbative g
         density.paint(P['Position'], weight=P['Mass'], layout=layout)
 
         def potential_transfer_function(k, v):
-            k2 = sum(ki**2 for ki in k)
+            k2 = k.normp(zeromode=1)
             return v / (k2)
 
         pot_k = density.r2c(out=Ellipsis)\

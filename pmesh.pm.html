@@ -6,9 +6,10 @@
   <head>
     <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>pmesh.pm module &#8212; pmesh 0.1.46 documentation</title>
+    <title>pmesh.pm module &#8212; pmesh 0.1.51 documentation</title>
     <link rel="stylesheet" href="_static/bizstyle.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
     <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
     <script type="text/javascript" src="_static/jquery.js"></script>
     <script type="text/javascript" src="_static/underscore.js"></script>
@@ -38,7 +39,7 @@
         <li class="right" >
           <a href="pmesh.particlemesh.html" title="pmesh.particlemesh module"
              accesskey="P">previous</a> |</li>
-        <li class="nav-item nav-item-0"><a href="index.html">pmesh 0.1.46 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-0"><a href="index.html">pmesh 0.1.51 documentation</a> &#187;</li>
           <li class="nav-item nav-item-1"><a href="modules.html" >pmesh</a> &#187;</li>
           <li class="nav-item nav-item-2"><a href="pmesh.html" accesskey="U">pmesh package</a> &#187;</li> 
       </ul>
@@ -94,8 +95,10 @@
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
 <dt><strong>func</strong> <span class="classifier-delimiter">:</span> <span class="classifier">callable</span></dt>
-<dd><p class="first last">func(k, y) where k is a list of k values that broadcasts into a full array.
+<dd><p class="first">func(k, y) where k is a list of k values that broadcasts into a full array.
 value of k depends on kind. y is the corrsponding value of field.</p>
+<p>y is the value of the field on the corresponding locations.</p>
+<p class="last"><cite>k.normp(p=2, zeromode=1)</cite> would return <cite>|k|^2</cite> but set the zero mode (r == 0) to 1.</p>
 </dd>
 <dt><strong>kind</strong> <span class="classifier-delimiter">:</span> <span class="classifier">string</span></dt>
 <dd><p class="first last">The kind of value in k.
@@ -409,11 +412,33 @@ RealField, ComplexField, TransposedComplexField, UntransposedComplexField</p>
 </dd>
 <dt><strong>base</strong> <span class="classifier-delimiter">:</span> <span class="classifier">object, None</span></dt>
 <dd><p class="first last">Reusing the base attribute (physical memory) of an existing field
-object. Provide the attribute, not the field object. (<cite>obj.base</cite> not <cite>obj</cite>)</p>
+object. Provide the attribute, not the field object. (<cite>obj._base</cite> not <cite>obj</cite>)</p>
 </dd>
 <dt><strong>value</strong> <span class="classifier-delimiter">:</span> <span class="classifier">array_like, None</span></dt>
 <dd><p class="first last">initialize the field with the values.</p>
 </dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="pmesh.pm.ParticleMesh.create_coords">
+<code class="descname">create_coords</code><span class="sig-paren">(</span><em>field_type</em>, <em>return_indices=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pmesh/pm.html#ParticleMesh.create_coords"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pmesh.pm.ParticleMesh.create_coords" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create coordinate arrays. If return_indices is True, return
+the integer indices instead.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>x</strong> <span class="classifier-delimiter">:</span> <span class="classifier">(when return_indices is False) list of arrays, broadcastable to the right shape of the field;</span></dt>
+<dd><p class="first last">distance or wavenumber; between negative and positive.</p>
+</dd>
+<dt><strong>i</strong> <span class="classifier-delimiter">:</span> <span class="classifier">(when return_indices is True) list of arrays, integers (ranging from 0 to Nmesh)</span></dt>
+<dd></dd>
 </dl>
 </td>
 </tr>
@@ -675,6 +700,37 @@ dimension.</p>
 <dd></dd></dl>
 
 <dl class="method">
+<dt id="pmesh.pm.ParticleMesh.respawn">
+<code class="descname">respawn</code><span class="sig-paren">(</span><em>comm</em>, <em>np=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pmesh/pm.html#ParticleMesh.respawn"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pmesh.pm.ParticleMesh.respawn" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a new ParticleMesh object with the same geometry but on a new communicator.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
+<dt><strong>comm</strong> <span class="classifier-delimiter">:</span> <span class="classifier">MPI.Comm</span></dt>
+<dd><p class="first last">the new communicator</p>
+</dd>
+<dt><strong>np</strong> <span class="classifier-delimiter">:</span> <span class="classifier">list or int</span></dt>
+<dd><p class="first last">the process mesh topology</p>
+</dd>
+</dl>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>A new ParticleMesh on the given communicator;</strong></dt>
+<dd></dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Notes</p>
+<p>Usually the communicator shall be a subcommunicator of self.comm, because otherwise
+there is no way to correctly make a barrier.</p>
+</dd></dl>
+
+<dl class="method">
 <dt id="pmesh.pm.ParticleMesh.unravel">
 <code class="descname">unravel</code><span class="sig-paren">(</span><em>type</em>, <em>flatiter</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pmesh/pm.html#ParticleMesh.unravel"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pmesh.pm.ParticleMesh.unravel" title="Permalink to this definition">¶</a></dt>
 <dd><p>Unravel c-ordered field values.</p>
@@ -755,12 +811,12 @@ for lanzcos, db, and sym.</p>
 <dd><p class="first">func(r, y) where r is a list of r values that broadcasts into a full array.
 value of r depends on kind.</p>
 <p>y is the value of the field on the corresponding locations.</p>
-<p class="last">r.normp(p=2, zeromode=1) would return <a href="#id1"><span class="problematic" id="id2">|</span></a>r|^2 but set the zero mode (r == 0) to 1.</p>
+<p class="last"><cite>r.normp(p=2, zeromode=1)</cite> would return <cite>|r|^2</cite> but set the zero mode (r == 0) to 1.</p>
 </dd>
 <dt><strong>kind</strong> <span class="classifier-delimiter">:</span> <span class="classifier">string</span></dt>
 <dd><p class="first last">The kind of value in r.
-‘relative’ means distance from [-0.5 Boxsize, 0.5 BoxSize).
-‘index’ means [0, Nmesh )</p>
+‘relative’ means distance from <cite>[-0.5 Boxsize, 0.5 BoxSize)</cite>.
+‘index’ means <cite>[0, Nmesh )</cite></p>
 </dd>
 </dl>
 </td>
@@ -1033,14 +1089,14 @@ k in Nsrc and composes Ndest</p>
         <li class="right" >
           <a href="pmesh.particlemesh.html" title="pmesh.particlemesh module"
              >previous</a> |</li>
-        <li class="nav-item nav-item-0"><a href="index.html">pmesh 0.1.46 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-0"><a href="index.html">pmesh 0.1.51 documentation</a> &#187;</li>
           <li class="nav-item nav-item-1"><a href="modules.html" >pmesh</a> &#187;</li>
           <li class="nav-item nav-item-2"><a href="pmesh.html" >pmesh package</a> &#187;</li> 
       </ul>
     </div>
     <div class="footer" role="contentinfo">
         &#169; Copyright 2017, Yu Feng.
-      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.7.5.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.8.2.
     </div>
   </body>
 </html>

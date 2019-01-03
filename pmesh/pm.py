@@ -816,12 +816,12 @@ class RealField(Field):
 
                 y is the value of the field on the corresponding locations.
 
-                r.normp(p=2, zeromode=1) would return |r|^2 but set the zero mode (r == 0) to 1.
+                `r.normp(p=2, zeromode=1)` would return `|r|^2` but set the zero mode (r == 0) to 1.
 
             kind : string
                 The kind of value in r.
-                'relative' means distance from [-0.5 Boxsize, 0.5 BoxSize).
-                'index' means [0, Nmesh )
+                'relative' means distance from `[-0.5 Boxsize, 0.5 BoxSize)`.
+                'index' means `[0, Nmesh )`
         """
         if out is None:
             out = self.pm.create(type=RealField)
@@ -999,6 +999,11 @@ class BaseComplexField(Field):
             func : callable
                 func(k, y) where k is a list of k values that broadcasts into a full array.
                 value of k depends on kind. y is the corrsponding value of field.
+
+                y is the value of the field on the corresponding locations.
+
+                `k.normp(p=2, zeromode=1)` would return `|k|^2` but set the zero mode (r == 0) to 1.
+
             kind : string
                 The kind of value in k.
                 'wavenumber' means wavenumber from [- 2 pi / L * N / 2, 2 pi / L * N / 2).

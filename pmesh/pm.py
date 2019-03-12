@@ -776,7 +776,8 @@ class RealField(Field):
                 out_self = self
 
             # watch out: do this after using self, because out_self can be self.
-            out_self.paint(pos, mass=v, resampler=resampler, transform=transform, gradient=gradient, hold=False, layout=layout)
+            self.pm.paint(pos, mass=v, resampler=resampler, transform=transform, gradient=gradient, hold=False,
+                    layout=layout, out=out_self)
 
         return out_self, out_pos
 

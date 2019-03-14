@@ -359,8 +359,7 @@ def test_tsc_tuned():
         assert_array_equal(d1, d2)
         assert_array_equal(v, v2)
 
-@MPITest(commsize=(1))
-def test_compensation(comm):
-    comp1 = CIC.get_fwindow([0, numpy.pi, 2 * numpy.pi])
+def test_compensation():
+    comp1 = CIC.get_fwindow([0, 2 * numpy.pi])
 
-    assert_allclose(comp1, [1, 
+    assert_allclose(comp1, [1, 0.0], atol=1e-9)

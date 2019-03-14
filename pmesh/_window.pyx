@@ -62,6 +62,7 @@ cdef extern from "_window_imp.h":
     void pmesh_painter_init(PMeshPainter * painter)
     void pmesh_painter_paint(PMeshPainter * painter, double pos[], double mass, double hsml)
     double pmesh_painter_readout(PMeshPainter * painter, double pos[], double hsml)
+    double pmesh_painter_get_fwindow(PMeshPainter * painter, double w)
 
 cdef class ResampleWindow(object):
     cdef PMeshPainter painter[1]
@@ -113,6 +114,16 @@ cdef class ResampleWindow(object):
         self.nativesupport = self.painter.nativesupport
         self.support = self.painter.support
         self.kind = kind
+
+    def get_fwindow(self, double [:] w):
+        cdef double [:] vrt
+        cdef double v
+        rt = numpy.zeros(w.shape[0], dtype='f8')
+        vrt = rt
+        for i in range(w.shape[0]):
+            v = pmesh_painter_get_fwindow(self.painter, w[i])
+            vrt[i] = v
+        return rt
 
     def paint(self, numpy.ndarray real, postype [:, :] pos, hsmltype [:] hsml, masstype [:] mass,
             order, double [:] scale, double [:] translate, ptrdiff_t [:] period):

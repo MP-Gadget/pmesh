@@ -10,6 +10,17 @@
 #include "_window_lanczos.h"
 #include "_window_acg.h"
 
+static double
+sinc_unnormed(double x) {
+    /* sin(x) / x */
+    if(x < 1e-5 && x > -1e-5) {
+        double x2 = x * x;
+        return 1.0 - x2 / 6. + x2  * x2 / 120.;
+    } else {
+        return sin(x) / x;
+    }
+}
+
 static void
 pmesh_window_info_init(PMeshWindowInfo * info, int ndim, int nativesupport, double support)
 {
@@ -107,6 +118,12 @@ _nearest_diff(double x) {
     return 0;
 }
 
+static double
+_nearest_fwindow(double w) {
+    /* p = 1 ; https://arxiv.org/abs/astro-ph/0409240 eq 18. */
+    double t = sinc_unnormed(0.5 * w);
+    return t;
+}
 
 static double
 _linear_kernel(double x) {
@@ -130,6 +147,14 @@ _linear_diff(double x) {
     }
     if(x < 1.0) return factor;
     return 0;
+}
+
+static double
+_linear_fwindow(double w) {
+    /* p == 2*/
+    double t = sinc_unnormed(0.5 * w);
+    t = t * t;
+    return t;
 }
 
 static double
@@ -168,6 +193,15 @@ _quadratic_diff(double x) {
 }
 
 static double
+_quadratic_fwindow(double w) {
+    /* p = 3 ; https://arxiv.org/abs/astro-ph/0409240 eq 18. */
+    double t = sinc_unnormed(0.5 * w);
+    t = t * t * t;
+    return t;
+}
+
+
+static double
 _cubic_kernel(double x) {
     /* Take from eq 18 https://arxiv.org/pdf/1512.07295.pdf, PCS */
     x = fabs(x);
@@ -201,6 +235,14 @@ _cubic_diff(double x) {
     return 0;
 }
 
+static double
+_cubic_fwindow(double w) {
+    /* p = 4 ; https://arxiv.org/abs/astro-ph/0409240 eq 18. */
+    double t = sinc_unnormed(0.5 * w);
+    t = t * t * t * t;
+    return t;
+}
+
 void
 pmesh_painter_init(PMeshPainter * painter)
 {
@@ -218,107 +260,128 @@ pmesh_painter_init(PMeshPainter * painter)
         case PMESH_PAINTER_NEAREST:
             painter->kernel = _nearest_kernel;
             painter->diff = _nearest_diff;
+            painter->fwindow = _nearest_fwindow;
             painter->nativesupport = 1;
         break;
         case PMESH_PAINTER_LINEAR:
             painter->kernel = _linear_kernel;
             painter->diff = _linear_diff;
+            painter->fwindow = _linear_fwindow;
             painter->nativesupport = 2;
         break;
         case PMESH_PAINTER_QUADRATIC:
             painter->kernel = _quadratic_kernel;
             painter->diff = _quadratic_diff;
+            painter->fwindow = _quadratic_fwindow;
             painter->nativesupport = 3;
         break;
         case PMESH_PAINTER_CUBIC:
             painter->kernel = _cubic_kernel;
             painter->diff = _cubic_diff;
+            painter->fwindow = _cubic_fwindow;
             painter->nativesupport = 4;
         break;
         case PMESH_PAINTER_LANCZOS2:
             painter->kernel = _lanczos2_kernel;
             painter->diff = _lanczos2_diff;
+            painter->fwindow = NULL;
             painter->nativesupport = _lanczos2_nativesupport;
         break;
         case PMESH_PAINTER_LANCZOS3:
             painter->kernel = _lanczos3_kernel;
             painter->diff = _lanczos3_diff;
+            painter->fwindow = NULL;
             painter->nativesupport = _lanczos3_nativesupport;
         break;
         case PMESH_PAINTER_LANCZOS4:
             painter->kernel = _lanczos4_kernel;
             painter->diff = _lanczos4_diff;
+            painter->fwindow = NULL;
             painter->nativesupport = _lanczos4_nativesupport;
         break;
         case PMESH_PAINTER_LANCZOS5:
             painter->kernel = _lanczos5_kernel;
             painter->diff = _lanczos5_diff;
+            painter->fwindow = NULL;
             painter->nativesupport = _lanczos5_nativesupport;
         break;
         case PMESH_PAINTER_LANCZOS6:
             painter->kernel = _lanczos6_kernel;
             painter->diff = _lanczos6_diff;
+            painter->fwindow = NULL;
             painter->nativesupport = _lanczos6_nativesupport;
         break;
         case PMESH_PAINTER_ACG2:
             painter->kernel = _acg2_kernel;
             painter->diff = _acg2_diff;
+            painter->fwindow = NULL;
             painter->nativesupport = _acg2_nativesupport;
         break;
         case PMESH_PAINTER_ACG3:
             painter->kernel = _acg3_kernel;
             painter->diff = _acg3_diff;
+            painter->fwindow = NULL;
             painter->nativesupport = _acg3_nativesupport;
         break;
         case PMESH_PAINTER_ACG4:
             painter->kernel = _acg4_kernel;
             painter->diff = _acg4_diff;
+            painter->fwindow = NULL;
             painter->nativesupport = _acg4_nativesupport;
         break;
         case PMESH_PAINTER_ACG5:
             painter->kernel = _acg5_kernel;
             painter->diff = _acg5_diff;
+            painter->fwindow = NULL;
             painter->nativesupport = _acg5_nativesupport;
         break;
         case PMESH_PAINTER_ACG6:
             painter->kernel = _acg6_kernel;
             painter->diff = _acg6_diff;
+            painter->fwindow = NULL;
             painter->nativesupport = _acg6_nativesupport;
         break;
         case PMESH_PAINTER_DB6:
             painter->kernel = _db6_kernel;
             painter->diff = _db6_diff;
+            painter->fwindow = NULL;
             painter->nativesupport = _db6_nativesupport;
         break;
         case PMESH_PAINTER_DB12:
             painter->kernel = _db12_kernel;
             painter->diff = _db12_diff;
+            painter->fwindow = NULL;
             painter->nativesupport = _db12_nativesupport;
         break;
         case PMESH_PAINTER_DB20:
             painter->kernel = _db20_kernel;
             painter->diff = _db20_diff;
+            painter->fwindow = NULL;
             painter->nativesupport = _db20_nativesupport;
         break;
         case PMESH_PAINTER_SYM6:
             painter->kernel = _sym6_kernel;
             painter->diff = _sym6_diff;
+            painter->fwindow = NULL;
             painter->nativesupport = _sym6_nativesupport;
         break;
         case PMESH_PAINTER_SYM12:
             painter->kernel = _sym12_kernel;
             painter->diff = _sym12_diff;
+            painter->fwindow = NULL;
             painter->nativesupport = _sym12_nativesupport;
         break;
         case PMESH_PAINTER_SYM20:
             painter->kernel = _sym20_kernel;
             painter->diff = _sym20_diff;
+            painter->fwindow = NULL;
             painter->nativesupport = _sym20_nativesupport;
         break;
         case PMESH_PAINTER_TUNED_NNB:
             /* fall back to use nearest kernel */
             painter->kernel = _nearest_kernel;
             painter->diff = _nearest_diff;
+            painter->fwindow = _nearest_fwindow;
             painter->nativesupport = 1;
 
             if(painter->order[0] > 1) break;
@@ -336,6 +399,7 @@ pmesh_painter_init(PMeshPainter * painter)
             /* fall back to use linear kernel */
             painter->kernel = _linear_kernel;
             painter->diff = _linear_diff;
+            painter->fwindow = _linear_fwindow;
             painter->nativesupport = 2;
 
             if(painter->order[0] > 1) break;
@@ -353,6 +417,7 @@ pmesh_painter_init(PMeshPainter * painter)
             /* fall back to use quad kernel */
             painter->kernel = _quadratic_kernel;
             painter->diff = _quadratic_diff;
+            painter->fwindow = _quadratic_fwindow;
             painter->nativesupport = 3;
 
             if(painter->order[0] > 1) break;
@@ -370,6 +435,7 @@ pmesh_painter_init(PMeshPainter * painter)
             /* fall back to use cubic kernel*/
             painter->kernel = _cubic_kernel;
             painter->diff = _cubic_diff;
+            painter->fwindow = _cubic_fwindow;
             painter->nativesupport = 4;
 
             if(painter->order[0] > 1) break;
@@ -402,5 +468,19 @@ double
 pmesh_painter_readout(PMeshPainter * painter, double pos[], double hsml)
 {
     return painter->readout(painter, pos, hsml);
+}
+
+double
+pmesh_painter_get_fwindow(PMeshPainter * painter, double w)
+{
+    /* if support is larger, the window is shallower, thus fwindow shall be peakier.
+     *  we shall look up from a larger frequency */
+    if(painter->fwindow) {
+        double r = painter->fwindow(w / painter->window.vfactor);
+        return r;
+    }
+    else {
+        return 1.0; /* not implemented */
+    }
 }
 

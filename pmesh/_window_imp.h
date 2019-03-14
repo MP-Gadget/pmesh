@@ -38,6 +38,7 @@ typedef struct PMeshWindowInfo {
 typedef struct PMeshPainter PMeshPainter;
 
 typedef double (*pmesh_kernelfunc)(double x);
+typedef double (*pmesh_fwindowfunc)(double w);
 
 typedef    void   (*paintfunc)(PMeshPainter * painter, double pos[], double weight, double hsml);
 typedef    double (*readoutfunc)(PMeshPainter * painter, double pos[], double hsml);
@@ -65,6 +66,7 @@ struct PMeshPainter {
 
     pmesh_kernelfunc kernel;
     pmesh_kernelfunc diff;
+    pmesh_fwindowfunc fwindow; /* fourier space window */
 
     double nativesupport; /* unscaled support */
 
@@ -79,6 +81,9 @@ pmesh_painter_paint(PMeshPainter * painter, double pos[], double weight, double 
 
 double
 pmesh_painter_readout(PMeshPainter * painter, double pos[], double hsml);
+
+double
+pmesh_painter_get_fwindow(PMeshPainter * painter, double w);
 
 #ifdef __cplusplus
 }

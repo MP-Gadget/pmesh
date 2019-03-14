@@ -358,3 +358,9 @@ def test_tsc_tuned():
         v2 = QUADRATIC.readout(field, pos, transform=affine)
         assert_array_equal(d1, d2)
         assert_array_equal(v, v2)
+
+@MPITest(commsize=(1))
+def test_compensation(comm):
+    comp1 = CIC.get_fwindow([0, numpy.pi, 2 * numpy.pi])
+
+    assert_allclose(comp1, [1, 

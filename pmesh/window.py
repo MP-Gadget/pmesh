@@ -62,6 +62,47 @@ class ResampleWindow(_ResampleWindow):
         """ Change the support of the window, returning a new window. """
         return ResampleWindow(self.kind, support)
 
+    def get_compensation(self):
+        """
+            Return a function that compensates the resampling window by
+            deconvolving in Fourier space.
+
+            The function can be used as an argument of ComplexField.apply,
+            with kind='circular'
+        """
+
+        def function(w, v):
+            tf = 1.0
+            for wi in w:
+                tf = tf * self.get_fwindow(wi)
+            return v / tf
+
+        return function
+
+    def get_fwindow(self, w):
+        """
+            Compute the 1d fourier space window function of the resample window
+
+            Parameters
+            ----------
+            w : array_like
+                circular frequency
+
+            Returns
+            -------
+            T : array_like
+                same shape as w, the window function T(w). Usually between 0 and 1.
+
+            If a window is not implemented, return 1.
+
+            This assumes the particles always scaled by the Native support of the window.
+        """
+
+        w1d = numpy.reshape(w, -1).astype('float64')
+
+        T = _ResampleWindow.get_fwindow(self, w1d)
+        return T.reshape(numpy.shape(w))
+
     def paint(self, real, pos, hsml=None, mass=None, diffdir=None, transform=None):
         """
             paint to a field.
@@ -212,6 +253,7 @@ windows = dict(
     SYM12 = ResampleWindow(kind="sym12"),
     SYM20 = ResampleWindow(kind="sym20"),
 )
+
 for m, p in list(windows.items()):
     windows[m.lower()] = p
     globals()[m] = p

@@ -641,6 +641,7 @@ def test_cdot_cnorm(comm):
     assert_allclose(norm2, norm3)
     assert_allclose(norm2, norm1)
 
+
 @MPITest(commsize=(1))
 def test_cnorm_log(comm):
     pm = ParticleMesh(BoxSize=8.0, Nmesh=[4, 4, 4], comm=comm, dtype='f8')

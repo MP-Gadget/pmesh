@@ -82,11 +82,11 @@ class slab(numpy.ndarray):
     pass
 
 class slabiter(object):
-    def __init__(self, field):
+    def __init__(self, field, value):
         # we iterate over the slowest axis to gain locality.
         if field.ndim == 2:
             axis = 2
-            self.optimized_view = field.value[None, ...]
+            self.optimized_view = value[None, ...]
             self.nslabs = 1
             self.optx = [xx[None, ...] for xx in field.x]
             self.opti = [ii[None, ...] for ii in field.i]
@@ -94,7 +94,7 @@ class slabiter(object):
             axissort = numpy.argsort(field.value.strides)[::-1]
             axis = axissort[0]
 
-            self.optimized_view = field.value.transpose(axissort)
+            self.optimized_view = value.transpose(axissort)
             self.nslabs = field.shape[axis]
 
             self.optx = [xx.transpose(axissort) for xx in field.x]
@@ -347,7 +347,7 @@ class Field(NDArrayLike):
 
     @property
     def slabs(self):
-        return slabiter(self)
+        return slabiter(self, self.value)
 
     def sort(self, out=None):
         warnings.warn("Use ravel instead of sort", DeprecationWarning, stacklevel=2)
@@ -584,6 +584,40 @@ class Field(NDArrayLike):
 
         self.pm.comm.Allreduce(MPI.IN_PLACE, result)
         return result
+
+    def apply(self, func, kind, out):
+        """ implements all kinds of apply operations. see subclass members for documentation"""
+        if out is None:
+            out = self.pm.create(type=_gettype(self))
+
+        if is_inplace(out):
+            out = self
+
+        if isinstance(out, numpy.ndarray):
+            assert out.shape == self.value.shape
+            outslabs = slabiter(self, out)
+        else:
+            assert isinstance(out, _gettype(self))
+            assert out.value.shape == self.value.shape
+            outslabs = slabiter(self, out.value)
+
+        for x, i, islab, oslab in zip(self.slabs.x, self.slabs.i, self.slabs, outslabs):
+            if kind == 'relative':
+                oslab[...] = func(x, islab)
+            elif kind == 'index':
+                oslab[...] = func(i, islab)
+            elif kind == 'absolute':
+                oslab[...] = func(x, islab)
+            elif kind == 'wavenumber':
+                k = x
+                oslab[...] = func(k, islab)
+            elif kind == 'circular':
+                w = [ ki * L / N for ki, L, N in zip(x, self.BoxSize, self.Nmesh)]
+                oslab[...] = func(w, islab)
+            else:
+                raise ValueError("unknown kind of apply function.")
+        return out
+
 
 class RealField(Field):
     def __init__(self, pm, base=None):
@@ -823,23 +857,13 @@ class RealField(Field):
                 The kind of value in r.
                 'relative' means distance from `[-0.5 Boxsize, 0.5 BoxSize)`.
                 'index' means `[0, Nmesh )`
+
+            out : array_like or Field, or None.
+                If provided, write into this object. Must be the same shape as self.
+
         """
-        if out is None:
-            out = self.pm.create(type=RealField)
-
-        if is_inplace(out):
-            out = self
-
-        assert isinstance(out, _gettype(self))
-
-        for x, i, islab, oslab in zip(self.slabs.x, self.slabs.i, self.slabs, out.slabs):
-            if kind == 'relative':
-                oslab[...] = func(x, islab)
-            elif kind == 'index':
-                oslab[...] = func(i, islab)
-            else:
-                raise ValueError("kind is relative, or index")
-        return out
+        assert kind in ['relative', 'index', 'absolute']
+        return Field.apply(self, func, kind, out)
 
     def cdot(self, other):
         self._check_compatible(other)
@@ -1010,26 +1034,12 @@ class BaseComplexField(Field):
                 'wavenumber' means wavenumber from [- 2 pi / L * N / 2, 2 pi / L * N / 2).
                 'circular' means circular frequency from [- pi, pi).
                 'index' means [0, Nmesh )
+
+            out : array_like or Field, or None.
+                If provided, write into this object. Must be the same shape as self.
         """
-        if out is None:
-            # must match the type!
-            out = self.pm.create(type=_gettype(self))
-        if is_inplace(out):
-            out = self
-
-        assert isinstance(out, _gettype(self))
-
-        for k, i, islab, oslab in zip(self.slabs.x, self.slabs.i, self.slabs, out.slabs):
-            if kind == 'wavenumber':
-                oslab[...] = func(k, islab)
-            elif kind == 'circular':
-                w = [ ki * L / N for ki, L, N in zip(k, self.BoxSize, self.Nmesh)]
-                oslab[...] = func(w, islab)
-            elif kind == 'index':
-                oslab[...] = func(i, islab)
-            else:
-                raise ValueError("kind is wavenumber, circular, or index")
-        return out
+        assert kind in ['wavenumber', 'circular', 'index']
+        return Field.apply(self, func, kind, out)
 
 class UntransposedComplexField(BaseComplexField):
     """

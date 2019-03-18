@@ -28,6 +28,11 @@ extensions = [
                          "pmesh/_window_acg.h"],
                 libraries = ['m'],
                 include_dirs=["./", numpy.get_include()]),
+        Extension("pmesh._invariant", ["pmesh/_invariant.pyx"],
+                depends=["pmesh/_invariant_imp.c",
+                        ],
+                libraries = ['m'],
+                include_dirs=["pmesh", numpy.get_include()]),
         Extension("pmesh._whitenoise", ["pmesh/gsl/ranlxd.c", "pmesh/gsl/missing.c", "pmesh/gsl/rng.c", "pmesh/_whitenoise_imp.c", "pmesh/_whitenoise.pyx"],
                 depends=["pmesh/gsl/config.h", "pmesh/gsl/gsl_errno.h",
                          "pmesh/gsl/gsl_inline.h", "pmesh/gsl/gsl_rng.h",
@@ -35,7 +40,7 @@ extensions = [
                          "pmesh/_whitenoise_imp.h", "pmesh/_whitenoise_generics.h"
                         ],
                 libraries = ['m'],
-                include_dirs=["pmesh/gsl", "pmesh", numpy.get_include()])
+                include_dirs=["pmesh/gsl", "pmesh", numpy.get_include()]),
         ]
 
 from Cython.Build import cythonize

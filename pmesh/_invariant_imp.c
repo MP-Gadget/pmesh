@@ -41,10 +41,23 @@ absmax(int ndim, const ptrdiff_t x[])
     return shell;
 }
 
+/*
+ * Returns the index in inside-out filling
+ * order for integer mode vector x.
+ *
+ * cmask is a bitmask for axes that only the
+ * non-negative half are saved. Usually it is 1 << (ndim-1).
+ * or 0.
+ *
+ * -1 is returned if the mode does not exist. This
+ * can happen when some axes have cmask set.
+ *
+ * */
 ptrdiff_t pmesh_get_invariant_index(
     int ndim,
     const ptrdiff_t x[],
-    const uint32_t cmask)
+    const uint32_t cmask,
+    ptrdiff_t max_length)
 {
     int d;
 
@@ -152,8 +165,18 @@ ptrdiff_t pmesh_get_invariant_index(
             /* hit the hosting cap */
             if(icap == icap_x && icapset == icapset_x) {
                 /* subproblem */
-                ptrdiff_t subind = pmesh_get_invariant_index(ndim1, x1, cmask1);
+                ptrdiff_t max_length1 = -1;
+                if (max_length >= 0) {
+                    max_length1 = max_length - ind;
+                }
+                ptrdiff_t subind = pmesh_get_invariant_index(ndim1, x1, cmask1, max_length1);
+                if(subind == -1) {
+                    return -1;
+                }
                 ind += subind;
+                if(max_length >= 0 && ind >= max_length) {
+                    return -1;
+                }
                 return ind;
             }
             /* advance to the end of the cap */
@@ -164,8 +187,11 @@ ptrdiff_t pmesh_get_invariant_index(
                 size[icapset] = ipow(side - 2, ndim - n - nhalf) * ipow(shell, nhalf);
             }
             ind += size[icapset];
+            if(max_length >= 0 && ind >= max_length) {
+                return -1;
+            }
         }
-    }    
+    }
     return -1;
 }
 
@@ -194,7 +220,7 @@ visual_2d(int n)
     for(i = -n + 1; i <= n; i ++) {
         printf("% 3d |", i);    
         INNERLOOP() {
-            int r = pmesh_get_invariant_index(2, P(i, j), 0);
+            int r = pmesh_get_invariant_index(2, P(i, j), 0, -1);
             assert (r >= 0);
             assert (r < max);
             assert (map[r] == 0);
@@ -226,7 +252,7 @@ visual_2dc(int n)
     for(i = -n + 1; i <= n; i ++) {
         printf("% 3d |", i);    
         INNERLOOP() {
-            int r = pmesh_get_invariant_index(2, P(i, j), 1);
+            int r = pmesh_get_invariant_index(2, P(i, j), 1, -1);
 /*
             assert (r >= 0);
             assert (r < max);
@@ -272,7 +298,7 @@ visual_3d(int n)
     for(i = -n + 1; i <= n; i ++) {
         printf("% 4d |", i);    
         INNERLOOP_START
-        int r = pmesh_get_invariant_index(3, P(i, j, k), 0);
+        int r = pmesh_get_invariant_index(3, P(i, j, k), 0, -1);
         assert ( r >= 0);
         assert ( r <= max );
         assert ( map[r] == 0);
@@ -301,7 +327,7 @@ test_nd(int ndim, int n)
             x[d] = ii % (2*n) - (n - 1);
             ii /= (2*n);
         }
-        int ind = pmesh_get_invariant_index(ndim, x, cmask);
+        int ind = pmesh_get_invariant_index(ndim, x, cmask, -1);
         assert (ind >= 0);
         assert (ind <= max);
         assert (map[ind] == 0);
@@ -332,7 +358,7 @@ test_ndc(int ndim, int n, int cdim)
                 cmask |= (1 << d);
             }
         }
-        int ind = pmesh_get_invariant_index(ndim, x, cmask);
+        int ind = pmesh_get_invariant_index(ndim, x, cmask, -1);
         assert (ind >= 0);
         assert (ind <= max);
         assert (map[ind] == 0);
@@ -350,7 +376,7 @@ check_index(ptrdiff_t expected, int ndim, const ptrdiff_t x[], uint32_t cmask)
         sprintf(xs + strlen(xs), "% 2td ", x[d]);
         sprintf(cs + strlen(cs), "% 2td ", (cmask >>d) & 1);
     }
-    ptrdiff_t value = pmesh_get_invariant_index(ndim, x, cmask);
+    ptrdiff_t value = pmesh_get_invariant_index(ndim, x, cmask, -1);
     char * status;
     if (value == expected) {
         status = "PASS";
@@ -370,6 +396,7 @@ pmesh_test_get_invariant_index()
     assert (get_nbits(3) == 2);
     assert (get_nbits(0xffffffff) == 32);
 
+    check_index(0, 0, P(0), 0);
     printf("----- test 1d no compresss -----\n");
     check_index(0, 1, P(0), 0);
     check_index(1, 1, P(1), 0);

@@ -1,7 +1,7 @@
 from . import _invariant
 import numpy
 
-def get_index(x, Nmesh, compressed=True):
+def get_index(x, Nmesh, compressed=True, maxlength=None):
     """
     Return the scale invariant index.
 
@@ -15,6 +15,10 @@ def get_index(x, Nmesh, compressed=True):
     compressed : bool
         if the last axis is compressed. Skip the
         non-positive half in the index if True.
+    maxlength : int or None
+        if given, set return to -1 if the index is
+        greater or equal to maxlength. This hits
+        a faster code path.
 
     Returns
     -------
@@ -32,6 +36,6 @@ def get_index(x, Nmesh, compressed=True):
     ndim = numpy.shape(x)[-1]
     Nmesh = numpy.broadcast_to(Nmesh, ndim).astype('intp')
     oldshape = numpy.shape(x)[:-1]
-    r = _invariant.get_index(x.reshape(-1, ndim), Nmesh, compressed)
+    r = _invariant.get_index(x.reshape(-1, ndim), Nmesh, compressed, maxlength=maxlength)
     r = r.reshape(oldshape)
     return r

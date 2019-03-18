@@ -60,6 +60,9 @@ def test_3d(pos, c):
     x[..., 2] = x1.reshape(-1, 1, 1)
 
     x = x.reshape(-1, 3)
+    indm = get_index(x, 6, compressed=c, maxlength=10)
+    assert (indm < 10).all()
+
     ind = get_index(x, 6, compressed=c)
     if c:
         assert_array_equal(

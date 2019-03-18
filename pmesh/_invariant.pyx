@@ -11,12 +11,18 @@ cdef extern from "_invariant_imp.c":
     ptrdiff_t pmesh_get_invariant_index(
         int ndim,
         const ptrdiff_t x[],
-        const unsigned int cmask) nogil;
+        const unsigned int cmask,
+        const ptrdiff_t max_length) nogil;
 
-def get_index(inttype [:, :] x, ptrdiff_t [:] Nmesh, compressed):
+def get_index(inttype [:, :] x, ptrdiff_t [:] Nmesh, compressed, maxlength=None):
     cdef ptrdiff_t [::1] xi
     cdef ptrdiff_t [::1] r
     cdef unsigned int cmask = 0
+    cdef ptrdiff_t ml
+    if maxlength is None:
+        ml = -1
+    else:
+        ml = maxlength
 
     xi = numpy.empty(x.shape[1], dtype='intp')
     ra = numpy.empty(x.shape[0], dtype='intp')
@@ -42,6 +48,6 @@ def get_index(inttype [:, :] x, ptrdiff_t [:] Nmesh, compressed):
             if bad:
                 r[i] = -1
             else:
-                r[i] = pmesh_get_invariant_index(x.shape[1], &xi[0], cmask)
+                r[i] = pmesh_get_invariant_index(x.shape[1], &xi[0], cmask, ml)
 
     return ra

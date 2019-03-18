@@ -99,11 +99,11 @@ class slabiter(object):
 
             self.optx = [xx.transpose(axissort) for xx in field.x]
             self.opti = [ii.transpose(axissort) for ii in field.i]
-        self.x = xslabiter(axis, self.nslabs, self.optx)
-        self.i = xslabiter(axis, self.nslabs, self.opti)
         self.axis = axis
         self.Nmesh = field.Nmesh
         self.BoxSize = field.BoxSize
+        self.x = xslabiter(self, axis, self.nslabs, self.optx)
+        self.i = xslabiter(self, axis, self.nslabs, self.opti)
 
     def __iter__(self):
         for irow in range(self.nslabs):
@@ -134,15 +134,20 @@ class xslab(list):
 
 class xslabiter(slabiter):
     """ iterating will yield the sparse coordinates of a list of slabs """
-    def __init__(self, axis, nslabs, optx):
+    def __init__(self, slabiter, axis, nslabs, optx):
         self.axis = axis
+        self.BoxSize = slabiter.BoxSize
+        self.Nmesh = slabiter.Nmesh
         self.nslabs = nslabs
         self.optx = optx
 
     def __iter__(self):
         for irow in range(self.nslabs):
             kk = [x[0] if d != self.axis else x[irow] for d, x in enumerate(self.optx)]
-            yield xslab(kk)
+            slab = xslab(kk)
+            slab.BoxSize = self.BoxSize
+            slab.Nmesh = self.Nmesh
+            yield slab
 
 
 class Field(NDArrayLike):

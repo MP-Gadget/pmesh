@@ -49,8 +49,12 @@ absmax(int ndim, const ptrdiff_t x[])
  * non-negative half are saved. Usually it is 1 << (ndim-1).
  * or 0.
  *
+ * max_length can terminate the calculation early. If the
+ * index is g.e. max_length then the return value will be -1.
+ *
  * -1 is returned if the mode does not exist. This
- * can happen when some axes have cmask set.
+ * can happen when some axes have cmask set, or if the index
+ * is g.e. max_length.
  *
  * */
 ptrdiff_t pmesh_get_invariant_index(

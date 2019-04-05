@@ -1163,7 +1163,7 @@ def _init_i_coords(partition, Nmesh, BoxSize):
 
         i_indi = numpy.arange(t[d], dtype='intp') + partition.local_i_start[d]
 
-        ri = numpy.arange(t[d], dtype='f4') + partition.local_i_start[d]
+        ri = numpy.arange(t[d], dtype='f8') + partition.local_i_start[d]
 
         ri[ri >= Nmesh[d] // 2] -= Nmesh[d]
 
@@ -1187,7 +1187,7 @@ def _init_o_coords(partition, Nmesh, BoxSize):
 
         o_indi = numpy.arange(s[d], dtype='intp') + partition.local_o_start[d]
 
-        wi = numpy.arange(s[d], dtype='f4') + partition.local_o_start[d]
+        wi = numpy.arange(s[d], dtype='f8') + partition.local_o_start[d]
 
         wi[wi >= Nmesh[d] // 2] -= Nmesh[d]
 

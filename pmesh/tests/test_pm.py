@@ -814,17 +814,21 @@ def test_coords(comm):
     pm = ParticleMesh(BoxSize=8.0, Nmesh=[4, 4, 4], comm=comm, dtype='f8')
     grid_x = pm.create_coords('real')
     assert len(grid_x) == 3
+    assert grid_x[0].dtype == pm.dtype
     grid_i = pm.create_coords('real', return_indices=True)
     assert len(grid_i) == 3
 
     grid_x = pm.create_coords('complex')
     grid_i = pm.create_coords('complex', return_indices=True)
     assert len(grid_x) == 3
+    assert grid_x[0].dtype == pm.dtype
     assert len(grid_i) == 3
 
+    pm = ParticleMesh(BoxSize=8.0, Nmesh=[4, 4, 4], comm=comm, dtype='f4')
     grid_x = pm.create_coords('transposedcomplex')
     grid_i = pm.create_coords('transposedcomplex', return_indices=True)
     assert len(grid_x) == 3
+    assert grid_x[0].dtype == pm.dtype
     assert len(grid_i) == 3
 
 @MPITest(commsize=(1, 4))

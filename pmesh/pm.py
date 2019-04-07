@@ -1152,7 +1152,7 @@ def _typestr_to_type(typestr):
 
     return typestr
 
-def _init_i_coords(partition, Nmesh, BoxSize):
+def _init_i_coords(partition, Nmesh, BoxSize, dtype):
     x = []
     r = []
     i_ind = []
@@ -1163,7 +1163,7 @@ def _init_i_coords(partition, Nmesh, BoxSize):
 
         i_indi = numpy.arange(t[d], dtype='intp') + partition.local_i_start[d]
 
-        ri = numpy.arange(t[d], dtype='f8') + partition.local_i_start[d]
+        ri = numpy.arange(t[d], dtype=dtype) + partition.local_i_start[d]
 
         ri[ri >= Nmesh[d] // 2] -= Nmesh[d]
 
@@ -1176,7 +1176,7 @@ def _init_i_coords(partition, Nmesh, BoxSize):
     # FIXME: r
     return x, i_ind
 
-def _init_o_coords(partition, Nmesh, BoxSize):
+def _init_o_coords(partition, Nmesh, BoxSize, dtype):
     k = []
     w = []
     o_ind = []
@@ -1187,7 +1187,7 @@ def _init_o_coords(partition, Nmesh, BoxSize):
 
         o_indi = numpy.arange(s[d], dtype='intp') + partition.local_o_start[d]
 
-        wi = numpy.arange(s[d], dtype='f8') + partition.local_o_start[d]
+        wi = numpy.arange(s[d], dtype=dtype) + partition.local_o_start[d]
 
         wi[wi >= Nmesh[d] // 2] -= Nmesh[d]
 
@@ -1461,7 +1461,9 @@ class ParticleMesh(object):
 
     def create_coords(self, field_type, return_indices=False):
         """ Create coordinate arrays. If return_indices is True, return
-            the integer indices instead.
+            the integer indices instead. The floating point coordiante
+            arrays are of the same dtype as the ParticleMesh object,
+            while the integral type coordiante arrays are of type intp.
 
             Returns
             -------
@@ -1473,12 +1475,12 @@ class ParticleMesh(object):
         field_type = _typestr_to_type(field_type)
         partition = self._get_partition(field_type)
         if issubclass(field_type, RealField):
-            x, i = _init_i_coords(partition, self.Nmesh, self.BoxSize)
+            x, i = _init_i_coords(partition, self.Nmesh, self.BoxSize, self.dtype)
             if return_indices:
                 return i
             return x
         if issubclass(field_type, BaseComplexField):
-            k, i = _init_o_coords(partition, self.Nmesh, self.BoxSize)
+            k, i = _init_o_coords(partition, self.Nmesh, self.BoxSize, self.dtype)
             if return_indices:
                 return i
             return k

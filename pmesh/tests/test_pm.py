@@ -223,7 +223,7 @@ def test_decompose(comm):
 
     pos = 4.0 * (numpy.random.uniform(size=(Npar, 3)))
 
-    pos = pm.generate_uniform_particle_grid()
+    pos = pm.generate_uniform_particle_grid(shift=0.5)
 
     all_pos = numpy.concatenate(comm.allgather(pos), axis=0)
 

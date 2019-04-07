@@ -1659,13 +1659,13 @@ class ParticleMesh(object):
         source = coord + partition.local_i_start
         return source
 
-    def generate_uniform_particle_grid(self, shift=0.5, dtype=None, return_id=False):
+    def generate_uniform_particle_grid(self, shift=None, dtype=None, return_id=False):
         """
             create uniform grid of particles, one per grid point, in BoxSize coordinate.
 
             Parameters
             ----------
-            shift : float, array_like
+            shift : float, array_like, None
                 shifting the grid by this much relative to the size of each grid cell.
                 if array_like, per direction.
 
@@ -1682,12 +1682,18 @@ class ParticleMesh(object):
         """
         if dtype is None: dtype == self.dtype
 
-        _shift = numpy.zeros(self.ndim, dtype)
-        _shift[:] = shift
+        if shift is None:
+            warnings.warn(
+            "calling generate_uniform_particle_grid without a shift argument is deprecated."
+            "use shift=0.5 for the previous default behavior. ", DeprecationWarning, 2)
+            shift = 0.5
+
+        shift = numpy.broadcast_to(shift, self.ndim)
+
         # one particle per base mesh point
         source = self.mesh_coordinates(dtype)
 
-        source[...] += _shift
+        source[...] += shift
         source[...] *= self.BoxSize / self.Nmesh
         source.flags.writeable = False
 

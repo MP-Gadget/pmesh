@@ -269,6 +269,20 @@ def test_indices_c2c(comm):
     assert_almost_equal(real.x[0], [[0], [2], [-4], [-2]], decimal=3)
     assert_almost_equal(real.x[1], [[0, 2, -4, -2]], decimal=3)
 
+@MPITest(commsize=(1))
+def test_field_compressed(comm):
+    pm = ParticleMesh(BoxSize=8.0, Nmesh=[4, 4], comm=comm, dtype='c16')
+    comp = pm.create(type='complex')
+    real = pm.create(type='real')
+    assert comp.compressed == False
+    assert real.compressed == False
+
+    pm = ParticleMesh(BoxSize=8.0, Nmesh=[4, 4], comm=comm, dtype='f8')
+    comp = pm.create(type='complex')
+    real = pm.create(type='real')
+    assert comp.compressed == True 
+    assert real.compressed == False
+
 def assert_same_base(a1, a2):
     def find_base(a):
         base = a

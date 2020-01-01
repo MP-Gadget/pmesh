@@ -351,6 +351,27 @@ class Field(NDArrayLike):
         return self.value
 
     @property
+    def compressed(self):
+        """
+        Whether the field stored in compressed half space format.
+
+        The compressed format only stores the non-negative plane of values along
+        the last axis, per PFFT and FFTW convention. All operations implicitly
+        assumes the field is hermitian.
+
+        A RealField is never compressed.
+        """
+        if self.Nmesh[-1] == self.cshape[-1]:
+            return False
+        elif self.Nmesh[-1] // 2 + 1 == self.cshape[-1]:
+            return True
+        else:
+            raise ValueError(
+                "The 3d mesh shape (%s) and the complex field shape (%s) are inconsistent." % 
+                (str(self.Nmesh), str(self.cshape))
+)
+
+    @property
     def slabs(self):
         return slabiter(self, self.value)
 
@@ -883,7 +904,7 @@ class BaseComplexField(Field):
 
     def _expand_hermitian(self, i, y):
         # is the field compressed?
-        if self.Nmesh[-1] == self.cshape[-1]:
+        if not self.compressed:
             return y
 
         y = y.copy()
@@ -892,7 +913,6 @@ class BaseComplexField(Field):
         mask = (i[-1] != 0) & (i[-1] != self.Nmesh[-1] // 2)
         y += mask * y
         return y
-
 
     def cnorm(self, metric=None, norm=lambda x: x.real **2 + x.imag**2):
         r"""compute the norm collectively. The conjugates are added too.
@@ -1289,12 +1309,15 @@ class ParticleMesh(object):
 
         self.comm = comm
 
+        if len(Nmesh) == 1 and self.comm.size != 1:
+            raise ValueError("Running 1d transforms on multiple ranks is not supported")
+
         if np is None:
             if len(Nmesh) >= 3:
                 np = pfft.split_size_2d(self.comm.size)
             elif len(Nmesh) == 2:
                 np = [self.comm.size]
-            elif len(Nmesh) == 1:
+            elif len(Nmesh) == 1:  # 1d transform, only 1 rank is supported. see above.
                 np = []
 
         self.np = np

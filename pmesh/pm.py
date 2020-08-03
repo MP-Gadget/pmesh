@@ -1467,6 +1467,8 @@ class ParticleMesh(object):
 
         _pm_cache[_cache_args] = template
 
+        self._coords = {}
+
     def _get_partition(self, field_type):
         if issubclass(field_type, RealField):
             # usually we use the transpsoed partition;
@@ -1496,19 +1498,19 @@ class ParticleMesh(object):
             i : (when return_indices is True) list of arrays, integers (ranging from 0 to Nmesh)
         """
         field_type = _typestr_to_type(field_type)
-        partition = self._get_partition(field_type)
-        if issubclass(field_type, RealField):
-            x, i = _init_i_coords(partition, self.Nmesh, self.BoxSize, self.dtype)
-            if return_indices:
-                return i
-            return x
-        if issubclass(field_type, BaseComplexField):
-            k, i = _init_o_coords(partition, self.Nmesh, self.BoxSize, self.dtype)
-            if return_indices:
-                return i
-            return k
+        if field_type not in self._coords:
+            partition = self._get_partition(field_type)
+            if issubclass(field_type, RealField):
+                self._coords[field_type] = _init_i_coords(partition, self.Nmesh, self.BoxSize, self.dtype)
+            elif issubclass(field_type, BaseComplexField):
+                self._coords[field_type] = _init_o_coords(partition, self.Nmesh, self.BoxSize, self.dtype)
+            else:
+                raise TypeError
 
-        raise TypeError
+        x, i = self._coords[field_type]
+        if return_indices:
+            return [ii.copy() for ii in i]
+        return [xx.copy() for xx in x]
 
     @property
     def partition(self):

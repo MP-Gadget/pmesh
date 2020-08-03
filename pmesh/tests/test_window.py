@@ -5,7 +5,8 @@ from pmesh.window import (CIC, LANCZOS2, LANCZOS3,
 
 import numpy
 from numpy.testing import assert_array_equal, assert_allclose, assert_almost_equal
-from numpy.testing.decorators import skipif
+
+import pytest
 
 def test_unweighted():
     real = numpy.zeros((4, 4))
@@ -285,7 +286,7 @@ def test_acg():
     assert_allclose(real, [ 0.  ,       0.21347228, 0.52014034 ,0.30805789 ])
 
 
-@skipif(True, "numerical details of wavelets undecided")
+@pytest.mark.skipif(True, reason="numerical details of wavelets undecided")
 def test_db12():
     real = numpy.zeros((10))
     pos = [
@@ -296,7 +297,7 @@ def test_db12():
          2.0444605e-01,  -3.4209320e-01,   3.9515054e-01,   7.4167734e-01,
          7.0450990e-02,   1.3687000e-04])
 
-@skipif(True, "numerical details of wavelets undecided")
+@pytest.mark.skipif(True, reason="numerical details of wavelets undecided")
 def test_db20():
     real = numpy.zeros((13))
     pos = [

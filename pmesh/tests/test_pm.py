@@ -2,7 +2,6 @@ from runtests.mpi import MPITest
 from numpy.testing import assert_array_equal
 from numpy.testing import assert_allclose
 from numpy.testing import assert_almost_equal
-from numpy.testing.decorators import skipif
 
 from pmesh.pm import ParticleMesh, RealField, ComplexField, TransposedComplexField, UntransposedComplexField
 from pmesh import window
@@ -47,8 +46,8 @@ def test_negnyquist(comm):
     assert (c.x[-1][0][-1] < 0).all()
     assert (c.x[-1][0][:-1] >= 0).all()
 
+@pytest.mark.skipif(True, reason="1d is not supported")
 @MPITest(commsize=(1,))
-@skipif(True, "1d is not supported")
 def test_1d(comm):
     pm = ParticleMesh(BoxSize=8.0, Nmesh=[8], comm=comm, dtype='f8')
     real = pm.generate_whitenoise(seed=123, type='real')

@@ -1,6 +1,5 @@
 import numpy
 from numpy.testing import assert_array_equal, assert_allclose, assert_almost_equal
-from numpy.testing.decorators import skipif
 
 from pmesh.whitenoise import generate
 

@@ -259,7 +259,7 @@ class Field(NDArrayLike):
                 for s, n in zip(self.start, self.shape)
                 ])
 
-        self.csize = pm.comm.allreduce(self.size)
+        self.csize = numpy.prod(self.cshape)
 
     def _ctol(self, index):
         oldindex = index

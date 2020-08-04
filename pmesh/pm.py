@@ -1,3 +1,6 @@
+import functools
+import operator
+
 import numpy
 import pfft
 import mpsort
@@ -259,7 +262,7 @@ class Field(NDArrayLike):
                 for s, n in zip(self.start, self.shape)
                 ])
 
-        self.csize = numpy.prod(self.cshape)
+        self.csize = functools.reduce(operator.mul, self.cshape, 1)
 
     def _ctol(self, index):
         oldindex = index

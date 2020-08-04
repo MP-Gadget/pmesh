@@ -60,7 +60,7 @@ def promote(data, comm):
         dtype = numpy.find_common_type(list(set(dtypes)), [])
         data = numpy.asarray(data, dtype)
         allshape = comm.allgather(data.shape[1:])
-        if any([numpy.any(shape != data.shape[1:]) for shape in allshape]):
+        if any([tuple(shape) != data.shape[1:] for shape in allshape]):
             raise ValueError('the shape of the data does not match accross ranks.')
         return data
 

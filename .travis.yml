@@ -10,7 +10,7 @@ cache:
         - $HOME/.cache/pip
 
 env:
-    - NUMPY_VERSION=1.14.1 OMP_NUM_THREADS=2
+    - NUMPY_VERSION=1.16.1 OMP_NUM_THREADS=2
 
 before_install:
     - |

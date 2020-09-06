@@ -20,6 +20,7 @@
 """
 from mpi4py import MPI
 import numpy
+from numpy.lib import recfunctions as rfn
 import heapq
 
 def bincountv(x, weights, minlength=None, dtype=None, out=None):
@@ -48,21 +49,35 @@ def bincountv(x, weights, minlength=None, dtype=None, out=None):
 
 def promote(data, comm):
     data = numpy.asarray(data)
-    dtypes = comm.allgather(data.dtype.str)
-    if any(['V' in dtype for dtype in dtypes]):
-        # structs? common type doesn't work here.
-        if not all([dtypes[0] == dtype for dtype in dtypes]):
-            raise TypeError("type of data is incompatible -- some are structs, some are not")
-        else:
-            # refuse to promote the type of structs
-            return data
-    else:
-        dtype = numpy.find_common_type(list(set(dtypes)), [])
-        data = numpy.asarray(data, dtype)
-        allshape = comm.allgather(data.shape[1:])
-        if any([tuple(shape) != data.shape[1:] for shape in allshape]):
-            raise ValueError('the shape of the data does not match accross ranks.')
-        return data
+    dtype_root = comm.bcast(data.dtype)
+    data = data.astype(dtype_root)
+    shape_root = comm.bcast(data.shape)
+    if shape_root[1:] != data.shape[1:]:
+        raise ValueError('the shape of the data does not match across ranks.')
+    return data
+
+def pack_arrays(seq):
+    """
+    Pack a sequence of arrays to a structured array by copying the data.
+
+    Unlike numpy's merge_arrays, this function preserves the shape of the columns
+    rather than silently losing data.
+    """
+    dtype = []
+    N = []
+    for data in seq:
+        data = numpy.asarray(data)
+        dtype.append(('', (data.dtype, data.shape[1:])))
+        N.append(data.shape[0])
+    if not all(n == N[0] for n in N):
+        raise ValueError('the shape of the data does not match across different columns.')
+
+    dtype = numpy.dtype(dtype)
+    out = numpy.empty(N[0], dtype=dtype)
+    for key, data in zip(dtype.names, seq):
+        data = numpy.asarray(data)
+        out[key] = data
+    return out
 
 class Layout(object):
     """ 
@@ -74,10 +89,12 @@ class Layout(object):
     Useful methods are :py:meth:`exchange`, and :py:meth:`gather`.
 
     """
-    def __init__(self, comm, oldlength, sendcounts, indices, recvcounts=None):
+    def __init__(self, comm, sendlength, sendcounts, indices, recvcounts=None):
         """
-        sendcounts is the number of items to send
-        indices is the indices of the items in the data array.
+        sendlength: the length of data to be sent.
+        sendcounts: the number of items to send.
+        recvcounts: if provided ust be an Alltoall transpose of sendcounts.
+        indices: the indices for shuffling the data arrays during communication.
         """
 
         self.comm = comm
@@ -100,35 +117,64 @@ class Layout(object):
         self.sendoffsets[1:] = self.sendcounts.cumsum()[:-1]
         self.recvoffsets[1:] = self.recvcounts.cumsum()[:-1]
 
-        self.oldlength = oldlength
-        self.newlength = self.recvcounts.sum()
+        self.sendlength = sendlength
+        self.recvlength = self.recvcounts.sum()
 
         self.indices = indices
 
-    def exchange(self, data):
+    def get_exchange_cost(self):
+        """
+        Returns an array of the exchange cost computed for each rank.
+
+        The exchange cost of a rank is the sum of number of items sent from
+        the rank to any rank that is not this rank.
+
+        """
+        mask = numpy.arange(self.comm.size) != self.comm.rank
+        sendcount = numpy.sum(self.sendcounts[mask])
+        allsendcount = self.comm.allgather(sendcount)
+        return numpy.array(allsendcount)
+
+    def exchange(self, *args, pack=True):
         """ 
-        Deliever data to the intersecting domains.
+        Delievers data to the intersecting domains.
 
         Parameters
         ----------
-        data     : array_like (, extra_dimensions)
-            The data to be delievered. It shall be of the same length and of 
-            the same ordering of the input position that builds the layout.
-            Each element is a matching element of the position used in the call
-            to :py:meth:`GridND.decompose`
+        *args : tuple of array_like (, extra_dimensions)
+            data to be delievered are positional arguments.
+            Every data item shall be of the same length and of the same
+            ordering of the input position that builds the layout.
+            Each element is a matching element of the position used
+            in the call to :py:meth:`GridND.decompose`
+        pack : boolean.  If True pack data entries into a structured array
+            and make a single Alltoall exchange for all entries.
 
         Returns
         -------
-        newdata  : array_like 
+        newdata  : tuple of array_like
             The data delievered to the domain.
             Ghosts are created if a particle intersects multiple domains.
             Refer to :py:meth:`gather` for collecting data of ghosts.
 
         """
+        if pack:
+            data = pack_arrays(args)
+            newdata = self._exchange(data)
+            r = tuple([newdata[name] for name in newdata.dtype.names])
+        else:
+            r = tuple([self._exchange(arg) for arg in args])
+        if len(args) == 0:
+            return None
+        if len(args) == 1:
+            return r[0]
+        return r
+
+    def _exchange(self, data):
         # first convert to array
         data = promote(data, self.comm)
 
-        if any(self.comm.allgather(len(data) != self.oldlength)):
+        if any(self.comm.allgather(len(data) != self.sendlength)):
             raise ValueError(
             'the length of data does not match that used to build the layout')
 
@@ -138,7 +184,7 @@ class Layout(object):
         # friendly to alltoallv.
         # fancy indexing does not always return C_contiguous
         # array (2 days to realize this!)
-        
+
         buffer = data.take(self.indices, axis=0)
 
         # build a dtype for communication
@@ -149,7 +195,7 @@ class Layout(object):
         dt = MPI.BYTE.Create_contiguous(itemsize)
         dt.Commit()
         dtype = numpy.dtype((data.dtype, data.shape[1:]))
-        recvbuffer = numpy.empty(self.newlength, dtype=dtype, order='C')
+        recvbuffer = numpy.empty(self.recvlength, dtype=dtype, order='C')
         self.comm.Barrier()
 
         # now fire
@@ -167,7 +213,7 @@ class Layout(object):
         ----------
         data    :   array_like
             data for each received particles. 
-            
+
         mode    : string 'sum', 'any', 'mean', 'all', 'local', or any numpy ufunc.
             :code:`'all'` is to return all results, local and ghosts, without any reduction
             :code:`'sum'` is to reduce the ghosts to the local with sum.
@@ -191,7 +237,7 @@ class Layout(object):
         # lets check the data type first
         data = promote(data, self.comm)
 
-        if any(self.comm.allgather(len(data) != self.newlength)):
+        if any(self.comm.allgather(len(data) != self.recvlength)):
             raise ValueError(
             'the length of data does not match result of a domain.exchange')
 
@@ -201,7 +247,7 @@ class Layout(object):
             self.comm.Barrier()
             # drop all ghosts communication is not needed
             if out is None:
-                out = numpy.empty(self.oldlength, dtype=dtype)
+                out = numpy.empty(self.sendlength, dtype=dtype)
 
             # indices uses send offsets
             start2 = self.sendoffsets[self.comm.rank]
@@ -234,9 +280,9 @@ class Layout(object):
         dt.Free()
         self.comm.Barrier()
 
-        if self.oldlength == 0:
+        if self.sendlength == 0:
             if out is None:
-                out = numpy.empty(self.oldlength, dtype=dtype)
+                out = numpy.empty(self.sendlength, dtype=dtype)
             return out
 
         if mode == 'all':
@@ -246,27 +292,27 @@ class Layout(object):
                 out[...] = recvbuffer
             return out
         if mode == 'sum':
-            return bincountv(self.indices, recvbuffer, minlength=self.oldlength, out=out)
+            return bincountv(self.indices, recvbuffer, minlength=self.sendlength, out=out)
 
         if isinstance(mode, numpy.ufunc):
             arg = self.indices.argsort()
             recvbuffer = recvbuffer[arg]
-            N = numpy.bincount(self.indices, minlength=self.oldlength)
-            offset = numpy.zeros(self.oldlength, 'intp')
+            N = numpy.bincount(self.indices, minlength=self.sendlength)
+            offset = numpy.zeros(self.sendlength, 'intp')
             offset[1:] = numpy.cumsum(N)[:-1]
             return mode.reduceat(recvbuffer, offset, out=out)
 
         if mode == 'mean':
-            N = numpy.bincount(self.indices, minlength=self.oldlength)
-            s = [self.oldlength] + [1] * (len(recvbuffer.shape) - 1)
+            N = numpy.bincount(self.indices, minlength=self.sendlength)
+            s = [self.sendlength] + [1] * (len(recvbuffer.shape) - 1)
             N = N.reshape(s)
-            out = bincountv(self.indices, recvbuffer, minlength=self.oldlength, out=out)
+            out = bincountv(self.indices, recvbuffer, minlength=self.sendlength, out=out)
             out[...] /= N
             return out
 
         if mode == 'any':
             if out is None:
-                out = numpy.zeros(self.oldlength, dtype=dtype)
+                out = numpy.zeros(self.sendlength, dtype=dtype)
             out[self.indices] = recvbuffer
             return out
         raise NotImplementedError
@@ -599,7 +645,7 @@ class GridND(object):
         # create the layout object
         layout = Layout(
                 comm=self.comm,
-                oldlength=Npoint,
+                sendlength=Npoint,
                 sendcounts=counts,
                 indices=indices)
 

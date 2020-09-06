@@ -41,6 +41,9 @@ def test_extra_ranks(comm):
         mass = []
 
     layout = dcop.decompose(pos, smoothing=0)
+    assert_array_equal(layout.get_exchange_cost(),
+        [2, 0, 0, 0])
+
     sendcounts = comm.allgather(layout.sendcounts)
     npos = layout.exchange(pos)
     npos = comm.allgather(npos)

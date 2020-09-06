@@ -89,10 +89,12 @@ class Layout(object):
     Useful methods are :py:meth:`exchange`, and :py:meth:`gather`.
 
     """
-    def __init__(self, comm, oldlength, sendcounts, indices, recvcounts=None):
+    def __init__(self, comm, sendlength, sendcounts, indices, recvcounts=None):
         """
-        sendcounts is the number of items to send
-        indices is the indices of the items in the data array.
+        sendlength: the length of data to be sent.
+        sendcounts: the number of items to send.
+        recvcounts: if provided ust be an Alltoall transpose of sendcounts.
+        indices: the indices for shuffling the data arrays during communication.
         """
 
         self.comm = comm
@@ -115,14 +117,27 @@ class Layout(object):
         self.sendoffsets[1:] = self.sendcounts.cumsum()[:-1]
         self.recvoffsets[1:] = self.recvcounts.cumsum()[:-1]
 
-        self.oldlength = oldlength
-        self.newlength = self.recvcounts.sum()
+        self.sendlength = sendlength
+        self.recvlength = self.recvcounts.sum()
 
         self.indices = indices
 
+    def get_exchange_cost(self):
+        """
+        Returns an array of the exchange cost computed for each rank.
+
+        The exchange cost of a rank is the sum of number of items sent from
+        the rank to any rank that is not this rank.
+
+        """
+        mask = numpy.arange(self.comm.size) != self.comm.rank
+        sendcount = numpy.sum(self.sendcounts[mask])
+        allsendcount = self.comm.allgather(sendcount)
+        return numpy.array(allsendcount)
+
     def exchange(self, *args, pack=True):
         """ 
-        Deliever data to the intersecting domains.
+        Delievers data to the intersecting domains.
 
         Parameters
         ----------
@@ -159,7 +174,7 @@ class Layout(object):
         # first convert to array
         data = promote(data, self.comm)
 
-        if any(self.comm.allgather(len(data) != self.oldlength)):
+        if any(self.comm.allgather(len(data) != self.sendlength)):
             raise ValueError(
             'the length of data does not match that used to build the layout')
 
@@ -180,7 +195,7 @@ class Layout(object):
         dt = MPI.BYTE.Create_contiguous(itemsize)
         dt.Commit()
         dtype = numpy.dtype((data.dtype, data.shape[1:]))
-        recvbuffer = numpy.empty(self.newlength, dtype=dtype, order='C')
+        recvbuffer = numpy.empty(self.recvlength, dtype=dtype, order='C')
         self.comm.Barrier()
 
         # now fire
@@ -198,7 +213,7 @@ class Layout(object):
         ----------
         data    :   array_like
             data for each received particles. 
-            
+
         mode    : string 'sum', 'any', 'mean', 'all', 'local', or any numpy ufunc.
             :code:`'all'` is to return all results, local and ghosts, without any reduction
             :code:`'sum'` is to reduce the ghosts to the local with sum.
@@ -222,7 +237,7 @@ class Layout(object):
         # lets check the data type first
         data = promote(data, self.comm)
 
-        if any(self.comm.allgather(len(data) != self.newlength)):
+        if any(self.comm.allgather(len(data) != self.recvlength)):
             raise ValueError(
             'the length of data does not match result of a domain.exchange')
 
@@ -232,7 +247,7 @@ class Layout(object):
             self.comm.Barrier()
             # drop all ghosts communication is not needed
             if out is None:
-                out = numpy.empty(self.oldlength, dtype=dtype)
+                out = numpy.empty(self.sendlength, dtype=dtype)
 
             # indices uses send offsets
             start2 = self.sendoffsets[self.comm.rank]
@@ -265,9 +280,9 @@ class Layout(object):
         dt.Free()
         self.comm.Barrier()
 
-        if self.oldlength == 0:
+        if self.sendlength == 0:
             if out is None:
-                out = numpy.empty(self.oldlength, dtype=dtype)
+                out = numpy.empty(self.sendlength, dtype=dtype)
             return out
 
         if mode == 'all':
@@ -277,27 +292,27 @@ class Layout(object):
                 out[...] = recvbuffer
             return out
         if mode == 'sum':
-            return bincountv(self.indices, recvbuffer, minlength=self.oldlength, out=out)
+            return bincountv(self.indices, recvbuffer, minlength=self.sendlength, out=out)
 
         if isinstance(mode, numpy.ufunc):
             arg = self.indices.argsort()
             recvbuffer = recvbuffer[arg]
-            N = numpy.bincount(self.indices, minlength=self.oldlength)
-            offset = numpy.zeros(self.oldlength, 'intp')
+            N = numpy.bincount(self.indices, minlength=self.sendlength)
+            offset = numpy.zeros(self.sendlength, 'intp')
             offset[1:] = numpy.cumsum(N)[:-1]
             return mode.reduceat(recvbuffer, offset, out=out)
 
         if mode == 'mean':
-            N = numpy.bincount(self.indices, minlength=self.oldlength)
-            s = [self.oldlength] + [1] * (len(recvbuffer.shape) - 1)
+            N = numpy.bincount(self.indices, minlength=self.sendlength)
+            s = [self.sendlength] + [1] * (len(recvbuffer.shape) - 1)
             N = N.reshape(s)
-            out = bincountv(self.indices, recvbuffer, minlength=self.oldlength, out=out)
+            out = bincountv(self.indices, recvbuffer, minlength=self.sendlength, out=out)
             out[...] /= N
             return out
 
         if mode == 'any':
             if out is None:
-                out = numpy.zeros(self.oldlength, dtype=dtype)
+                out = numpy.zeros(self.sendlength, dtype=dtype)
             out[self.indices] = recvbuffer
             return out
         raise NotImplementedError
@@ -630,7 +645,7 @@ class GridND(object):
         # create the layout object
         layout = Layout(
                 comm=self.comm,
-                oldlength=Npoint,
+                sendlength=Npoint,
                 sendcounts=counts,
                 indices=indices)
 

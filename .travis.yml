@@ -1,15 +1,16 @@
 language: python
 
 python:
-    - 2.7
     - 3.6
+    - 3.7
+    - 3.8
 
 cache:
     directories:
         - $HOME/.cache/pip
 
 env:
-    - NUMPY_VERSION=1.13.1 OMP_NUM_THREADS=2
+    - NUMPY_VERSION=1.14.1 OMP_NUM_THREADS=2
 
 before_install:
     - |

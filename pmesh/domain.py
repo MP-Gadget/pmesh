@@ -20,6 +20,7 @@
 """
 from mpi4py import MPI
 import numpy
+from numpy.lib import recfunctions as rfn
 import heapq
 
 def bincountv(x, weights, minlength=None, dtype=None, out=None):
@@ -52,8 +53,31 @@ def promote(data, comm):
     data = data.astype(dtype_root)
     shape_root = comm.bcast(data.shape)
     if shape_root[1:] != data.shape[1:]:
-        raise ValueError('the shape of the data does not match accross ranks.')
+        raise ValueError('the shape of the data does not match across ranks.')
     return data
+
+def pack_arrays(seq):
+    """
+    Pack a sequence of arrays to a structured array by copying the data.
+
+    Unlike numpy's merge_arrays, this function preserves the shape of the columns
+    rather than silently losing data.
+    """
+    dtype = []
+    N = []
+    for data in seq:
+        data = numpy.asarray(data)
+        dtype.append(('', (data.dtype, data.shape[1:])))
+        N.append(data.shape[0])
+    if not all(n == N[0] for n in N):
+        raise ValueError('the shape of the data does not match across different columns.')
+
+    dtype = numpy.dtype(dtype)
+    out = numpy.empty(N[0], dtype=dtype)
+    for key, data in zip(dtype.names, seq):
+        data = numpy.asarray(data)
+        out[key] = data
+    return out
 
 class Layout(object):
     """ 
@@ -96,26 +120,42 @@ class Layout(object):
 
         self.indices = indices
 
-    def exchange(self, data):
+    def exchange(self, *args, pack=True):
         """ 
         Deliever data to the intersecting domains.
 
         Parameters
         ----------
-        data     : array_like (, extra_dimensions)
-            The data to be delievered. It shall be of the same length and of 
-            the same ordering of the input position that builds the layout.
-            Each element is a matching element of the position used in the call
-            to :py:meth:`GridND.decompose`
+        *args : tuple of array_like (, extra_dimensions)
+            data to be delievered are positional arguments.
+            Every data item shall be of the same length and of the same
+            ordering of the input position that builds the layout.
+            Each element is a matching element of the position used
+            in the call to :py:meth:`GridND.decompose`
+        pack : boolean.  If True pack data entries into a structured array
+            and make a single Alltoall exchange for all entries.
 
         Returns
         -------
-        newdata  : array_like 
+        newdata  : tuple of array_like
             The data delievered to the domain.
             Ghosts are created if a particle intersects multiple domains.
             Refer to :py:meth:`gather` for collecting data of ghosts.
 
         """
+        if pack:
+            data = pack_arrays(args)
+            newdata = self._exchange(data)
+            r = tuple([newdata[name] for name in newdata.dtype.names])
+        else:
+            r = tuple([self._exchange(arg) for arg in args])
+        if len(args) == 0:
+            return None
+        if len(args) == 1:
+            return r[0]
+        return r
+
+    def _exchange(self, data):
         # first convert to array
         data = promote(data, self.comm)
 
@@ -129,7 +169,7 @@ class Layout(object):
         # friendly to alltoallv.
         # fancy indexing does not always return C_contiguous
         # array (2 days to realize this!)
-        
+
         buffer = data.take(self.indices, axis=0)
 
         # build a dtype for communication

@@ -140,6 +140,45 @@ def test_inhomotypes(comm):
     assert_array_equal(nmass[0], [0, 1])
     assert_array_equal(nmass[1], [2, 3])
 
+@MPITest(commsize=2)
+def test_packed(comm):
+    """ Testing type promotion of a packed exchange."""
+    DomainGrid = [[0, 1, 2], [0, 2]]
+
+    dcop = domain.GridND(DomainGrid, 
+            comm=comm,
+            periodic=True)
+
+    if comm.rank == 0:
+        pos = numpy.array(list(numpy.ndindex((2, 2))), dtype='f8')
+        mass = numpy.array([0, 1, 2, 3], dtype='complex64')
+    else:
+        pos = numpy.empty((0, 2), dtype='f4')
+        mass = numpy.array([], dtype='f8')
+
+    layout = dcop.decompose(pos, smoothing=0)
+    sendcounts = comm.allgather(layout.sendcounts)
+
+    nposu, nmassu = layout.exchange(pos, mass, pack=False)
+    assert nposu.dtype == numpy.dtype('f8')
+    assert nmassu.dtype == numpy.dtype('complex64')
+
+    npos, nmass = layout.exchange(pos, mass, pack=True)
+    assert npos.dtype == numpy.dtype('f8')
+    assert nmass.dtype == numpy.dtype('complex64')
+
+    assert_array_equal(npos, nposu)
+    assert_array_equal(nmass, nmassu)
+
+    npos = comm.allgather(npos)
+    nmass = comm.allgather(nmass)
+    assert_array_equal(npos[0], [[0, 0], [0, 1]])
+    assert_array_equal(npos[1], [[1, 0], [1, 1]])
+    assert_array_equal(nmass[0], [0, 1])
+    assert_array_equal(nmass[1], [2, 3])
+
+
+
 @MPITest(commsize=3)
 def test_period_empty_ranks(comm):
     DomainGrid = [[0, 2, 4, 4], [0, 4]]

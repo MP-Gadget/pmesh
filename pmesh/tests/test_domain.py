@@ -135,7 +135,7 @@ def test_inhomotypes(comm):
     assert_array_equal(npos[1], [[1, 0], [1, 1]])
 
     nmass = layout.exchange(mass)
-    assert nmass.dtype == numpy.dtype('complex128')
+    assert nmass.dtype == numpy.dtype('complex64')
     nmass = comm.allgather(nmass)
     assert_array_equal(nmass[0], [0, 1])
     assert_array_equal(nmass[1], [2, 3])

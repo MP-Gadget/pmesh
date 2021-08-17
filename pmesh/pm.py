@@ -1370,7 +1370,7 @@ class ParticleMesh(object):
         # is alive.
         # if we don't find a pm then we'll create a new one anyways.
 
-        _cache_args = (tuple(Nmesh), tuple(BoxSize),
+        _cache_args = (tuple(Nmesh),
                        MPI._addressof(comm), comm.rank, comm.size,
                        tuple(np), dtype, plan_method, paddedflag)
 

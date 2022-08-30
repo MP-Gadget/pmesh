@@ -377,7 +377,7 @@ class GridND(object):
         """
         self.shape = numpy.array([len(g) - 1 for g in edges], dtype='int32')
         self.ndim = len(self.shape)
-        self.edges = numpy.asarray(edges)
+        self.edges = numpy.asarray(edges, dtype=object)
         self.periodic = periodic
         self.comm = comm
         self.size = numpy.product(self.shape)

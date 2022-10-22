@@ -370,7 +370,7 @@ class Field(NDArrayLike):
             return True
         else:
             raise ValueError(
-                "The 3d mesh shape (%s) and the complex field shape (%s) are inconsistent." % 
+                "The 3d mesh shape (%s) and the complex field shape (%s) are inconsistent." %
                 (str(self.Nmesh), str(self.cshape))
 )
 
@@ -1293,7 +1293,7 @@ class ParticleMesh(object):
 
     def __init__(self, Nmesh, BoxSize=1.0, comm=None, np=None, dtype='f8',
                     plan_method='estimate', resampler='cic'):
-        """ create a PM object.  
+        """ create a PM object.
 
             Parameters
             ----------
@@ -1443,7 +1443,21 @@ class ParticleMesh(object):
         # use the transpsoed partition for configuration space edges
         partition = plans['partitionT']
 
-        self.domain = domain.GridND(partition.i_edges, comm=self.comm)
+        # pfft local domain index is not necessarily np.unravel_index(irank, shape, order='C'),
+        # as assumed by default in domain.GridND,
+        # so pass DomainAssign, recording to which rank is assigned each domain
+        edges = partition.i_edges
+        shape = numpy.array([len(g) - 1 for g in edges], dtype='int32')
+        size = numpy.prod(shape)
+        ilocal = tuple(numpy.flatnonzero(iedges == istart)[0] for istart, iedges in zip(partition.local_i_start, partition.i_edges))
+        ilocal = numpy.ravel_multi_index(ilocal, shape, mode='raise', order='C')
+        ilocals = numpy.array(self.comm.allgather(ilocal))
+        DomainAssign = numpy.empty(size, dtype='int32')
+        for irank, ilocal in enumerate(ilocals):
+            start = ilocal * size // self.comm.size
+            end = (ilocal + 1) * size // self.comm.size
+            DomainAssign[start:end] = irank
+        self.domain = domain.GridND(edges, comm=self.comm, DomainAssign=DomainAssign)
 
         self.procmesh = procmesh
 
@@ -2010,5 +2024,3 @@ class ParticleMesh(object):
         #v1 = layout.exchange(f)
         #print(q1, v1)
         return self.paint(q, mass=f, layout=layout, resampler=resampler, transform=transform)
-
-

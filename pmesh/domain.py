@@ -7,7 +7,7 @@
 
     - `local` and `ghost`. A data entry is local if
       it is stored on the current rank. A data entry is ghost
-      if it is stored on another rank. 
+      if it is stored on another rank.
 
     - `primary` and `padding`. A spatial position is
       primary if it is within the spatial boundary the current rank.
@@ -80,7 +80,7 @@ def pack_arrays(seq):
     return out
 
 class Layout(object):
-    """ 
+    """
     The communication layout of a domain decomposition.
 
     Given a set of particles, Layout object knows how to move particles around.
@@ -136,7 +136,7 @@ class Layout(object):
         return numpy.array(allsendcount)
 
     def exchange(self, *args, pack=True):
-        """ 
+        """
         Delievers data to the intersecting domains.
 
         Parameters
@@ -179,8 +179,8 @@ class Layout(object):
             'the length of data does not match that used to build the layout')
 
         #build buffer
-        # Watch out: 
-        # take produces C-contiguous array, 
+        # Watch out:
+        # take produces C-contiguous array,
         # friendly to alltoallv.
         # fancy indexing does not always return C_contiguous
         # array (2 days to realize this!)
@@ -189,7 +189,7 @@ class Layout(object):
 
         # build a dtype for communication
         # this is to avoid 2GB limit from bytes.
-        duplicity = numpy.product(numpy.array(data.shape[1:], 'intp')) 
+        duplicity = numpy.product(numpy.array(data.shape[1:], 'intp'))
         itemsize = duplicity * data.dtype.itemsize
 
         dt = MPI.BYTE.Create_contiguous(itemsize)
@@ -199,20 +199,20 @@ class Layout(object):
         self.comm.Barrier()
 
         # now fire
-        rt = self.comm.Alltoallv((buffer, (self.sendcounts, self.sendoffsets), dt), 
+        rt = self.comm.Alltoallv((buffer, (self.sendcounts, self.sendoffsets), dt),
                             (recvbuffer, (self.recvcounts, self.recvoffsets), dt))
         dt.Free()
         self.comm.Barrier()
         return recvbuffer
 
     def gather(self, data, mode='sum', out=None):
-        """ 
+        """
         Pull the data from other ranks back to its original hosting rank.
 
         Attributes
         ----------
         data    :   array_like
-            data for each received particles. 
+            data for each received particles.
 
         mode    : string 'sum', 'any', 'mean', 'all', 'local', or any numpy ufunc.
             :code:`'all'` is to return all results, local and ghosts, without any reduction
@@ -230,7 +230,7 @@ class Layout(object):
         -------
         gathered  : array_like
             gathered data. It is of the same length and ordering of the original
-            positions used in :py:meth:`domain.decompose`. When mode is 'all', 
+            positions used in :py:meth:`domain.decompose`. When mode is 'all',
             all gathered particles (corresponding to self.indices) are returned.
 
         """
@@ -265,7 +265,7 @@ class Layout(object):
 
         # build a dtype for communication
         # this is to avoid 2GB limit from bytes.
-        duplicity = numpy.product(numpy.array(data.shape[1:], 'intp')) 
+        duplicity = numpy.product(numpy.array(data.shape[1:], 'intp'))
         itemsize = duplicity * data.dtype.itemsize
         dt = MPI.BYTE.Create_contiguous(itemsize)
         dt.Commit()
@@ -275,7 +275,7 @@ class Layout(object):
 
 
         # now fire
-        rt = self.comm.Alltoallv((data, (self.recvcounts, self.recvoffsets), dt), 
+        rt = self.comm.Alltoallv((data, (self.recvcounts, self.recvoffsets), dt),
                             (recvbuffer, (self.sendcounts, self.sendoffsets), dt))
         dt.Free()
         self.comm.Barrier()
@@ -329,14 +329,14 @@ class GridND(object):
         A list of edges of the edges in each dimension.
         edges[i] is the edges on direction i. edges[i] includes 0 and BoxSize.
     comm   : :py:class:`MPI.Comm`
-        MPI Communicator, default is :code:`MPI.COMM_WORLD` 
- 
+        MPI Communicator, default is :code:`MPI.COMM_WORLD`
+
     periodic : boolean
         Is the domain decomposition periodic? If so , edges[i][-1] is the period.
 
 
     """
-    
+
     from ._domain import gridnd_fill as _fill
     _fill = staticmethod(_fill)
     @staticmethod
@@ -367,17 +367,17 @@ class GridND(object):
             edges.append(numpy.linspace(0, BoxSize[i], shape[i] + 1, endpoint=True))
         return cls(edges, comm, periodic)
 
-    def __init__(self, 
+    def __init__(self,
             edges,
             comm=MPI.COMM_WORLD,
             periodic=True,
             DomainAssign=None):
-        """ 
+        """
         DomainAssign records each domain is assigned to which rank
         """
         self.shape = numpy.array([len(g) - 1 for g in edges], dtype='int32')
         self.ndim = len(self.shape)
-        self.edges = numpy.asarray(edges, dtype=object)
+        self.edges = [numpy.asarray(g) for g in edges]
         self.periodic = periodic
         self.comm = comm
         self.size = numpy.product(self.shape)
@@ -423,7 +423,7 @@ class GridND(object):
         """
 
         # FIXME: this function looks like decompose; might be able to merge them into one?
-        
+
         pos = numpy.asarray(pos)
 
         assert pos.shape[1] >= self.ndim
@@ -435,7 +435,7 @@ class GridND(object):
 
         if Npoint != 0:
             sil = numpy.empty((self.ndim, Npoint), dtype='i2', order='C')
-            chunksize = 1024 * 48 
+            chunksize = 1024 * 48
             for i in range(0, Npoint, chunksize):
                 s = slice(i, i + chunksize)
                 chunk = transform(pos[s])
@@ -467,7 +467,7 @@ class GridND(object):
 
     def loadbalance(self, domainload):
         """
-        Balancing the load of different ranks given the load of each domain. 
+        Balancing the load of different ranks given the load of each domain.
         The result is recorded in self.DomainAssign.
 
         Parameters
@@ -559,11 +559,11 @@ class GridND(object):
         return r
 
     def decompose(self, pos, smoothing=0, transform=None):
-        """ 
+        """
         Decompose particles into domains.
 
         Create a decomposition layout for particles at :code:`pos`.
-        
+
         Parameters
         ----------
         pos       :  array_like (, ndim)
@@ -650,4 +650,3 @@ class GridND(object):
                 indices=indices)
 
         return layout
-

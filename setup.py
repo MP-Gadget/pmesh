@@ -1,7 +1,7 @@
-from setuptools import setup
-from distutils.extension import Extension
-import numpy
 import os
+from setuptools import setup, Extension
+
+import numpy
 
 def find_version(path):
     import re
@@ -55,6 +55,5 @@ setup(
     install_requires=['cython', 'numpy', 'mpi4py', 'mpsort', 'pfft-python'],
     license='GPL3',
     ext_modules = extensions,
-    extras_require={'full':['abopt'], 'abopt':['abopt']}
+    extras_require={'full': ['abopt'], 'abopt': ['abopt']}
 )
-

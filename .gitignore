@@ -4,3 +4,7 @@ pmesh/_domain.c
 MANIFEST
 *.so
 dist/
+**/*.egg-info
+pmesh/_invariant.c
+pmesh/_whitenoise.c
+pmesh/_window.c

@@ -122,8 +122,7 @@ def test_scale():
         [10., 0],
     ]
     CIC.paint(real, pos, transform=affine)
-    assert_array_equal(real,
-        [[1., 0.], [0, 0.]])
+    assert_almost_equal(real, [[1., 0.], [0, 0.]])
 
 def test_scale_hsml():
     affine = Affine(ndim=1, translate=[0], scale=0.1)

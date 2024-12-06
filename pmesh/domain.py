@@ -189,7 +189,7 @@ class Layout(object):
 
         # build a dtype for communication
         # this is to avoid 2GB limit from bytes.
-        duplicity = numpy.product(numpy.array(data.shape[1:], 'intp'))
+        duplicity = numpy.prod(numpy.array(data.shape[1:], 'intp'))
         itemsize = duplicity * data.dtype.itemsize
 
         dt = MPI.BYTE.Create_contiguous(itemsize)
@@ -265,7 +265,7 @@ class Layout(object):
 
         # build a dtype for communication
         # this is to avoid 2GB limit from bytes.
-        duplicity = numpy.product(numpy.array(data.shape[1:], 'intp'))
+        duplicity = numpy.prod(numpy.array(data.shape[1:], 'intp'))
         itemsize = duplicity * data.dtype.itemsize
         dt = MPI.BYTE.Create_contiguous(itemsize)
         dt.Commit()
@@ -380,7 +380,7 @@ class GridND(object):
         self.edges = [numpy.asarray(g) for g in edges]
         self.periodic = periodic
         self.comm = comm
-        self.size = numpy.product(self.shape)
+        self.size = numpy.prod(self.shape)
 
         if DomainAssign is None:
             if comm.size >= self.size:

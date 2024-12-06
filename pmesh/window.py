@@ -137,11 +137,11 @@ class ResampleWindow(_ResampleWindow):
         if diffdir is not None:
             order[diffdir] = 1
 
-        pos = numpy.asfarray(pos)
+        pos = numpy.asarray(pos)
         if mass is None:
             mass = numpy.array(1.0, 'f8')
         else:
-            mass = numpy.asfarray(mass)
+            mass = numpy.asarray(mass)
 
         mass = _mkarr(mass, len(pos), mass.dtype)
         # workaround https://github.com/cython/cython/issues/1605
@@ -152,7 +152,7 @@ class ResampleWindow(_ResampleWindow):
             mass = mass.copy()
 
         if hsml is not None:
-            hsml = numpy.asfarray(hsml)
+            hsml = numpy.asarray(hsml)
             hsml = _mkarr(hsml, len(pos), hsml.dtype)
 
             if not hsml.flags.writeable:
@@ -197,7 +197,7 @@ class ResampleWindow(_ResampleWindow):
         if diffdir is not None:
             order[diffdir] = 1
 
-        pos = numpy.asfarray(pos)
+        pos = numpy.asarray(pos)
         if out is None:
             out = numpy.zeros(pos.shape[:-1], dtype='f8')
 
@@ -207,7 +207,7 @@ class ResampleWindow(_ResampleWindow):
             pos = pos.copy()
 
         if hsml is not None:
-            hsml = numpy.asfarray(hsml)
+            hsml = numpy.asarray(hsml)
             hsml = _mkarr(hsml, len(pos), hsml.dtype)
 
             if not hsml.flags.writeable:

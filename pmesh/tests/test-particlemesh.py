@@ -1,8 +1,8 @@
 from pmesh.particlemesh import ParticleMesh
 from numpy.testing import assert_allclose
-from runtests.mpi import MPITest
 
-@MPITest(commsize=1)
+@pytest.mark.parametrize("comm", [MPI.COMM_WORLD,])
+@pytest.mark.mpi
 def test_roundtrip_normalization(comm):
     pm = ParticleMesh(10.0, 2, comm=comm)
     pm.real[:] = 1.0
@@ -11,7 +11,8 @@ def test_roundtrip_normalization(comm):
     pm.c2r()
     assert_allclose(pm.real, 1.0)
 
-@MPITest(commsize=1)
+@pytest.mark.parametrize("comm", [MPI.COMM_WORLD,])
+@pytest.mark.mpi
 def test_xkrw(comm):
     pm = ParticleMesh(10.0, 2, comm=comm)
 

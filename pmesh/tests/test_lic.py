@@ -1,7 +1,9 @@
 from pmesh.lic import lic
-from runtests.mpi import MPITest
+import pytest
+from mpi4py import MPI
 
-@MPITest([1, 4])
+@pytest.mark.parametrize("comm", [MPI.COMM_WORLD,])
+@pytest.mark.mpi
 def test_lic(comm):
     from pmesh.pm import ParticleMesh
     pm = ParticleMesh(Nmesh=[8, 8], comm=comm, BoxSize=8.0)

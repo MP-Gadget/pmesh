@@ -11,10 +11,10 @@ import pytest
 def test_unweighted():
     real = numpy.zeros((4, 4))
     pos = [
-        [0, 0],
-        [1, 1],
-        [2, 2],
-        [3, 3],
+        [0., 0.],
+        [1., 1.],
+        [2., 2.],
+        [3., 3.],
     ]
     CIC.paint(real, pos)
 
@@ -27,12 +27,12 @@ def test_unweighted():
 def test_weighted():
     real = numpy.zeros((4, 4))
     pos = [
-        [0, 0],
-        [1, 1],
-        [2, 2],
-        [3, 3],
+        [0., 0.],
+        [1., 1.],
+        [2., 2.],
+        [3., 3.],
     ]
-    mass = [0, 1, 2, 3]
+    mass = [0., 1., 2., 3.]
     CIC.paint(real, pos, mass=mass)
     assert_array_equal(real,
         [[0, 0, 0, 0],
@@ -192,10 +192,10 @@ def test_nearest():
     ]
     NEAREST.paint(real, pos)
     assert_allclose(real,
-      [[ 0 , 0,   0,  0], 
-       [ 0 , 1,   0,  0], 
-       [ 0 , 0,   0,  0], 
-       [ 0 , 0,   0,  0], 
+      [[ 0 , 0,   0,  0],
+       [ 0 , 1,   0,  0],
+       [ 0 , 0,   0,  0],
+       [ 0 , 0,   0,  0],
        ], atol=1e-5)
     assert_array_equal(NEAREST.support, 1)
 
@@ -206,7 +206,7 @@ def test_lanczos2():
     ]
     LANCZOS2.paint(real, pos)
     assert_allclose(real,
-      [[ 0.003977, -0.035797, -0.035797,  0.003977], 
+      [[ 0.003977, -0.035797, -0.035797,  0.003977],
        [-0.035797,  0.322173,  0.322173, -0.035797],
        [-0.035797,  0.322173,  0.322173, -0.035797],
        [ 0.003977, -0.035797, -0.035797,  0.003977]], atol=1e-5)
@@ -237,14 +237,14 @@ def test_tsc():
 
     real = numpy.zeros((5))
     pos = [
-        [2],
+        [2.],
     ]
     TSC.paint(real, pos)
     assert_array_equal(real, [0, 0.125, 0.75, 0.125, 0])
 
     real = numpy.zeros((5))
     pos = [
-        [0],
+        [0.],
     ]
     affine = Affine(ndim=1, period=5)
     TSC.paint(real, pos, transform=affine)
@@ -300,7 +300,7 @@ def test_db12():
 def test_db20():
     real = numpy.zeros((13))
     pos = [
-        [6],
+        [6.],
     ]
     DB20.paint(real, pos)
     assert_almost_equal(real, [  8.7396600e-03,  -6.7160500e-03,  -6.5716800e-03,   3.5024950e-02,

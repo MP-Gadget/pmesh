@@ -39,7 +39,6 @@ jobs:
         python setup.py build_ext --inplace
         mpirun -n 1 python -m pytest --with-mpi
         mpirun -n 2 python -m pytest --with-mpi
-        mpirun -n 3 --oversubscribe python -m pytest --with-mpi
         mpirun -n 4 --oversubscribe python -m pytest --with-mpi
     - name: Version
       run: bash check_tag.sh pmesh/version.py

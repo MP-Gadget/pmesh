@@ -27,7 +27,7 @@ def test_uniform(comm):
         assert_array_equal(dcop.shape, (1, 1, 1))
 
 @pytest.mark.parametrize("comm", [MPI.COMM_WORLD,])
-@pytest.mark.mpi
+@pytest.mark.mpi(min_size=4)
 def test_extra_ranks(comm):
     DomainGrid = [[0, 1, 2], [0, 2]]
 
@@ -61,7 +61,7 @@ def test_extra_ranks(comm):
     assert_array_equal(mass2, mass)
 
 @pytest.mark.parametrize("comm", [MPI.COMM_WORLD,])
-@pytest.mark.mpi
+@pytest.mark.mpi(min_size=2)
 def test_exchange(comm):
     DomainGrid = [[0, 1, 2], [0, 2]]
 
@@ -92,7 +92,7 @@ def test_exchange(comm):
     assert_array_equal(mass2, mass)
 
 @pytest.mark.parametrize("comm", [MPI.COMM_WORLD,])
-@pytest.mark.mpi
+@pytest.mark.mpi(min_size=2)
 def test_exchange_struct(comm):
     DomainGrid = [[0, 1, 2], [0, 2]]
 
@@ -118,7 +118,7 @@ def test_exchange_struct(comm):
     assert_array_equal(npos[1], [[1, 0], [1, 1]])
 
 @pytest.mark.parametrize("comm", [MPI.COMM_WORLD,])
-@pytest.mark.mpi
+@pytest.mark.mpi(min_size=2)
 def test_inhomotypes(comm):
     """ Testing type promotion """
     DomainGrid = [[0, 1, 2], [0, 2]]
@@ -149,7 +149,7 @@ def test_inhomotypes(comm):
     assert_array_equal(nmass[1], [2, 3])
 
 @pytest.mark.parametrize("comm", [MPI.COMM_WORLD,])
-@pytest.mark.mpi
+@pytest.mark.mpi(min_size=2)
 def test_packed(comm):
     """ Testing type promotion of a packed exchange."""
     DomainGrid = [[0, 1, 2], [0, 2]]
@@ -209,7 +209,7 @@ def test_period_empty_ranks(comm):
         assert len(p1) == comm.size
 
 @pytest.mark.parametrize("comm", [MPI.COMM_WORLD,])
-@pytest.mark.mpi
+@pytest.mark.mpi(min_size=4)
 def test_period(comm):
     DomainGrid = [[0, 2, 4, 4], [0, 4]]
 
@@ -227,7 +227,7 @@ def test_period(comm):
         assert len(p1) == 4
 
 @pytest.mark.parametrize("comm", [MPI.COMM_WORLD,])
-@pytest.mark.mpi
+@pytest.mark.mpi(min_size=2)
 def test_exchange_smooth(comm):
     DomainGrid = [[0, 1, 2], [0, 2]]
 
@@ -306,7 +306,7 @@ def test_load(comm):
     assert sum(domainload) == comm.allreduce(len(pos))
 
 @pytest.mark.parametrize("comm", [MPI.COMM_WORLD,])
-@pytest.mark.mpi
+@pytest.mark.mpi(min_size=4)
 def test_loadbalance(comm):
     DomainGrid = [[0, 1, 2, 3, 4], [0, 2, 4]]
 
@@ -321,7 +321,7 @@ def test_loadbalance(comm):
     assert not any(dcop.DomainAssign - [3, 2, 1, 1, 0, 3, 2, 3])
 
 @pytest.mark.parametrize("comm", [MPI.COMM_WORLD,])
-@pytest.mark.mpi
+@pytest.mark.mpi(min_size=4)
 def test_loadbalance_degenerate(comm):
     DomainGrid = [[0, 1, 2, 3], [0, 3]]
 

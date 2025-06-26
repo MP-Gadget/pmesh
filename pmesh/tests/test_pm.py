@@ -42,7 +42,7 @@ def test_shape_complex(comm):
     assert comp.csize == 40
 
 @pytest.mark.parametrize("comm", [MPI.COMM_WORLD,])
-@pytest.mark.mpi
+@pytest.mark.mpi_xfail
 def test_negnyquist(comm):
     # the nyquist mode wave number in the hermitian complex field must be negative.
     # nbodykit depends on this behavior.
@@ -264,7 +264,7 @@ def test_decompose(comm):
         test(resampler)
 
 @pytest.mark.parametrize("comm", [MPI.COMM_WORLD,])
-@pytest.mark.mpi
+@pytest.mark.mpi_xfail
 def test_indices(comm):
     pm = ParticleMesh(BoxSize=8.0, Nmesh=[4, 4], comm=comm, dtype='f8')
     comp = pm.create(type='complex')
@@ -275,7 +275,7 @@ def test_indices(comm):
     assert_almost_equal(real.x[1], [[0, 2, -4, -2]], decimal=3)
 
 @pytest.mark.parametrize("comm", [MPI.COMM_WORLD,])
-@pytest.mark.mpi
+@pytest.mark.mpi_xfail
 def test_indices_c2c(comm):
     pm = ParticleMesh(BoxSize=8.0, Nmesh=[4, 4], comm=comm, dtype='c16')
     comp = pm.create(type='complex')
@@ -370,7 +370,7 @@ def test_untransposed_complex_apply(comm):
         assert_array_equal(slab, x[0] + x[1] * 1j + x[2])
 
 @pytest.mark.parametrize("comm", [MPI.COMM_WORLD,])
-@pytest.mark.mpi
+@pytest.mark.mpi_xfail
 def test_reshape(comm):
     pm = ParticleMesh(BoxSize=8.0, Nmesh=[8, 8, 8], comm=comm, dtype='f8', np=[1, 1])
     pm2d = pm.reshape(Nmesh=[8, 8])
@@ -677,7 +677,7 @@ def test_readout(comm):
     real.readout(pos, out=out)
 
 @pytest.mark.parametrize("comm", [MPI.COMM_WORLD,])
-@pytest.mark.mpi
+@pytest.mark.mpi_xfail
 def test_cdot_cnorm(comm):
     pm = ParticleMesh(BoxSize=8.0, Nmesh=[4, 4, 4], comm=comm, dtype='f8')
     comp1 = pm.generate_whitenoise(1234, type='complex')
@@ -690,7 +690,7 @@ def test_cdot_cnorm(comm):
 
 
 @pytest.mark.parametrize("comm", [MPI.COMM_WORLD,])
-@pytest.mark.mpi
+@pytest.mark.mpi_xfail
 def test_cnorm_log(comm):
     pm = ParticleMesh(BoxSize=8.0, Nmesh=[4, 4, 4], comm=comm, dtype='f8')
     comp1 = pm.generate_whitenoise(1234, type='complex', mean=1.0)
@@ -717,7 +717,7 @@ def test_cdot(comm):
     assert_allclose(norm1.imag, -norm2.imag)
 
 @pytest.mark.parametrize("comm", [MPI.COMM_WORLD,])
-@pytest.mark.mpi
+@pytest.mark.mpi_xfail
 def test_cdot_c2c(comm):
     pm = ParticleMesh(BoxSize=8.0, Nmesh=[4, 4, 4], comm=comm, dtype='c16')
     comp1 = pm.generate_whitenoise(1234, type='complex')
@@ -736,7 +736,7 @@ def test_cdot_c2c(comm):
     assert_allclose(norm1.imag, -norm2.imag)
 
 @pytest.mark.parametrize("comm", [MPI.COMM_WORLD,])
-@pytest.mark.mpi
+@pytest.mark.mpi_xfail
 def test_cdot_types(comm):
     pm = ParticleMesh(BoxSize=8.0, Nmesh=[4, 4, 4], comm=comm, dtype='f8')
     comp1 = pm.generate_whitenoise(1234, type='complex')

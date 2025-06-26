@@ -22,7 +22,7 @@ def test_asarray(comm):
     assert a is real.value
 
     real = RealField(pm)
-    a = numpy.array(real, copy=False)
+    a = numpy.asarray(real)
     assert a is real.value
 
 @pytest.mark.parametrize("comm", [MPI.COMM_WORLD,])

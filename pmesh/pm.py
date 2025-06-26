@@ -1216,10 +1216,11 @@ def _init_o_coords(partition, Nmesh, BoxSize, dtype):
 
         wi *= (2 * numpy.pi / Nmesh[d])
         ki = wi * Nmesh[d] / BoxSize[d]
+        ki_type = ki.astype(dtype)
 
         o_ind.append(o_indi.reshape(s))
         w.append(wi.reshape(s))
-        k.append(ki.reshape(s))
+        k.append(ki_type.reshape(s))
 
     # FIXME: w
     return k, o_ind

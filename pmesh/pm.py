@@ -1960,7 +1960,7 @@ class ParticleMesh(object):
         """
         assert isinstance(source, RealField)
 
-        q = self.mesh_coordinates(dtype='i4')
+        q = self.mesh_coordinates(dtype=self.dtype)
 
         # transform from my mesh to source's mesh
         transform = Affine(self.ndim,
@@ -2011,7 +2011,7 @@ class ParticleMesh(object):
         """
         assert isinstance(source, RealField)
 
-        q = source.pm.mesh_coordinates(dtype='i4')
+        q = source.pm.mesh_coordinates(dtype=self.dtype)
         f = source.readout(q, resampler='nnb', transform=source.pm.affine_grid)
 
         # transform from ssource' mesh to my mesh

@@ -34,9 +34,14 @@ jobs:
     - name: Install
       run: |
         python -m pip install --user dist/pmesh*whl
-    - name: Python unit tests
+    - name: Build in place for tests
       run: |
         python setup.py build_ext --inplace
+    - name: Non-MPI python unit tests #So that the MPI_XFAIL tests run
+      run: |
+        python -m pytest
+    - name: Python unit tests w varying rank
+      run: |
         mpirun -n 1 python -m pytest --with-mpi
         mpirun -n 2 python -m pytest --with-mpi
         mpirun -n 4 --oversubscribe python -m pytest --with-mpi

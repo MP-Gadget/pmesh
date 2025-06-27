@@ -1216,10 +1216,11 @@ def _init_o_coords(partition, Nmesh, BoxSize, dtype):
 
         wi *= (2 * numpy.pi / Nmesh[d])
         ki = wi * Nmesh[d] / BoxSize[d]
+        ki_type = ki.astype(dtype)
 
         o_ind.append(o_indi.reshape(s))
         w.append(wi.reshape(s))
-        k.append(ki.reshape(s))
+        k.append(ki_type.reshape(s))
 
     # FIXME: w
     return k, o_ind
@@ -1959,7 +1960,7 @@ class ParticleMesh(object):
         """
         assert isinstance(source, RealField)
 
-        q = self.mesh_coordinates(dtype='i4')
+        q = self.mesh_coordinates(dtype=self.dtype)
 
         # transform from my mesh to source's mesh
         transform = Affine(self.ndim,
@@ -2010,7 +2011,7 @@ class ParticleMesh(object):
         """
         assert isinstance(source, RealField)
 
-        q = source.pm.mesh_coordinates(dtype='i4')
+        q = source.pm.mesh_coordinates(dtype=self.dtype)
         f = source.readout(q, resampler='nnb', transform=source.pm.affine_grid)
 
         # transform from ssource' mesh to my mesh

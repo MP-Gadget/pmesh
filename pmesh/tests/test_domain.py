@@ -1,10 +1,11 @@
-from runtests.mpi import MPITest
-
 import numpy
 from pmesh import domain
 from numpy.testing import assert_allclose, assert_array_equal
+import pytest
+from mpi4py import MPI
 
-@MPITest(commsize=[1, 2, 3, 4])
+@pytest.mark.parametrize("comm", [MPI.COMM_WORLD,])
+@pytest.mark.mpi
 def test_uniform(comm):
     DomainGrid = [[0, 1, 2], [0, 2]]
 
@@ -25,11 +26,12 @@ def test_uniform(comm):
     if comm.size == 1:
         assert_array_equal(dcop.shape, (1, 1, 1))
 
-@MPITest(commsize=4)
+@pytest.mark.parametrize("comm", [MPI.COMM_WORLD,])
+@pytest.mark.mpi(min_size=4)
 def test_extra_ranks(comm):
     DomainGrid = [[0, 1, 2], [0, 2]]
 
-    dcop = domain.GridND(DomainGrid, 
+    dcop = domain.GridND(DomainGrid,
             comm=comm,
             periodic=True)
 
@@ -58,11 +60,12 @@ def test_extra_ranks(comm):
     assert_array_equal(nmass[1], [2, 3])
     assert_array_equal(mass2, mass)
 
-@MPITest(commsize=2)
+@pytest.mark.parametrize("comm", [MPI.COMM_WORLD,])
+@pytest.mark.mpi(min_size=2)
 def test_exchange(comm):
     DomainGrid = [[0, 1, 2], [0, 2]]
 
-    dcop = domain.GridND(DomainGrid, 
+    dcop = domain.GridND(DomainGrid,
             comm=comm,
             periodic=True)
 
@@ -88,11 +91,12 @@ def test_exchange(comm):
     assert_array_equal(nmass[1], [2, 3])
     assert_array_equal(mass2, mass)
 
-@MPITest(commsize=2)
+@pytest.mark.parametrize("comm", [MPI.COMM_WORLD,])
+@pytest.mark.mpi(min_size=2)
 def test_exchange_struct(comm):
     DomainGrid = [[0, 1, 2], [0, 2]]
 
-    dcop = domain.GridND(DomainGrid, 
+    dcop = domain.GridND(DomainGrid,
             comm=comm,
             periodic=True)
 
@@ -113,12 +117,13 @@ def test_exchange_struct(comm):
     assert_array_equal(npos[0], [[0, 0], [0, 1]])
     assert_array_equal(npos[1], [[1, 0], [1, 1]])
 
-@MPITest(commsize=2)
+@pytest.mark.parametrize("comm", [MPI.COMM_WORLD,])
+@pytest.mark.mpi(min_size=2)
 def test_inhomotypes(comm):
     """ Testing type promotion """
     DomainGrid = [[0, 1, 2], [0, 2]]
 
-    dcop = domain.GridND(DomainGrid, 
+    dcop = domain.GridND(DomainGrid,
             comm=comm,
             periodic=True)
 
@@ -143,12 +148,13 @@ def test_inhomotypes(comm):
     assert_array_equal(nmass[0], [0, 1])
     assert_array_equal(nmass[1], [2, 3])
 
-@MPITest(commsize=2)
+@pytest.mark.parametrize("comm", [MPI.COMM_WORLD,])
+@pytest.mark.mpi(min_size=2)
 def test_packed(comm):
     """ Testing type promotion of a packed exchange."""
     DomainGrid = [[0, 1, 2], [0, 2]]
 
-    dcop = domain.GridND(DomainGrid, 
+    dcop = domain.GridND(DomainGrid,
             comm=comm,
             periodic=True)
 
@@ -180,13 +186,12 @@ def test_packed(comm):
     assert_array_equal(nmass[0], [0, 1])
     assert_array_equal(nmass[1], [2, 3])
 
-
-
-@MPITest(commsize=3)
+@pytest.mark.parametrize("comm", [MPI.COMM_WORLD,])
+@pytest.mark.mpi
 def test_period_empty_ranks(comm):
     DomainGrid = [[0, 2, 4, 4], [0, 4]]
 
-    dcop = domain.GridND(DomainGrid, 
+    dcop = domain.GridND(DomainGrid,
             comm=comm,
             periodic=True)
 
@@ -203,11 +208,12 @@ def test_period_empty_ranks(comm):
     if comm.rank == 1:
         assert len(p1) == comm.size
 
-@MPITest(commsize=4)
+@pytest.mark.parametrize("comm", [MPI.COMM_WORLD,])
+@pytest.mark.mpi(min_size=4)
 def test_period(comm):
     DomainGrid = [[0, 2, 4, 4], [0, 4]]
 
-    dcop = domain.GridND(DomainGrid, 
+    dcop = domain.GridND(DomainGrid,
             comm=comm,
             periodic=True)
 
@@ -220,11 +226,12 @@ def test_period(comm):
     if comm.rank == 1:
         assert len(p1) == 4
 
-@MPITest(commsize=2)
+@pytest.mark.parametrize("comm", [MPI.COMM_WORLD,])
+@pytest.mark.mpi(min_size=2)
 def test_exchange_smooth(comm):
     DomainGrid = [[0, 1, 2], [0, 2]]
 
-    dcop = domain.GridND(DomainGrid, 
+    dcop = domain.GridND(DomainGrid,
             comm=comm,
             periodic=True)
 
@@ -258,11 +265,12 @@ def test_exchange_smooth(comm):
     assert_array_equal(npos[0], [[0, 0], [0, 1], [1, 0], [1, 1]])
     assert_array_equal(npos[1], [[0, 0], [0, 1], [1, 0], [1, 1]])
 
-@MPITest(commsize=2)
+@pytest.mark.parametrize("comm", [MPI.COMM_WORLD,])
+@pytest.mark.mpi
 def test_isprimary(comm):
     DomainGrid = [[0, 1, 2], [0, 2]]
 
-    dcop = domain.GridND(DomainGrid, 
+    dcop = domain.GridND(DomainGrid,
             comm=comm,
             periodic=True)
 
@@ -279,11 +287,12 @@ def test_isprimary(comm):
 #    print('-----', comm.rank, isprimary, npos[isprimary], npos[~isprimary], dcop.primary_region)
     assert comm.allreduce(isprimary.sum()) == comm.allreduce(len(pos))
 
-@MPITest(commsize=2)
+@pytest.mark.parametrize("comm", [MPI.COMM_WORLD,])
+@pytest.mark.mpi
 def test_load(comm):
     DomainGrid = [[0, 1, 2], [0, 2]]
 
-    dcop = domain.GridND(DomainGrid, 
+    dcop = domain.GridND(DomainGrid,
             comm=comm,
             periodic=True)
 
@@ -296,7 +305,8 @@ def test_load(comm):
     domainload = dcop.load(pos, gamma=1)
     assert sum(domainload) == comm.allreduce(len(pos))
 
-@MPITest(commsize=4)
+@pytest.mark.parametrize("comm", [MPI.COMM_WORLD,])
+@pytest.mark.mpi(min_size=4)
 def test_loadbalance(comm):
     DomainGrid = [[0, 1, 2, 3, 4], [0, 2, 4]]
 
@@ -310,7 +320,8 @@ def test_loadbalance(comm):
 
     assert not any(dcop.DomainAssign - [3, 2, 1, 1, 0, 3, 2, 3])
 
-@MPITest(commsize=4)
+@pytest.mark.parametrize("comm", [MPI.COMM_WORLD,])
+@pytest.mark.mpi(min_size=4)
 def test_loadbalance_degenerate(comm):
     DomainGrid = [[0, 1, 2, 3], [0, 3]]
 

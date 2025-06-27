@@ -1,4 +1,3 @@
-from runtests.mpi import MPITest
 from numpy.testing import assert_array_equal
 from numpy.testing import assert_allclose
 from numpy.testing import assert_almost_equal
@@ -6,6 +5,8 @@ from numpy.testing import assert_almost_equal
 from pmesh.pm import ParticleMesh, RealField, ComplexField
 from pmesh import window
 import numpy
+import pytest
+from mpi4py import MPI
 
 def perturb(comp, mode, value):
     comp = comp.copy()
@@ -65,7 +66,8 @@ def get_mass(mass, ind, comm):
         old = 0
     return comm.allreduce(old)
 
-@MPITest([1, 4])
+@pytest.mark.parametrize("comm", [MPI.COMM_WORLD,])
+@pytest.mark.mpi
 def test_c2r_vjp(comm):
     pm = ParticleMesh(BoxSize=8.0, Nmesh=[4, 4], comm=comm, dtype='f8')
 
@@ -98,7 +100,8 @@ def test_c2r_vjp(comm):
 
     assert_allclose(ng, ag, rtol=1e-5)
 
-@MPITest([1, 2])
+@pytest.mark.parametrize("comm", [MPI.COMM_WORLD,])
+@pytest.mark.mpi
 def test_readout_gradients(comm):
     pm = ParticleMesh(BoxSize=8.0, Nmesh=[4, 4, 4], comm=comm, dtype='f8', resampler='cic')
 
@@ -177,7 +180,8 @@ def test_readout_gradients(comm):
     assert_allclose(bag, fag, rtol=1e-7)
     assert_allclose(ng, bag, rtol=1e-4)
 
-@MPITest([1, 2])
+@pytest.mark.parametrize("comm", [MPI.COMM_WORLD,])
+@pytest.mark.mpi
 def test_paint_gradients(comm):
     pm = ParticleMesh(BoxSize=8.0, Nmesh=[4, 4, 4], comm=comm, dtype='f8', resampler='cic')
 
@@ -258,7 +262,8 @@ def test_paint_gradients(comm):
     assert_allclose(bag, fag, rtol=1e-7)
     assert_allclose(ng, bag, rtol=1e-4)
 
-@MPITest([1, 4])
+@pytest.mark.parametrize("comm", [MPI.COMM_WORLD,])
+@pytest.mark.mpi
 def test_cdot_grad(comm):
     pm = ParticleMesh(BoxSize=8.0, Nmesh=[4, 4], comm=comm, dtype='f8')
 
@@ -314,7 +319,8 @@ def test_cdot_grad(comm):
 
     assert_allclose(ng, ag, rtol=1e-5)
 
-@MPITest([1, 4])
+@pytest.mark.parametrize("comm", [MPI.COMM_WORLD,])
+@pytest.mark.mpi
 def test_cnorm_grad(comm):
     pm = ParticleMesh(BoxSize=8.0, Nmesh=[4, 4, 4], comm=comm, dtype='f8')
 

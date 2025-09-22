@@ -1653,7 +1653,7 @@ class ParticleMesh(object):
         r.unravel(flatiter)
         return r
 
-    def generate_whitenoise(self, seed, unitary=False, mean=0, type=TransposedComplexField, mode=None, base=None):
+    def generate_whitenoise(self, seed, unitary=False, mean=0, type=TransposedComplexField, mode=None, base=None, invertphase=False):
         """ Generate white noise to the field with the given seed.
 
             The scheme is supposed to be compatible with Gadget when the field is three-dimensional.
@@ -1682,7 +1682,7 @@ class ParticleMesh(object):
             complex_type = type
 
         complex = self.create(type=complex_type, base=base)
-        generate(complex.value, complex.start, complex.Nmesh, seed, bool(unitary))
+        generate(complex.value, complex.start, complex.Nmesh, seed, bool(unitary), bool(invertphase))
 
         # add mean
         def filter(k, v):

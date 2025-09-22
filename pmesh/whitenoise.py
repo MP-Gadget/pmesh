@@ -1,7 +1,7 @@
 from . import _whitenoise
 import numpy
 
-def generate(complex, start, Nmesh, seed, unitary):
+def generate(complex, start, Nmesh, seed, unitary, invertphase=False):
     """
         The result is always hermitian.
 
@@ -19,7 +19,7 @@ def generate(complex, start, Nmesh, seed, unitary):
     _Nmesh[:] = Nmesh
 
     if complex.ndim == 3:
-        _whitenoise.generate(complex, _start, _Nmesh, seed, unitary)
+        _whitenoise.generate(complex, _start, _Nmesh, seed, unitary, bool(invertphase))
     elif complex.ndim <= 2:
         # FIXME: this is not scale invariant though it is at least invariant
         # against partition. Since 2d and 1d is only used for testing this
